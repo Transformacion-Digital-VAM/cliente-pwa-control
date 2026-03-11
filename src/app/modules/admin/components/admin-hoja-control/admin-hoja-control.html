@@ -1,133 +1,160 @@
-<div class="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col p-4 md:p-6"> 
-  <div class="flex-1 w-full bg-white border border-slate-300 rounded-2xl shadow-xl flex flex-col overflow-hidden">
-    
-    <div class="px-8 py-5 border-b border-slate-200 bg-white shrink-0 flex justify-between items-center">
+<div class="min-h-screen bg-slate-100 text-slate-900 font-sans flex flex-col items-center p-4 md:p-6">
+  <div class="w-full max-w-screen-2xl max-h-[calc(100vh-2rem)] md:max-h-[calc(100vh-3rem)] bg-white border border-slate-300 rounded-2xl shadow-xl flex flex-col overflow-hidden">
+
+    <!-- HEADER (sin cambios) -->
+    <div class="px-8 py-5 border-b border-blue-700 bg-blue-600 shrink-0 flex justify-between items-center rounded-t-2xl">
       <div class="flex items-center space-x-4">
-        <div class="p-2 bg-blue-600 rounded-lg shadow-md shadow-blue-200">
+        <div class="p-2 bg-white/20 rounded-lg shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
         <div>
-          <h2 class="text-slate-900 text-xl font-bold tracking-tight">Crédito Comunal</h2>
+          <h2 class="text-white text-xl font-bold tracking-tight">Crédito Comunal</h2>
         </div>
       </div>
-      <span class="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">VAMOS A MEJORAR S.A. DE C.V. SOFOM ENR</span>
+      <span class="hidden md:block text-[10px] font-black text-blue-900 uppercase tracking-widest text-right">VAMOS A MEJORAR S.A. DE C.V. SOFOM ENR</span>
     </div>
 
-    <form [formGroup]="hojaControlForm" class="flex-1 overflow-y-auto p-8 space-y-12">
-      
-      <section class="space-y-6">
-        <div class="flex items-center space-x-3 border-b border-slate-200 pb-2">
-          <span class="h-4 w-1 bg-blue-600 rounded-full"></span>
-          <h3 class="text-slate-700 font-bold text-xs uppercase tracking-widest">Información General</h3>
-        </div>
-        
-        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-          <div class="w-full lg:max-w-2xl space-y-2">
-            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo</label>
-            <input type="text" formControlName="nombreGrupo" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="Nombre de la agrupación">
+    <div class="flex-1 overflow-y-auto w-full">
+      <form [formGroup]="hojaControlForm" class="p-8 space-y-12">
+
+        <!-- SECCIÓN: Información General -->
+        <section class="space-y-6">
+          <div class="flex items-center space-x-3 border-b border-slate-200 pb-2">
+            <span class="h-4 w-1 bg-blue-600 rounded-full"></span>
+            <h3 class="text-slate-800 font-bold text-xs uppercase tracking-widest">Información General</h3>   <!-- oscurecido y aumentado -->
           </div>
 
-          <div class="flex items-end space-x-4">
-            <div class="w-28 space-y-2">
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 text-center">Clave</label>
-              <input type="text" formControlName="clave" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center font-mono focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="0000">
+          <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div class="w-full lg:max-w-2xl space-y-2">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo</label>
+              <input type="text" formControlName="nombreGrupo" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="Nombre del Grupo">
             </div>
-            <div class="w-24 space-y-2">
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 text-center">Plazo</label>
-              <input type="number" formControlName="plazo" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="0">
-            </div>
-            <div class="w-28 space-y-2">
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 text-center">Tasa %</label>
-              <div class="relative">
-                <input type="number" formControlName="tasa" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center pr-7 focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="0.00">
-                <span class="absolute right-3 top-3 text-slate-500 font-bold text-xs">%</span>
+
+            <div class="flex items-end space-x-4">
+              <div class="w-28 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Clave</label>
+                <input type="text" formControlName="clave" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center font-mono focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="00000">
+              </div>
+              <div class="w-full sm:max-w-[12rem] space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asesor</label>
+                <div class="relative">
+                  <select formControlName="asesor" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-10 hover:border-blue-400">
+                    <option value="" disabled selected>Seleccione al asesor</option>
+                    <option *ngFor="let asesor of asesores" [value]="asesor._id">{{ asesor.username }}</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  </div>
+                </div>
+              </div>
+              <div class="w-24 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Ciclo</label>
+                <input type="number" formControlName="cicloActual" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="1" min="1">
+              </div>
+              <div class="w-28 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Tasa de Interés %</label>
+                <div class="relative">
+                  <input type="number" formControlName="tasa" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center pr-7 focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="0.00">
+                  <span class="absolute right-3 top-3 text-slate-500 font-bold text-xs">%</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <section class="space-y-6">
-        <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
-          <div class="flex flex-col md:flex-row gap-4 w-full lg:max-w-2xl">
-            <div class="flex-1 space-y-2">
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Día de Visita</label>
-              <select formControlName="diaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
-                <option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option>
-              </select>
+        <!-- SECCIÓN: Día y Hora de Visita -->
+        <section class="space-y-6">
+          <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
+            <div class="flex flex-col md:flex-row gap-4 w-full lg:max-w-2xl">
+              <div class="flex-1 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita</label>
+                <select formControlName="diaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
+                  <option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option>
+                </select>
+              </div>
+              <div class="flex-1 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago</label>
+                <input type="date" formControlName="fechaPrimerPago" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              </div>
             </div>
-            <div class="flex-1 space-y-2">
-              <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago</label>
-              <input type="date" formControlName="fechaPrimerPago" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+            <div class="w-full lg:w-48 space-y-2">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de Visita</label>
+              <input type="time" formControlName="horaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
           </div>
+        </section>
 
-          <div class="w-full lg:w-48 space-y-2">
-            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de Visita</label>
-            <input type="time" formControlName="horaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+        <!-- SECCIÓN: Listado de Integrantes -->
+        <section class="space-y-4">
+          <div class="flex items-center space-x-2 px-1">
+            <span class="h-4 w-1 bg-blue-600 rounded-full"></span>
+            <h3 class="text-slate-800 font-bold text-xs uppercase tracking-widest">Listado de Integrantes</h3>   <!-- oscurecido -->
           </div>
-        </div>
-      </section>
 
-      <section class="space-y-4">
-        <div class="flex items-center space-x-2 px-1">
-          <span class="h-4 w-1 bg-slate-400 rounded-full"></span>
-          <h3 class="text-slate-500 font-bold text-xs uppercase tracking-widest">Listado de Integrantes</h3>
-        </div>
-
-        <div class="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-sm">
-          <div class="overflow-x-auto">
-            <table class="w-full border-collapse">
-              <thead class="bg-slate-100 border-b border-slate-300">
-                <tr>
-                  <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-600 uppercase tracking-widest w-16">No.</th>
-                  <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-600 uppercase tracking-widest">Nombre del Integrante</th>
-                  <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-600 uppercase tracking-widest">Apellidos</th>
-                  <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-600 uppercase tracking-widest w-48">Cargo</th>
-                  <th class="px-6 py-4 text-left text-[10px] font-bold text-slate-600 uppercase tracking-widest">Pago Pactado</th>
-                  <th class="px-6 py-4 text-center text-[10px] font-bold text-red-500 uppercase tracking-widest">Acción</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-200" formArrayName="integrantes">
-                <tr *ngFor="let integrante of integrantes.controls; let i = index" [formGroupName]="i" class="hover:bg-slate-100/50 transition-colors">
-                  <td class="px-6 py-4 text-xs font-bold text-slate-400">{{ (i + 1).toString().padStart(2, '0') }}</td>
-                  <td class="px-6 py-4">
-                    <input type="text" formControlName="nombre" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Nombre">
-                  </td>
-                  <td class="px-6 py-4">
-                    <input type="text" formControlName="apellidos" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Apellidos">
-                  </td>
-                  <td class="px-6 py-4">
-                    <select formControlName="cargo" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
-                      <option value="">Ninguno</option>
-                      <option value="presidenta">PRESIDENTA</option>
-                      <option value="secretaria">SECRETARIA</option>
-                      <option value="tesorera">TESORERA</option>
-                      <option value="vocal">INTEGRANTE</option>
-                    </select>
-                  </td>
-                  <td class="px-6 py-4 w-36">
-                    <div class="relative"><span class="absolute left-2.5 top-2 text-slate-500 text-xs">$</span><input type="number" formControlName="pagoPactado" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-xs outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00"></div>
-                  </td>
-                  <td class="px-6 py-4 text-center">
-                    <button type="button" (click)="removeIntegrante(i)" class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm">✕</button>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+          <div class="border border-slate-300 rounded-2xl overflow-hidden bg-white shadow-sm">
+            <div class="overflow-x-auto">
+              <!-- Fix error in original table, td inputs inside tbody where there was a missing close tag/missing form tag -->
+              <table class="w-full border-collapse">
+                <thead class="bg-slate-100 border-b border-slate-300">
+                  <tr>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-16">No.</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre del Integrante</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo Credito</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-48">Cargo</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Pago Pactado</th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-red-500 uppercase tracking-widest">Acción</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-200" formArrayName="integrantes">
+                  <tr *ngFor="let integrante of integrantes.controls; let i = index" [formGroupName]="i" class="hover:bg-slate-100/50 transition-colors">
+                    <td class="px-6 py-4 text-sm font-bold text-slate-400">{{ (i + 1).toString().padStart(2, '0') }}</td>
+                    <td class="px-6 py-4">
+                      <input type="text" formControlName="nombre" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Nombre">
+                    </td>
+                    <td class="px-6 py-4">
+                      <input type="text" formControlName="apellidos" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Apellidos">
+                    </td>
+                    <td class="px-6 py-4">
+                      <select formControlName="tipoCredito" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
+                        <option value="CC">C.C</option>
+                        <option value="R">R</option>
+                        <option value="8S">8S</option>
+                      </select>
+                    </td>
+                    <td class="px-6 py-4">
+                      <select formControlName="cargo" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
+                        <option value="">Ninguno</option>
+                        <option value="presidenta">PRESIDENTA</option>
+                        <option value="secretaria">SECRETARIA</option>
+                        <option value="tesorera">TESORERA</option>
+                        <option value="vocal">INTEGRANTE</option>
+                      </select>
+                    </td>
+                    <td class="px-6 py-4 w-36">
+                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span><input type="number" formControlName="pagoPactado" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00"></div>
+                    </td>
+                    <td class="px-6 py-4 text-center">
+                      <button type="button" (click)="removeIntegrante(i)" class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm">✕</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </section>
-    </form>
+        </section>
+      </form>
+    </div>
 
-    <div class="px-8 py-6 border-t border-slate-200 bg-white shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4">
+    <!-- FOOTER -->
+    <div class="px-8 py-6 border-t border-slate-200 bg-slate-50 shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4 z-10 w-full relative drop-shadow-[0_-5px_5px_rgba(0,0,0,0.02)]">
       <button type="button" (click)="addIntegrante()" class="w-full sm:w-auto px-6 py-3 border-2 border-emerald-600 text-emerald-700 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-xs font-bold uppercase tracking-widest flex items-center space-x-2 active:scale-95">
         <span class="text-lg">+</span><span>Añadir Integrante</span>
       </button>
       <div class="flex items-center space-x-4 w-full sm:w-auto">
-        <button type="button" (click)="cancelar()" class="flex-1 sm:flex-none px-8 py-3 bg-slate-200 text-slate-600 rounded-xl hover:bg-slate-300 transition-all text-xs font-bold uppercase tracking-widest active:scale-95">Cancelar</button>
+        <button type="button" (click)="cancelar()" class="flex-1 sm:flex-none px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-100 transition-all text-xs font-bold uppercase tracking-widest active:scale-95 shadow-sm">Cancelar</button>
         <button type="button" (click)="guardarCambios()" class="flex-1 sm:flex-none px-10 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-300 transition-all text-xs font-bold uppercase tracking-widest active:scale-95">Guardar Cambios</button>
       </div>
     </div>

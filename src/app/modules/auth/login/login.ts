@@ -41,7 +41,8 @@ export class LoginComponent {
     if (navigator.onLine) {
       try {
         const response: any = await firstValueFrom(
-          this.http.post('http://localhost:3000/api/users/login', this.loginData)
+          // this.http.post('http://localhost:3000/api/users/login', this.loginData)
+          this.http.post('http://192.168.1.82:3000/api/users/login', this.loginData)
         );
 
         // Guardar sesión en Dexie
@@ -54,6 +55,7 @@ export class LoginComponent {
 
         localStorage.setItem('userRole', response.user.role);
         localStorage.setItem('isLoggedIn', 'true');
+        localStorage.setItem('user', JSON.stringify({ username: response.user.username || this.loginData.username }));
 
         this.redirectByRole(response.user.role);
 
@@ -93,6 +95,7 @@ export class LoginComponent {
       // Por ahora, permitimos el paso si el usuario ya inició sesión antes en este equipo
       localStorage.setItem('userRole', localUser.role);
       localStorage.setItem('isLoggedIn', 'true');
+      localStorage.setItem('user', JSON.stringify({ username: localUser.user }));
       this.redirectByRole(localUser.role);
     } else {
       this.errorMessage = 'No hay datos de acceso guardados para este usuario o no hay conexión.';

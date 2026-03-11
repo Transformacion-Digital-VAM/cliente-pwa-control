@@ -9,8 +9,12 @@ import { catchError, map, switchMap } from 'rxjs/operators';
     providedIn: 'root'
 })
 export class GrupoService {
-    private apiUrlGrupo = 'http://localhost:3000/api/grupo';
-    private apiUrlMiembro = 'http://localhost:3000/api/miembro';
+    // private apiUrlGrupo = 'http://localhost:3000/api/grupos';
+    // private apiUrlMiembro = 'http://localhost:3000/api/miembros';
+    // private apiUrlCredito = 'http://localhost:3000/api/creditos';
+    private apiUrlGrupo = 'http://192.168.1.82:3000/api/grupos';
+    private apiUrlMiembro = 'http://192.168.1.82:3000/api/miembros';
+    private apiUrlCredito = 'http://192.168.1.82:3000/api/creditos';
 
     constructor(
         private http: HttpClient,
@@ -26,8 +30,8 @@ export class GrupoService {
         }
 
         // Adaptamos el payload de Grupo para esquivar error de 'integrantes' en Backend
-        const { integrantes, nombreGrupo, ...resto } = payload;
-        const bodyGrupo = { ...resto, nombre: nombreGrupo };
+        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, ...resto } = payload;
+        const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo };
 
         // Intentar POST del Grupo
         return this.http.post(`${this.apiUrlGrupo}/create`, bodyGrupo).pipe(
@@ -54,17 +58,55 @@ export class GrupoService {
                         return this.http.post(`${this.apiUrlMiembro}/create`, bodyMiembro);
                     });
 
-                    return forkJoin(peticionesMiembros).pipe(map(() => grupoGuardado));
+                    return forkJoin(peticionesMiembros).pipe(
+                        switchMap((miembrosGuardados: any[]) => {
+                            const peticionesCreditos = miembrosGuardados.map((miembroGuardado, index) => {
+                                const integ = integrantes[index];
+                                const bodyCredito = {
+                                    miembro: miembroGuardado._id,
+                                    ciclo: cicloActual || 1,
+                                    tipoCredito: integ.tipoCredito || 'CC',
+                                    pagoPactado: integ.pagoPactado,
+                                    fechaPrimerPago: fechaPrimerPago
+                                };
+                                return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
+                            });
+
+                            if (peticionesCreditos.length > 0) {
+                                return forkJoin(peticionesCreditos).pipe(map(() => grupoGuardado));
+                            }
+                            return of(grupoGuardado);
+                        })
+                    );
                 }
                 return of(grupoGuardado);
             }),
             catchError(error => {
-                if (error.status === 0 || error.status === 504) {
+                const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503 || error.status === 500;
+                if (isNetworkError) {
+                    console.warn(`[Network Error] Status: ${error.status} - Usando guardado local (Dexie)`);
                     return this.guardarLocal(payload);
                 }
                 return throwError(() => error);
             })
         );
+    }
+
+    getGrupos(): Observable<any> {
+        return this.http.get(`${this.apiUrlGrupo}/get`);
+    }
+
+    getAsesores(): Observable<any> {
+        // return this.http.get(`http://localhost:3000/api/users/asesores`);
+        return this.http.get(`http://192.168.1.82:3000/api/users/asesores`);
+    }
+
+    getMiembros(): Observable<any> {
+        return this.http.get(`${this.apiUrlMiembro}/get`);
+    }
+
+    getCreditos(): Observable<any> {
+        return this.http.get(`${this.apiUrlCredito}/`);
     }
 
     private guardarLocal(payload: GrupoPayload): Observable<any> {

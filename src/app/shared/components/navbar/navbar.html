@@ -1,21 +1,22 @@
-<nav class="bg-white border-b border-gray-100 py-4 px-6">
+<nav *ngIf="!isAsesorPage && !isLoginPage" class="bg-white border-b border-gray-100 py-4 px-6">
   <div class="container mx-auto flex items-center justify-between">
     
     <!-- Logo / título -->
-    <div class="flex items-center space-x-2 cursor-pointer" routerLink="/">
-      <span class="text-xl font-bold text-slate-900 tracking-tight">Hoja de Control</span>
+    <div class="flex items-center space-x-2 cursor-pointer" [routerLink]="isUserLoggedIn ? (isAdmin ? '/home-admin' : '/home-asesor') : '/login'">
+      <img src="assets/LogoOficialVAM.avif" alt="Logo VAM" class="h-10 w-auto object-contain">
     </div>
 
     <!-- Enlaces de navegación (solo para usuarios autenticados) -->
     <div class="hidden md:flex items-center space-x-10" *ngIf="isUserLoggedIn">
       <ng-container *ngIf="isAdmin">
-        <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio Admin</a>
-        <a routerLink="/hoja-control-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Control Interno</a>
+        <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
+        <a routerLink="/hoja-control-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Grupal</a>
+        <a routerLink="/hoja-control-admin-ind" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Individual</a>
       </ng-container>
 
       <ng-container *ngIf="isUser">
-        <a routerLink="/home-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio Asesor</a>
-        <a routerLink="/hoja-control-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Asesor</a>
+        <a routerLink="/home-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
+        <!-- <a routerLink="/hoja-control-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"></a> -->
       </ng-container>
     </div>
 

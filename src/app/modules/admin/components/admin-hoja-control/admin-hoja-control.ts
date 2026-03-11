@@ -1,6 +1,7 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, Validators } from '@angular/forms';
-import { CommonModule } from '@angular/common';
+import { CommonModule, isPlatformBrowser } from '@angular/common';
+import Swal from 'sweetalert2';
 import { GrupoService } from '../../../../core/services/grupo.service';
 
 @Component({
@@ -13,14 +14,18 @@ import { GrupoService } from '../../../../core/services/grupo.service';
 export class AdminHojaControl implements OnInit {
   hojaControlForm: FormGroup;
 
+  asesores: any[] = [];
+
   constructor(
+    @Inject(PLATFORM_ID) private platformId: Object,
     private fb: FormBuilder,
     private grupoService: GrupoService
   ) {
     this.hojaControlForm = this.fb.group({
       nombreGrupo: ['', Validators.required],
       clave: ['', Validators.required],
-      plazo: [0, [Validators.required, Validators.min(1)]],
+      asesor: ['', Validators.required],
+      cicloActual: [1, [Validators.required, Validators.min(1)]],
       tasa: [0, [Validators.required, Validators.min(0)]],
       diaVisita: ['Lunes', Validators.required],
       fechaPrimerPago: ['', Validators.required],
@@ -30,7 +35,26 @@ export class AdminHojaControl implements OnInit {
   }
 
   ngOnInit() {
+    if (isPlatformBrowser(this.platformId)) {
+      this.cargarAsesores();
+    }
     this.addIntegrante(); // Añadir un integrante por defecto al inicio
+  }
+
+  cargarAsesores(): void {
+    this.grupoService.getAsesores().subscribe({
+      next: (data) => {
+        if (data && Array.isArray(data)) {
+          this.asesores = data;
+        } else {
+          this.asesores = [];
+        }
+      },
+      error: (err) => {
+        console.error('Error al cargar asesores:', err);
+        this.asesores = [];
+      }
+    });
   }
 
   get integrantes(): FormArray {
@@ -41,6 +65,7 @@ export class AdminHojaControl implements OnInit {
     const integranteForm = this.fb.group({
       nombre: ['', Validators.required],
       apellidos: ['', Validators.required],
+      tipoCredito: ['CC', Validators.required],
       cargo: ['', Validators.required],
       pagoPactado: [0, [Validators.required, Validators.min(0)]]
     });
@@ -54,24 +79,53 @@ export class AdminHojaControl implements OnInit {
   guardarCambios() {
     if (this.hojaControlForm.valid) {
       const payload = this.hojaControlForm.value;
-      console.log('Enviando datos...', payload);
+
+      Swal.fire({
+        title: 'Guardando...',
+        text: 'Por favor espera mientras verificamos y guardamos el grupo.',
+        allowOutsideClick: false,
+        didOpen: () => {
+          Swal.showLoading();
+        }
+      });
+
       this.grupoService.crearGrupo(payload).subscribe({
         next: (response) => {
           if (response?.offline) {
-            alert('Se ha guardado localmente. Se sincronizará en cuanto tengas conexión a internet.');
+            Swal.fire({
+              icon: 'info',
+              title: 'Guardado temporalmente',
+              text: 'Se ha guardado localmente. Se sincronizará en cuanto tengas conexión a internet.',
+              confirmButtonColor: '#3085d6'
+            });
           } else {
-            alert('Grupo guardado en el servidor correctamente.');
+            Swal.fire({
+              icon: 'success',
+              title: '¡Éxito!',
+              text: 'Grupo guardado en el servidor correctamente.',
+              confirmButtonColor: '#3085d6'
+            });
           }
           this.cancelar(); // Limpiar el formulario
         },
         error: (err) => {
           console.error('Error al guardar el grupo', err);
-          alert('Hubo un error al intentar guardar. Revisa la consola.');
+          Swal.fire({
+            icon: 'error',
+            title: 'Oops...',
+            text: 'Hubo un error al intentar guardar. Revisa la consola.',
+            confirmButtonColor: '#d33'
+          });
         }
       });
     } else {
       this.hojaControlForm.markAllAsTouched();
-      alert('Por favor, completa correctamente todos los campos obligatorios.');
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'Por favor, completa correctamente todos los campos obligatorios.',
+        confirmButtonColor: '#f59e0b'
+      });
       console.error('Formulario inválido:', this.hojaControlForm.value);
     }
   }
@@ -79,7 +133,7 @@ export class AdminHojaControl implements OnInit {
   cancelar() {
     this.hojaControlForm.reset({
       diaVisita: 'Lunes',
-      plazo: 0,
+      cicloActual: 1,
       tasa: 0
     });
     this.integrantes.clear();

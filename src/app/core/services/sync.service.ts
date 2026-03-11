@@ -8,8 +8,12 @@ import { firstValueFrom, forkJoin } from 'rxjs';
     providedIn: 'root'
 })
 export class SyncService {
-    private apiUrlGrupo = 'http://localhost:3000/api/grupo';
-    private apiUrlMiembro = 'http://localhost:3000/api/miembro';
+    // private apiUrlGrupo = 'http://localhost:3000/api/grupos';
+    // private apiUrlMiembro = 'http://localhost:3000/api/miembros';
+    // private apiUrlCredito = 'http://localhost:3000/api/creditos';
+    private apiUrlGrupo = 'http://192.168.1.82:3000/api/grupos';
+    private apiUrlMiembro = 'http://192.168.1.82:3000/api/miembros';
+    private apiUrlCredito = 'http://192.168.1.82:3000/api/creditos';
 
     constructor(
         private http: HttpClient,
@@ -46,8 +50,8 @@ export class SyncService {
                 if (item.type === 'POST_GRUPO') {
                     try {
                         const payload = item.data;
-                        const { integrantes, nombreGrupo, ...resto } = payload;
-                        const bodyGrupo = { ...resto, nombre: nombreGrupo };
+                        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, ...resto } = payload;
+                        const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo };
 
                         const grupoGuardado: any = await firstValueFrom(this.http.post(`${this.apiUrlGrupo}/create`, bodyGrupo));
 
@@ -71,7 +75,25 @@ export class SyncService {
                                 };
                                 return this.http.post(`${this.apiUrlMiembro}/create`, bodyMiembro);
                             });
-                            await firstValueFrom(forkJoin(peticionesMiembros));
+
+                            const miembrosGuardados = await firstValueFrom(forkJoin(peticionesMiembros)) as any[];
+
+                            // Ahora crear los créditos para cada miembro
+                            const peticionesCreditos = miembrosGuardados.map((miembroGuardado, index) => {
+                                const integ = integrantes[index];
+                                const bodyCredito = {
+                                    miembro: miembroGuardado._id,
+                                    ciclo: cicloActual || 1,
+                                    tipoCredito: integ.tipoCredito || 'CC',
+                                    pagoPactado: integ.pagoPactado,
+                                    fechaPrimerPago: fechaPrimerPago
+                                };
+                                return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
+                            });
+
+                            if (peticionesCreditos.length > 0) {
+                                await firstValueFrom(forkJoin(peticionesCreditos));
+                            }
                         }
 
                         await this.dexie.syncQueue.delete(item.id!);

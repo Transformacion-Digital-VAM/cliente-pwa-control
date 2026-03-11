@@ -1,11 +1,11 @@
 <div class="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
   <main class="flex-1 overflow-y-auto p-8 space-y-10">
-    
+
+    <!-- TARJETAS DE ACCESO (sin cambios) -->
     <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      
-      <div class="group relative bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden">
+
+      <div routerLink="/hoja-control-admin" class="group relative bg-white rounded-3xl border border-blue-600 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden">
         <div class="h-1.5 w-full bg-slate-100 group-hover:bg-blue-500 transition-colors duration-300"></div>
-        
         <div class="p-6">
           <div class="flex justify-between items-start">
             <div class="p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-500 transition-colors duration-300">
@@ -16,14 +16,13 @@
           </div>
           <div class="mt-8">
             <h3 class="text-slate-900 text-xl font-black group-hover:text-blue-600 transition-colors duration-300">Crédito Comunal</h3>
-            <p class="text-slate-500 text-sm mt-1 font-medium">Gestión de grupos y renovaciones.</p>
+            <p class="text-slate-500 text-sm mt-1 font-medium">Gestión de grupos</p>
           </div>
         </div>
       </div>
 
-      <div class="group relative bg-white rounded-3xl border border-slate-200 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden">
+      <div routerLink="/hoja-control-admin-ind" class="group relative bg-white rounded-3xl border border-blue-600 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden">
         <div class="h-1.5 w-full bg-slate-100 group-hover:bg-blue-500 transition-colors duration-300"></div>
-        
         <div class="p-6">
           <div class="flex justify-between items-start">
             <div class="p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-500 transition-colors duration-300">
@@ -40,40 +39,144 @@
       </div>
     </section>
 
+    <!-- SECCIÓN: Hojas Creadas Recientemente -->
     <section class="space-y-4">
-      <div class="flex items-center justify-between px-2">
-        <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Hojas Creadas Recientemente</h3>
-        <button class="text-blue-600 text-xs font-bold hover:underline">Ver toda la cartera</button>
+      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 px-2 tracking-wide">
+        <div class="flex items-center space-x-3">
+          <h3 class="text-xs font-bold text-slate-800 uppercase tracking-widest">Hojas Creadas Recientemente</h3>
+          <button (click)="refrescarDatos()" class="p-1.5 text-blue-600 bg-blue-50 rounded-lg hover:bg-blue-100 transition-colors shadow-sm" title="Refrescar Datos">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" [class.animate-spin]="isLoading" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Buscador -->
+        <div class="relative w-full md:w-64">
+           <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"/></svg>
+           <input type="text" [(ngModel)]="searchTerm" placeholder="Buscar clave o nombre..." class="w-full bg-white border border-slate-200 rounded-xl pl-9 pr-4 py-2 text-sm focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all shadow-sm">
+        </div>
+      </div>
+
+      <!-- Tabs de Coordinación -->
+      <div class="flex space-x-2 px-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
+        <button (click)="selectCoordinacion('todas')" 
+                [class.bg-slate-800]="selectedCoordinacionId === 'todas'" [class.text-white]="selectedCoordinacionId === 'todas'"
+                [class.bg-white]="selectedCoordinacionId !== 'todas'" [class.text-slate-700]="selectedCoordinacionId !== 'todas'"
+                class="px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border border-slate-300 shadow-sm transition-all focus:outline-none">
+          Todas las Coordinaciones
+        </button>
+        <button *ngFor="let coord of coordinacionesList" 
+                (click)="selectCoordinacion(coord._id)"
+                [class.bg-slate-800]="selectedCoordinacionId === coord._id" [class.text-white]="selectedCoordinacionId === coord._id"
+                [class.bg-white]="selectedCoordinacionId !== coord._id" [class.text-slate-700]="selectedCoordinacionId !== coord._id"
+                class="px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border border-slate-300 shadow-sm transition-all focus:outline-none flex items-center space-x-1">
+          <svg *ngIf="selectedCoordinacionId === coord._id" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+          <span>{{ coord.nombre }}</span>
+        </button>
+      </div>
+
+      <!-- Tabs de Asesores -->
+      <div class="flex space-x-2 px-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
+        <button (click)="selectedAsesorId = 'todos'" 
+                [class.bg-blue-600]="selectedAsesorId === 'todos'" [class.text-white]="selectedAsesorId === 'todos'"
+                [class.bg-white]="selectedAsesorId !== 'todos'" [class.text-slate-600]="selectedAsesorId !== 'todos'"
+                class="px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border border-slate-200 shadow-sm transition-all focus:outline-none">
+          Todos los Grupos
+        </button>
+        <button *ngFor="let asesor of asesoresList" 
+                (click)="selectedAsesorId = asesor._id"
+                [class.bg-blue-600]="selectedAsesorId === asesor._id" [class.text-white]="selectedAsesorId === asesor._id"
+                [class.bg-white]="selectedAsesorId !== asesor._id" [class.text-slate-600]="selectedAsesorId !== asesor._id"
+                class="px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border border-slate-200 shadow-sm transition-all focus:outline-none flex items-center space-x-1">
+          <svg *ngIf="selectedAsesorId === asesor._id" xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+          <span>{{ asesor.username || asesor.nombre }}</span>
+        </button>
       </div>
 
       <div class="bg-white border border-slate-200 rounded-[2rem] overflow-hidden shadow-sm">
-        <table class="w-full text-left">
-          <thead class="bg-slate-50/50 border-b border-slate-100">
-            <tr>
-              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Clave</th>
-              <th class="px-6 py-4 text-[10px] font-black text-slate-400 uppercase tracking-widest">Cliente / Grupo</th>
-              <th class="px-6 py-4 text-center text-[10px] font-black text-slate-400 uppercase tracking-widest">Acción</th>
-            </tr>
-          </thead>
-          <tbody class="divide-y divide-slate-50 text-sm">
-            <tr class="hover:bg-slate-50/50 transition-colors group/row cursor-pointer">
-              <td class="px-6 py-5 font-mono font-bold text-blue-600">CVE-9921</td>
-              <td class="px-6 py-5">
-                <p class="font-bold text-slate-800 group-hover/row:text-blue-600 transition-colors">Los Guerreros del Sol</p>
-                <p class="text-[10px] text-slate-400 font-bold">📍 Dolores Hidalgo</p>
-              </td>
-              <td class="px-6 py-5 text-center">
-                <button class="p-2.5 bg-slate-50 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  </svg>
-                </button>
-              </td>
-            </tr>
+        <div class="max-h-[500px] overflow-y-auto w-full">
+          <table class="w-full text-left">
+            <thead class="bg-blue-600 text-white border-b border-slate-100 sticky top-0 z-10">
+              <tr>
+                <th class="px-6 py-4 text-xs font-bold text-white uppercase tracking-widest">Clave</th>
+                <th class="px-6 py-4 text-xs font-bold text-white uppercase tracking-widest">Cliente / Grupo</th>
+                <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest">Acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-50 text-sm">
+              <!-- (Spinner comentado igual) -->
+              <ng-container *ngIf="!isLoading">
+                <ng-container *ngFor="let grupo of filteredGrupos">
+                  <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer" (click)="toggleGroup(grupo._id)">
+                    <td class="px-6 py-3 font-mono font-bold text-blue-600 text-sm">{{ grupo.clave }}</td>
+                    <td class="px-6 py-3">
+                      <p class="font-bold text-slate-800 text-sm">{{ grupo.nombre }}</p>
+                      <p class="text-xs text-slate-400 font-bold">{{ grupo.integrantes?.length || 0 }} Integrantes</p>
+                    </td>
+                  <td class="px-6 py-5 flex items-center justify-center space-x-3">
+                    <!-- Botón Generar Info Grupo -->
+                    <button class="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-600 hover:text-white transition-colors border border-blue-100 shadow-sm" 
+                            title="Descargar Info Grupo" 
+                            (click)="descargarInfoGrupo(grupo, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+
+                    <!-- Botón Generar Tabla/Garantias (Icono impresora/documento) -->
+                    <button class="bg-emerald-50 text-emerald-600 p-2 rounded-lg hover:bg-emerald-600 hover:text-white transition-colors border border-emerald-100 shadow-sm" 
+                            title="Descargar Garantías/Tabla" 
+                            (click)="descargarGarantias(grupo, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                      </svg>
+                    </button>
+
+                    <button class="p-2 text-slate-400 focus:outline-none transition-transform" 
+                            [class.rotate-180]="expandedGroups[grupo._id]" 
+                            (click)="toggleGroup(grupo._id); $event.stopPropagation()">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+                <!-- Sub-tabla Integrantes (se mantiene estilo) -->
+                <tr *ngIf="expandedGroups[grupo._id]" class="bg-indigo-50/30">
+                  <td colspan="3" class="px-6 py-4">
+                    <div class="rounded-xl border border-indigo-100 bg-white shadow-sm overflow-hidden mb-2">
+                      <table class="w-full text-left text-sm">   
+                        <thead class="bg-blue-600 text-white">
+                          <tr>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Integrante</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Rol</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Tipo Crédito</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Semanas</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Pago Pactado</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Saldo Total</th>
+                          </tr>
+                        </thead>
+                        <tbody class="divide-y divide-indigo-50">
+                          <tr *ngFor="let m of grupo.integrantes" class="hover:bg-indigo-50/30 transition-colors">
+                            <td class="px-4 py-3 font-medium text-slate-700 text-sm">{{ m.nombre }} {{ m.apellidos }}</td>
+                            <td class="px-4 py-3 text-slate-500 text-sm">{{ m.rol }}</td>
+                            <td class="px-4 py-3 font-medium text-blue-600 text-sm">{{ getCreditoDeMiembro(m._id)?.tipoCredito || 'N/A' }}</td>
+                            <td class="px-4 py-3 font-medium text-slate-500 text-sm">{{ getCreditoDeMiembro(m._id)?.semanas || 0 }}</td>
+                            <td class="px-4 py-3 font-mono font-bold text-emerald-600 text-sm">{{ getCreditoDeMiembro(m._id)?.pagoPactado | currency:'MXN' }}</td>
+                            <td class="px-4 py-3 font-mono font-bold text-emerald-700 text-sm">{{ getCreditoDeMiembro(m._id)?.saldoTotal | currency:'MXN' }}</td>
+                          </tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </td>
+                </tr>
+              </ng-container>
+            </ng-container>
           </tbody>
         </table>
       </div>
-    </section>
-  </main>
+    </div>
+  </section>
+</main>
 </div>

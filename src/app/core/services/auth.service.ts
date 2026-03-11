@@ -7,7 +7,8 @@ import { from, firstValueFrom } from 'rxjs';
     providedIn: 'root'
 })
 export class AuthService {
-    private apiUrl = 'http://localhost:3000/api/users';
+    // private apiUrl = 'http://localhost:3000/api/users';
+    private apiUrl = 'http://192.168.1.82:3000/api/users';
 
     constructor(private http: HttpClient, private dexie: DexieService) { }
 
@@ -15,7 +16,8 @@ export class AuthService {
         if (navigator.onLine) {
             try {
                 const response: any = await firstValueFrom(
-                    this.http.post('http://localhost:3000/api/users/login', credentials)
+                    // this.http.post('http://localhost:3000/api/users/login', credentials)
+                    this.http.post('http://192.168.1.82:3000/api/users/login', credentials)
                 );
                 // Persistimos sesión para uso offline futuro
                 await this.dexie.user_session.put({
@@ -26,6 +28,7 @@ export class AuthService {
                 });
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userRole', response.user.role);
+                localStorage.setItem('user', JSON.stringify({ username: response.user.username || credentials.user }));
                 return response;
             } catch (error) {
                 return this.attemptOfflineLogin(credentials.user);
@@ -49,6 +52,12 @@ export class AuthService {
         const localUser = await this.dexie.user_session.get(user);
         if (localUser) return { ...localUser, isOffline: true };
         throw new Error('No hay sesión local');
+    }
+
+    async logout() {
+        localStorage.removeItem('isLoggedIn');
+        localStorage.removeItem('userRole');
+        await this.dexie.user_session.clear();
     }
 }
 
