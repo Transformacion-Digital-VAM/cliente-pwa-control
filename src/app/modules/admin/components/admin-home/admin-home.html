@@ -60,6 +60,12 @@
 
       <!-- Tabs de Coordinación -->
       <div class="flex space-x-2 px-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
+        <!-- <button (click)="selectedAsesorId = 'todos'" 
+                [class.bg-blue-600]="selectedAsesorId === 'todos'" [class.text-white]="selectedAsesorId === 'todos'"
+                [class.bg-white]="selectedAsesorId !== 'todos'" [class.text-slate-600]="selectedAsesorId !== 'todos'"
+                class="px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border border-slate-200 shadow-sm transition-all focus:outline-none">
+          Todos los Grupos
+        </button> -->
         <button (click)="selectCoordinacion('todas')" 
                 [class.bg-slate-800]="selectedCoordinacionId === 'todas'" [class.text-white]="selectedCoordinacionId === 'todas'"
                 [class.bg-white]="selectedCoordinacionId !== 'todas'" [class.text-slate-700]="selectedCoordinacionId !== 'todas'"
@@ -78,13 +84,7 @@
 
       <!-- Tabs de Asesores -->
       <div class="flex space-x-2 px-2 overflow-x-auto pb-2" style="scrollbar-width: none;">
-        <button (click)="selectedAsesorId = 'todos'" 
-                [class.bg-blue-600]="selectedAsesorId === 'todos'" [class.text-white]="selectedAsesorId === 'todos'"
-                [class.bg-white]="selectedAsesorId !== 'todos'" [class.text-slate-600]="selectedAsesorId !== 'todos'"
-                class="px-5 py-2 rounded-full text-[11px] font-bold uppercase tracking-wider whitespace-nowrap border border-slate-200 shadow-sm transition-all focus:outline-none">
-          Todos los Grupos
-        </button>
-        <button *ngFor="let asesor of asesoresList" 
+        <button *ngFor="let asesor of filteredAsesoresList" 
                 (click)="selectedAsesorId = asesor._id"
                 [class.bg-blue-600]="selectedAsesorId === asesor._id" [class.text-white]="selectedAsesorId === asesor._id"
                 [class.bg-white]="selectedAsesorId !== asesor._id" [class.text-slate-600]="selectedAsesorId !== asesor._id"
