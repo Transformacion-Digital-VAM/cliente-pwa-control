@@ -1,0 +1,43 @@
+/* Estilo para el contenedor del marcador personalizado */
+.custom-leaflet-marker {
+    background: none;
+    border: none;
+}
+
+.marker-pin-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 54px;
+}
+
+/* El círculo con borde amarillo */
+.marker-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 3px solid #fbc02d; /* Color amarillo de tu logo */
+    background-color: white;
+    background-size: cover;
+    background-position: center;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+    z-index: 2;
+    overflow: hidden;
+}
+
+.marker-circle img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* La punta triangular inferior */
+.marker-arrow {
+    width: 0;
+    height: 0;
+    border-left: 10px solid transparent;
+    border-right: 10px solid transparent;
+    border-top: 14px solid #fbc02d; /* Mismo amarillo */
+    margin-top: -4px; /* Traslapar un poco para que se vea unido */
+    z-index: 1;
+}

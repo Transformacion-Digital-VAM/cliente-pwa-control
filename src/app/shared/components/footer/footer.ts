@@ -13,7 +13,7 @@ export class Footer {
   constructor(private router: Router) { }
 
   get isAsesorPage(): boolean {
-    return this.router.url.includes('asesor');
+    return (this.router.url.includes('asesor') && !this.router.url.includes('mapa-asesores')) || this.router.url.includes('hoja-control-individual');
   }
 
   get isLoginPage(): boolean {

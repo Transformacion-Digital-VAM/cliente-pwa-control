@@ -4,6 +4,7 @@ import { DexieService } from '../database/dexie.service';
 import { GrupoPayload } from '../models/grupo.model';
 import { Observable, from, throwError, forkJoin, of } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
@@ -12,9 +13,9 @@ export class GrupoService {
     // private apiUrlGrupo = 'http://localhost:3000/api/grupos';
     // private apiUrlMiembro = 'http://localhost:3000/api/miembros';
     // private apiUrlCredito = 'http://localhost:3000/api/creditos';
-    private apiUrlGrupo = 'http://192.168.1.82:3000/api/grupos';
-    private apiUrlMiembro = 'http://192.168.1.82:3000/api/miembros';
-    private apiUrlCredito = 'http://192.168.1.82:3000/api/creditos';
+    private apiUrlGrupo = `${environment.apiUrl}/grupos`;
+    private apiUrlMiembro = `${environment.apiUrl}/miembros`;
+    private apiUrlCredito = `${environment.apiUrl}/creditos`;
 
     constructor(
         private http: HttpClient,
@@ -97,8 +98,8 @@ export class GrupoService {
     }
 
     getAsesores(): Observable<any> {
-        // return this.http.get(`http://localhost:3000/api/users/asesores`);
-        return this.http.get(`http://192.168.1.82:3000/api/users/asesores`);
+        // return this.http.get(`http://localhost:3000/api/grupos/asesores`);
+        return this.http.get(`${this.apiUrlGrupo}/asesores`);
     }
 
     getMiembros(): Observable<any> {
@@ -107,6 +108,18 @@ export class GrupoService {
 
     getCreditos(): Observable<any> {
         return this.http.get(`${this.apiUrlCredito}/`);
+    }
+
+    getCoordinaciones(): Observable<any> {
+        return this.http.get(`${this.apiUrlGrupo}/coordinacion`);
+    }
+
+    registrarPago(creditoId: string, pagoParams: any): Observable<any> {
+        return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams);
+    }
+
+    registrarAhorro(creditoId: string, ahorroParams: any): Observable<any> {
+        return this.http.post(`${this.apiUrlCredito}/${creditoId}/ahorro`, ahorroParams);
     }
 
     private guardarLocal(payload: GrupoPayload): Observable<any> {

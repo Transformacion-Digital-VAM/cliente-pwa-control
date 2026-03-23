@@ -2,13 +2,15 @@ import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { DexieService } from '../../core/database/dexie.service';
 import { from, firstValueFrom } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
 })
 export class AuthService {
     // private apiUrl = 'http://localhost:3000/api/users';
-    private apiUrl = 'http://192.168.1.82:3000/api/users';
+    // private apiUrl = 'http://192.168.1.237:3000/api/users';
+    private apiUrl = `${environment.apiUrl}/users`;
 
     constructor(private http: HttpClient, private dexie: DexieService) { }
 
@@ -17,7 +19,7 @@ export class AuthService {
             try {
                 const response: any = await firstValueFrom(
                     // this.http.post('http://localhost:3000/api/users/login', credentials)
-                    this.http.post('http://192.168.1.82:3000/api/users/login', credentials)
+                    this.http.post(`${this.apiUrl}/login`, credentials)
                 );
                 // Persistimos sesión para uso offline futuro
                 await this.dexie.user_session.put({

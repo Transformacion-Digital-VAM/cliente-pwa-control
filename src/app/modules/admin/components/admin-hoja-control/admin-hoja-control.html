@@ -28,17 +28,17 @@
 
           <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div class="w-full lg:max-w-2xl space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo <span class="text-red-500">*</span></label>
               <input type="text" formControlName="nombreGrupo" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="Nombre del Grupo">
             </div>
 
             <div class="flex items-end space-x-4">
               <div class="w-28 space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Clave</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Clave <span class="text-red-500">*</span></label>
                 <input type="text" formControlName="clave" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center font-mono focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="00000">
               </div>
               <div class="w-full sm:max-w-[12rem] space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asesor</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asesor <span class="text-red-500">*</span></label>
                 <div class="relative">
                   <select formControlName="asesor" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-10 hover:border-blue-400">
                     <option value="" disabled selected>Seleccione al asesor</option>
@@ -50,11 +50,11 @@
                 </div>
               </div>
               <div class="w-24 space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Ciclo</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Ciclo <span class="text-red-500">*</span></label>
                 <input type="number" formControlName="cicloActual" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="1" min="1">
               </div>
               <div class="w-28 space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Tasa de Interés %</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Tasa de Interés % <span class="text-red-500">*</span></label>
                 <div class="relative">
                   <input type="number" formControlName="tasa" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center pr-7 focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="0.00">
                   <span class="absolute right-3 top-3 text-slate-500 font-bold text-xs">%</span>
@@ -69,18 +69,18 @@
           <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-8">
             <div class="flex flex-col md:flex-row gap-4 w-full lg:max-w-2xl">
               <div class="flex-1 space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span class="text-red-500">*</span></label>
                 <select formControlName="diaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
                   <option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option>
                 </select>
               </div>
               <div class="flex-1 space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago</label>
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago <span class="text-red-500">*</span></label>
                 <input type="date" formControlName="fechaPrimerPago" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
               </div>
             </div>
             <div class="w-full lg:w-48 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de Visita</label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de Visita <span class="text-red-500">*</span></label>
               <input type="time" formControlName="horaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
           </div>
@@ -100,11 +100,11 @@
                 <thead class="bg-slate-100 border-b border-slate-300">
                   <tr>
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-16">No.</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre del Integrante</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo Credito</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-48">Cargo</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Pago Pactado</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre del Integrante <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo Credito <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-48">Cargo <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Pago Pactado <span class="text-red-500">*</span></th>
                     <th class="px-6 py-4 text-center text-xs font-bold text-red-500 uppercase tracking-widest">Acción</th>
                   </tr>
                 </thead>

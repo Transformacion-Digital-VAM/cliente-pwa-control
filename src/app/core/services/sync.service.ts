@@ -3,6 +3,7 @@ import { HttpClient } from '@angular/common/http';
 import { DexieService } from '../database/dexie.service';
 import { first } from 'rxjs/operators';
 import { firstValueFrom, forkJoin } from 'rxjs';
+import { environment } from '../../../environments/environment';
 
 @Injectable({
     providedIn: 'root'
@@ -11,9 +12,9 @@ export class SyncService {
     // private apiUrlGrupo = 'http://localhost:3000/api/grupos';
     // private apiUrlMiembro = 'http://localhost:3000/api/miembros';
     // private apiUrlCredito = 'http://localhost:3000/api/creditos';
-    private apiUrlGrupo = 'http://192.168.1.82:3000/api/grupos';
-    private apiUrlMiembro = 'http://192.168.1.82:3000/api/miembros';
-    private apiUrlCredito = 'http://192.168.1.82:3000/api/creditos';
+    private apiUrlGrupo = `${environment.apiUrl}/grupos`;
+    private apiUrlMiembro = `${environment.apiUrl}/miembros`;
+    private apiUrlCredito = `${environment.apiUrl}/creditos`;
 
     constructor(
         private http: HttpClient,

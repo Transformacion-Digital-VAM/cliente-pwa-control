@@ -32,7 +32,9 @@
       "name": "api-grupos",
       "urls": [
         "*/api/grupos/**",
-        "*/api/miembros/**"
+        "*/api/miembros/**",
+        "*/api/creditos/**",
+        "*/api/clientes/**"
       ],
       "cacheConfig": {
         "maxSize": 50,

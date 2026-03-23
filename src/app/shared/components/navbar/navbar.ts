@@ -39,7 +39,7 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   private checkRoute(url: string) {
-    this.isAsesorPage = url.includes('asesor');
+    this.isAsesorPage = (url.includes('asesor') && !url.includes('mapa-asesores')) || url.includes('hoja-control-individual');
     this.isLoginPage = url.includes('login') || url === '/';
     this.cdr.detectChanges();
   }

@@ -5,6 +5,7 @@ import { DexieService } from '../../../core/database/dexie.service';
 import { firstValueFrom } from 'rxjs';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
+import { environment } from '../../../../environments/environment';
 
 @Component({
   selector: 'app-login',
@@ -42,7 +43,7 @@ export class LoginComponent {
       try {
         const response: any = await firstValueFrom(
           // this.http.post('http://localhost:3000/api/users/login', this.loginData)
-          this.http.post('http://192.168.1.82:3000/api/users/login', this.loginData)
+          this.http.post(`${environment.apiUrl}/users/login`, this.loginData)
         );
 
         // Guardar sesión en Dexie

@@ -2,6 +2,9 @@ import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angu
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { Router } from '@angular/router';
 import { GrupoService } from '../../../../core/services/grupo.service';
+import { NotificationService } from '../../../../core/services/notification.service';
+import { forkJoin } from 'rxjs';
+import { AuthService } from '../../../../core/services/auth.service';
 
 @Component({
     selector: 'app-asesor-lista-grupos',
@@ -12,6 +15,7 @@ import { GrupoService } from '../../../../core/services/grupo.service';
 })
 export class AsesorListaGrupos implements OnInit {
     asesorName: string = '';
+    hoyStr: string = '';
     grupos: any[] = [];
     gruposResumen: { [grupoId: string]: { pagosTotal: number; saldoPendiente: number; tieneSolidarios: boolean } } = {};
     cargando: boolean = true;
@@ -19,11 +23,16 @@ export class AsesorListaGrupos implements OnInit {
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object,
         private grupoService: GrupoService,
+        private authService: AuthService,
+        private notificationService: NotificationService,
         private router: Router,
         private cdr: ChangeDetectorRef
     ) { }
 
     ngOnInit(): void {
+        const dias = ['Domingo', 'Lunes', 'Martes', 'Miercoles', 'Jueves', 'Viernes', 'Sabado'];
+        this.hoyStr = dias[new Date().getDay()];
+
         if (isPlatformBrowser(this.platformId)) {
             const userStr = localStorage.getItem('user');
             if (userStr) {
@@ -43,32 +52,47 @@ export class AsesorListaGrupos implements OnInit {
         this.grupoService.getGrupos().subscribe({
             next: (grupos: any[]) => {
                 this.grupos = grupos;
+                // Verificar si hay grupos nuevos asignados → notificar
+                this.notificationService.verificarNuevosGrupos(this.grupos);
                 this.grupos.forEach(g => {
                     this.gruposResumen[g._id] = { pagosTotal: 0, saldoPendiente: 0, tieneSolidarios: false };
                 });
 
-                this.grupoService.getMiembros().subscribe({
-                    next: (miembros: any[]) => {
-                        // Calcular resumenes usando los posibles pagos pactados (mock o del pagoPactado del array)
-                        // Ya que el backend de abonos aun no existe, vamos a parsear la deuda y pagos solidarios basándonos en los datos disponibles.
-                        miembros.forEach(m => {
+                forkJoin({
+                    miembrosAll: this.grupoService.getMiembros(),
+                    creditosAll: this.grupoService.getCreditos()
+                }).subscribe({
+                    next: (res: any) => {
+                        const miembros = res.miembrosAll || [];
+                        const creditos = res.creditosAll.creditos || res.creditosAll || [];
+
+                        miembros.forEach((m: any) => {
                             const grupoId = m.grupo?._id || m.grupo;
                             if (grupoId && this.gruposResumen[grupoId]) {
-                                // Simulando que 'pagoPactado' es lo que debe pagar y vamos a poner un placeholder de pagos
-                                const cuota = m.pagoPactado || 500;
-                                // Simular que algunos abonos existen, otros no. Idealmente aca consultariamos a getCreditos u otro endopint de abonos.
-                                // Para modo de ejemplo / prueba:
-                                this.gruposResumen[grupoId].saldoPendiente += cuota;
+                                // Find credit for this member
+                                const credito = creditos.find((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
 
-                                // Simulación de revisión de solidarios: si una bandera "esSolidario" existiera en el miembro o crédito...
-                                // Vamos a poner false por defecto, a menos que m.solidarioActivo sea un property.
+                                if (credito) {
+                                    const saldoPendiente = credito.saldoPendiente || 0;
+                                    const saldoTotal = credito.saldoTotal || 0;
+                                    const totalPagado = saldoTotal - saldoPendiente;
+
+                                    this.gruposResumen[grupoId].saldoPendiente += saldoPendiente;
+                                    this.gruposResumen[grupoId].pagosTotal += totalPagado;
+
+                                    // Check solidario
+                                    const tieneSolidario = credito.pagos && credito.pagos.some((p: any) => p.pagoSolidario === true);
+                                    if (tieneSolidario) {
+                                        this.gruposResumen[grupoId].tieneSolidarios = true;
+                                    }
+                                }
                             }
                         });
                         this.cargando = false;
                         this.cdr.detectChanges();
                     },
                     error: (err) => {
-                        console.error('Error al obtener miembros:', err);
+                        console.error('Error al obtener miembros y creditos:', err);
                         this.cargando = false;
                         this.cdr.detectChanges();
                     }
@@ -88,5 +112,14 @@ export class AsesorListaGrupos implements OnInit {
 
     volver(): void {
         this.router.navigate(['/home-asesor']);
+    }
+
+    irAInicio(): void {
+        this.router.navigate(['/home-asesor']);
+    }
+
+    logout(): void {
+        this.authService.logout();
+        this.router.navigate(['/login']);
     }
 }

@@ -4,6 +4,8 @@ import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import { GrupoService } from '../../../../core/services/grupo.service';
+import { ClienteService } from '../../../../core/services/cliente.service';
+import { NotificationService } from '../../../../core/services/notification.service';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -14,6 +16,7 @@ import Swal from 'sweetalert2';
   styleUrl: './admin-home.css',
 })
 export class AdminHome implements OnInit {
+  elementosPrincipales: any[] = [];
   grupos: any[] = [];
   creditos: any[] = [];
   asesoresList: any[] = [];
@@ -25,10 +28,13 @@ export class AdminHome implements OnInit {
   searchTerm: string = '';
   selectedCoordinacionId: string = 'todas';
   selectedAsesorId: string = 'todos';
+  activeTab: 'grupos' | 'individuales' = 'grupos';
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
-    private grupoService: GrupoService
+    private grupoService: GrupoService,
+    private clienteService: ClienteService,
+    private notificationService: NotificationService
   ) { }
 
   ngOnInit() {
@@ -51,11 +57,14 @@ export class AdminHome implements OnInit {
     forkJoin({
       miembros: this.grupoService.getMiembros(),
       creditos: this.grupoService.getCreditos(),
-      asesores: this.grupoService.getAsesores()
+      asesores: this.grupoService.getAsesores(),
+      clientes: this.clienteService.getClientes(),
+      coordinaciones: this.grupoService.getCoordinaciones()
     }).subscribe({
       next: (res: any) => {
-        // Guardar asesores
+        // Guardar asesores y coordinaciones
         this.asesoresList = res.asesores || [];
+        this.coordinacionesList = res.coordinaciones || [];
 
         // Extraer coordinaciones únicas
         const coordMap = new Map();
@@ -74,7 +83,7 @@ export class AdminHome implements OnInit {
             });
           }
         });
-        this.coordinacionesList = Array.from(coordMap.values());
+         // Coordinaciones cargadas desde el servicio
 
         // Mapear grupos desde miembros
         const tempGrupos: { [key: string]: any } = {};
@@ -83,7 +92,7 @@ export class AdminHome implements OnInit {
             if (m.grupo && m.grupo._id) {
               const gId = m.grupo._id;
               if (!tempGrupos[gId]) {
-                tempGrupos[gId] = { ...m.grupo, integrantes: [] };
+                tempGrupos[gId] = { ...m.grupo, integrantes: [], tipo: 'GRUPO' };
               }
               tempGrupos[gId].integrantes.push(m);
             }
@@ -91,8 +100,24 @@ export class AdminHome implements OnInit {
         }
         this.grupos = Object.values(tempGrupos);
 
+        // Procesar clientes individuales
+        const clientesInd = res.clientes ? res.clientes.map((c: any) => ({
+          ...c,
+          tipo: 'INDIVIDUAL'
+        })) : [];
+
+        // Combinar en lista principal
+        this.elementosPrincipales = [...this.grupos, ...clientesInd];
+
         // Guardar créditos
         this.creditos = res.creditos.creditos || res.creditos;
+
+        // Verificar si alguna hoja de control se completó → notificar
+        this.notificationService.verificarHojasCompletadas(
+          this.grupos,
+          this.creditos,
+          res.miembros || []
+        );
 
         this.isLoading = false;
       },
@@ -114,16 +139,24 @@ export class AdminHome implements OnInit {
   }
 
   get filteredGrupos() {
-    return this.grupos.filter(g => {
+    return this.filteredElementos; // Hacemos alias para evitar modificar demasiado si hay usos externos, aunque preferiremos filteredElementos
+  }
+
+  get filteredElementos() {
+    return this.elementosPrincipales.filter(item => {
+      // Filtrar por Pestaña Activa (Grupos vs Individuales)
+      if (this.activeTab === 'grupos' && item.tipo !== 'GRUPO') return false;
+      if (this.activeTab === 'individuales' && item.tipo !== 'INDIVIDUAL') return false;
+
       // Filtrar por Coordinación
       if (this.selectedCoordinacionId !== 'todas') {
-        const gAsesorId = g.asesor?._id || g.asesor;
-        const idAComparar = typeof gAsesorId === 'object' ? gAsesorId?._id : gAsesorId;
-        const asesorDelGrupo = this.asesoresList.find(a => a._id === idAComparar);
+        const itemAsesorId = item.asesor?._id || item.asesor;
+        const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
+        const asesorDelElemento = this.asesoresList.find(a => a._id === idAComparar);
 
-        if (!asesorDelGrupo || !asesorDelGrupo.coordinacion) return false;
+        if (!asesorDelElemento || !asesorDelElemento.coordinacion) return false;
 
-        const aCoordId = (asesorDelGrupo.coordinacion && typeof asesorDelGrupo.coordinacion === 'object') ? asesorDelGrupo.coordinacion._id : asesorDelGrupo.coordinacion;
+        const aCoordId = (asesorDelElemento.coordinacion && typeof asesorDelElemento.coordinacion === 'object') ? asesorDelElemento.coordinacion._id : asesorDelElemento.coordinacion;
         if (aCoordId !== this.selectedCoordinacionId) {
           return false;
         }
@@ -131,9 +164,9 @@ export class AdminHome implements OnInit {
 
       // Filtrar por Asesor (Tab)
       if (this.selectedAsesorId !== 'todos') {
-        const gAsesorId = g.asesor?._id || g.asesor;
+        const itemAsesorId = item.asesor?._id || item.asesor;
         // convert objects if they exist
-        const idAComparar = typeof gAsesorId === 'object' ? gAsesorId?._id : gAsesorId;
+        const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
         if (idAComparar !== this.selectedAsesorId) {
           return false;
         }
@@ -142,8 +175,8 @@ export class AdminHome implements OnInit {
       // Filtrar por Búsqueda (Texto)
       if (this.searchTerm && this.searchTerm.trim() !== '') {
         const term = this.searchTerm.toLowerCase();
-        const matchClave = g.clave && g.clave.toString().toLowerCase().includes(term);
-        const matchNombre = g.nombre && g.nombre.toLowerCase().includes(term);
+        const matchClave = item.clave && item.clave.toString().toLowerCase().includes(term);
+        const matchNombre = item.nombre && item.nombre.toLowerCase().includes(term);
         if (!matchClave && !matchNombre) return false;
       }
 
@@ -157,26 +190,91 @@ export class AdminHome implements OnInit {
     );
   }
 
-  descargarInfoGrupo(grupo: any, event: Event) {
-    event.stopPropagation();
-    Swal.fire({
-      icon: 'info',
-      title: 'Función en desarrollo',
-      text: `Generar Información del Grupo: ${grupo.nombre}`,
-      confirmButtonColor: '#3085d6'
-    });
-    // Aquí puedes implementar la lógica para exportar a Excel, PDF, etc.
+  getCreditoDeCliente(clienteId: string) {
+    return this.creditos.find(c =>
+      c.cliente && (c.cliente._id === clienteId || c.cliente === clienteId)
+    );
   }
 
-  descargarGarantias(grupo: any, event: Event) {
+  descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
-    Swal.fire({
-      icon: 'info',
-      title: 'Función en desarrollo',
-      text: `Generar Tabla de Garantías/Grupo: ${grupo.nombre}`,
-      confirmButtonColor: '#3085d6'
-    });
-    // Aquí puedes implementar la lógica para emitir el reporte final parecido al de la imagen.
+    
+    // Buscar el ciclo del grupo a partir de sus créditos
+    let ciclo = 1;
+    if (grupo.integrantes && grupo.integrantes.length > 0) {
+      const primerMiembro = grupo.integrantes[0];
+      const credito = this.getCreditoDeMiembro(primerMiembro._id);
+      if (credito && credito.ciclo) {
+        ciclo = credito.ciclo;
+      }
+    }
+
+    // Descargar el PDF completo (3 hojas juntas)
+    const host = window.location.hostname;
+    const url = `http://${host}:3000/api/creditos/hoja-control/${grupo._id}/${ciclo}`;
+    window.open(url, '_blank');
+  }
+
+  descargarInfoGrupoLlena(grupo: any, event: Event) {
+    event.stopPropagation();
+    
+    // Buscar el ciclo del grupo a partir de sus créditos
+    let ciclo = 1;
+    if (grupo.integrantes && grupo.integrantes.length > 0) {
+      const primerMiembro = grupo.integrantes[0];
+      const credito = this.getCreditoDeMiembro(primerMiembro._id);
+      if (credito && credito.ciclo) {
+        ciclo = credito.ciclo;
+      }
+    }
+
+    // Descargar el PDF completo pero lleno
+    const host = window.location.hostname;
+    const url = `http://${host}:3000/api/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
+    window.open(url, '_blank');
+  }
+
+  descargarInfoIndividual(cliente: any, event: Event) {
+    event.stopPropagation();
+    
+    // Buscar el ciclo del cliente a partir de sus créditos
+    let ciclo = 1;
+    const credito = this.getCreditoDeCliente(cliente._id);
+    if (credito && credito.ciclo) {
+      ciclo = credito.ciclo;
+    }
+
+    const host = window.location.hostname;
+    const url = `http://${host}:3000/api/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
+    window.open(url, '_blank');
+  }
+
+  descargarInfoIndividualLlena(cliente: any, event: Event) {
+    event.stopPropagation();
+    
+    // Buscar el ciclo del cliente a partir de sus créditos
+    let ciclo = 1;
+    const credito = this.getCreditoDeCliente(cliente._id);
+    if (credito && credito.ciclo) {
+      ciclo = credito.ciclo;
+    }
+
+    const host = window.location.hostname;
+    const url = `http://${host}:3000/api/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
+    window.open(url, '_blank');
+  }
+
+  limpiarFiltros() {
+    this.searchTerm = '';
+    this.selectedCoordinacionId = 'todas';
+    this.activeTab = 'grupos';
+  }
+
+  getNombreCoordinacion(id: any): string {
+    if (!id) return 'Sin Coor.';
+    const idStr = typeof id === 'object' ? id._id : id;
+    const coord = this.coordinacionesList.find(c => c._id === idStr);
+    return coord ? coord.nombre : `ID: ${idStr.toString().substring(idStr.toString().length - 4)}`;
   }
 
   toggleGroup(groupId: string) {

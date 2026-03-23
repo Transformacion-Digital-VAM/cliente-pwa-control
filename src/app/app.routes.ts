@@ -6,6 +6,9 @@ import { AdminHome } from './modules/admin/components/admin-home/admin-home';
 import { AsesorHome } from './modules/asesor/components/asesor-home/asesor-home';
 import { AsesorListaGrupos } from './modules/asesor/components/asesor-lista-grupos/asesor-lista-grupos';
 import { AdminHojaControlInd } from './modules/admin/components/admin-hoja-control-ind/admin-hoja-control-ind';
+import { AsesorListaClientes } from './modules/asesor/components/asesor-lista-clientes/asesor-lista-clientes';
+import { AsesorHojaControlInd } from './modules/asesor/components/asesor-hoja-control-ind/asesor-hoja-control-ind';
+import { AdminMapaAsesores } from './modules/admin/components/admin-mapa-asesores/admin-mapa-asesores';
 import { roleGuard, noAuthGuard } from './core/guards/auth.guard';
 
 
@@ -14,9 +17,12 @@ export const routes: Routes = [
     { path: 'login', component: LoginComponent, canActivate: [noAuthGuard] },
     { path: 'hoja-control-admin', component: AdminHojaControl, canActivate: [roleGuard(['admin'])] },
     { path: 'hoja-control-admin-ind', component: AdminHojaControlInd, canActivate: [roleGuard(['admin'])] },
+    { path: 'mapa-asesores', component: AdminMapaAsesores, canActivate: [roleGuard(['admin'])] },
     { path: 'hoja-control-asesor/:id', component: AsesorHojaControl, canActivate: [roleGuard(['user', 'asesor'])] },
     { path: 'home-admin', component: AdminHome, canActivate: [roleGuard(['admin'])] },
     { path: 'home-asesor', component: AsesorHome, canActivate: [roleGuard(['user', 'asesor'])] },
     { path: 'grupos-asesor', component: AsesorListaGrupos, canActivate: [roleGuard(['user', 'asesor'])] },
+    { path: 'clientes-asesor', component: AsesorListaClientes, canActivate: [roleGuard(['user', 'asesor'])] },
+    { path: 'hoja-control-individual/:id', component: AsesorHojaControlInd, canActivate: [roleGuard(['user', 'asesor'])] },
     { path: '**', redirectTo: 'login' }
 ];
