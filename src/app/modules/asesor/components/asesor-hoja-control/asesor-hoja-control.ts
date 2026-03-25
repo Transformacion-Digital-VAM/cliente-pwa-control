@@ -213,11 +213,17 @@ export class AsesorHojaControl implements OnInit {
     });
 
     forkJoin(peticiones).subscribe({
-      next: (resp) => {
-        Swal.fire('Éxito', 'Pagos registrados correctamente', 'success').then(() => {
+      next: (responses) => {
+        const isOffline = responses.some(r => r.offline);
+        const message = isOffline
+          ? 'Los pagos se han guardado localmente (Sin internet) y se subirán al servidor automáticamente al recuperar la señal.'
+          : 'Pagos registrados correctamente';
+
+        Swal.fire('Éxito', message, 'success').then(() => {
           this.router.navigate(['/home-asesor']);
         });
       },
+
       error: (err) => {
         Swal.fire('Error', 'Hubo un error al registrar los pagos', 'error');
         console.error(err);

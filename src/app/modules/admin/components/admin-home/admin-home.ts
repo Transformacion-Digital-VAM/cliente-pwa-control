@@ -6,6 +6,7 @@ import { forkJoin } from 'rxjs';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { ClienteService } from '../../../../core/services/cliente.service';
 import { NotificationService } from '../../../../core/services/notification.service';
+import { environment } from '../../../../../environments/environment';
 import Swal from 'sweetalert2';
 
 @Component({
@@ -210,8 +211,7 @@ export class AdminHome implements OnInit {
     }
 
     // Descargar el PDF completo (3 hojas juntas)
-    const host = window.location.hostname;
-    const url = `http://${host}:3000/api/creditos/hoja-control/${grupo._id}/${ciclo}`;
+    const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}`;
     window.open(url, '_blank');
   }
 
@@ -229,8 +229,7 @@ export class AdminHome implements OnInit {
     }
 
     // Descargar el PDF completo pero lleno
-    const host = window.location.hostname;
-    const url = `http://${host}:3000/api/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
+    const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
     window.open(url, '_blank');
   }
 
@@ -244,8 +243,7 @@ export class AdminHome implements OnInit {
       ciclo = credito.ciclo;
     }
 
-    const host = window.location.hostname;
-    const url = `http://${host}:3000/api/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
+    const url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
     window.open(url, '_blank');
   }
 
@@ -259,8 +257,7 @@ export class AdminHome implements OnInit {
       ciclo = credito.ciclo;
     }
 
-    const host = window.location.hostname;
-    const url = `http://${host}:3000/api/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
+    const url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
     window.open(url, '_blank');
   }
 

@@ -110,6 +110,7 @@ export class AsesorListaClientes implements OnInit {
           return {
             ...c,
             creditoActivo: creditoCliente,
+            montoPactado: creditoCliente ? creditoCliente.pagoPactado : 0,
             estadoFiltro: estado === 'Liquidado' ? 'Liquidados' : (estado === 'Sin Crédito' ? 'Todos' : 'Activos'),
             tienePagoHoy: tienePagoHoy,
             diaVisitaStr: c.diaPago ? c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ''

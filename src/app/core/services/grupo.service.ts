@@ -107,20 +107,95 @@ export class GrupoService {
     }
 
     getCreditos(): Observable<any> {
-        return this.http.get(`${this.apiUrlCredito}/`);
+        return this.http.get(`${this.apiUrlCredito}/`).pipe(
+            map((res: any) => {
+                const creditos = res.creditos || res || [];
+                if (Array.isArray(creditos)) {
+                    this.dexie.table('creditos').clear().then(() => {
+                        this.dexie.table('creditos').bulkAdd(creditos);
+                    });
+                }
+                return res;
+            }),
+            catchError(error => {
+                if (!navigator.onLine || error.status === 0) {
+                    console.log('[GrupoService] Cargando créditos desde Dexie (Offline)');
+                    return from(this.dexie.table('creditos').toArray()).pipe(
+                        map(creditos => ({ creditos })) // Envolver en objeto para mantener compatibilidad
+                    );
+                }
+                return throwError(() => error);
+            })
+        );
     }
+
 
     getCoordinaciones(): Observable<any> {
         return this.http.get(`${this.apiUrlGrupo}/coordinacion`);
     }
 
     registrarPago(creditoId: string, pagoParams: any): Observable<any> {
-        return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams);
+        const isOnline = navigator.onLine;
+        if (!isOnline) {
+            return this.guardarPagoLocal(creditoId, pagoParams);
+        }
+
+        return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
+            catchError(error => {
+                if (!navigator.onLine || error.status === 0) {
+                    return this.guardarPagoLocal(creditoId, pagoParams);
+                }
+                return throwError(() => error);
+            })
+        );
     }
 
     registrarAhorro(creditoId: string, ahorroParams: any): Observable<any> {
-        return this.http.post(`${this.apiUrlCredito}/${creditoId}/ahorro`, ahorroParams);
+        const isOnline = navigator.onLine;
+        if (!isOnline) {
+            return this.guardarAhorroLocal(creditoId, ahorroParams);
+        }
+
+        return this.http.post(`${this.apiUrlCredito}/${creditoId}/ahorro`, ahorroParams).pipe(
+            catchError(error => {
+                if (!navigator.onLine || error.status === 0) {
+                    return this.guardarAhorroLocal(creditoId, ahorroParams);
+                }
+                return throwError(() => error);
+            })
+        );
     }
+
+    private guardarPagoLocal(creditoId: string, pagoParams: any): Observable<any> {
+        return from(
+            this.dexie.syncQueue.add({
+                type: 'POST_PAGO',
+                data: { creditoId, pagoParams },
+                timestamp: Date.now()
+            })
+        ).pipe(
+            map(() => ({
+                offline: true,
+                message: 'Pago guardado localmente (Sin internet). Se sincronizará automáticamente.'
+            }))
+        );
+    }
+
+    private guardarAhorroLocal(creditoId: string, ahorroParams: any): Observable<any> {
+        return from(
+            this.dexie.syncQueue.add({
+                type: 'POST_AHORRO',
+                data: { creditoId, ahorroParams },
+                timestamp: Date.now()
+            })
+        ).pipe(
+            map(() => ({
+                offline: true,
+                message: 'Ahorro guardado localmente (Sin internet). Se sincronizará automáticamente.'
+            }))
+        );
+    }
+
 
     private guardarLocal(payload: GrupoPayload): Observable<any> {
         return from(

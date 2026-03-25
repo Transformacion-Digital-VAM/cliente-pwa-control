@@ -28,16 +28,26 @@ export class SyncService {
     }
 
     private initSyncListener() {
+        // Al recuperar conexión
         window.addEventListener('online', () => {
-            console.log('[SyncService] Conexión recuperada, intentando sincronizar...');
+            console.log('[SyncService] Conexión detectada (online event).');
             this.syncData();
         });
 
+        // Al iniciar, si ya hay internet y la app está estable
         this.appRef.isStable.pipe(
             first(isStable => isStable === true)
         ).subscribe(() => {
-            if (navigator.onLine) this.syncData();
+            console.log('[SyncService] App estable, verificando conexión...');
+            if (navigator.onLine) {
+                this.syncData();
+            }
         });
+
+        // Verificación inmediata por si acaso (poco después de arrancar)
+        if (typeof navigator !== 'undefined' && navigator.onLine) {
+            setTimeout(() => this.syncData(), 3000);
+        }
     }
 
     async syncData() {
@@ -101,6 +111,33 @@ export class SyncService {
                         console.log(`[SyncService] Sincronización exitosa para elemento ${item.id}`);
                     } catch (error: any) {
                         console.error(`[SyncService] Error al sincronizar elemento ${item.id}`, error);
+                    }
+                } else if (item.type === 'POST_PAGO') {
+                    try {
+                        const { creditoId, pagoParams } = item.data;
+                        await firstValueFrom(this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams));
+                        await this.dexie.syncQueue.delete(item.id!);
+                        console.log(`[SyncService] Pago sincronizado correctamente: ${item.id}`);
+                    } catch (error: any) {
+                        console.error(`[SyncService] Error al sincronizar Pago ${item.id}`, error);
+                    }
+                } else if (item.type === 'POST_AHORRO') {
+                    try {
+                        const { creditoId, ahorroParams } = item.data;
+                        await firstValueFrom(this.http.post(`${this.apiUrlCredito}/${creditoId}/ahorro`, ahorroParams));
+                        await this.dexie.syncQueue.delete(item.id!);
+                        console.log(`[SyncService] Ahorro sincronizado correctamente: ${item.id}`);
+                    } catch (error: any) {
+                        console.error(`[SyncService] Error al sincronizar Ahorro ${item.id}`, error);
+                    }
+                } else if (item.type === 'PUT_CREDITO') {
+                    try {
+                        const { creditoId, payload } = item.data;
+                        await firstValueFrom(this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload));
+                        await this.dexie.syncQueue.delete(item.id!);
+                        console.log(`[SyncService] Crédito actualizado correctamente: ${item.id}`);
+                    } catch (error: any) {
+                        console.error(`[SyncService] Error al sincronizar actualización de Crédito ${item.id}`, error);
                     }
                 }
             }

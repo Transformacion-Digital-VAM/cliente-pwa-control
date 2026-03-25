@@ -19,11 +19,14 @@ export class DexieService extends Dexie {
     constructor() {
         super('pwa-hcontrol');
         if (typeof indexedDB !== 'undefined') {
-            this.version(3).stores({
+            this.version(4).stores({
                 syncQueue: '++id, type, timestamp',
                 user_session: 'user, token, role, lastLogin',
-                grupos: '++id, clave, nombre'
+                grupos: '++id, clave, nombre',
+                clientes: '++id, _id, nombre, apellidos',
+                creditos: '++id, _id, miembro, cliente'
             });
         }
+
     }
 }

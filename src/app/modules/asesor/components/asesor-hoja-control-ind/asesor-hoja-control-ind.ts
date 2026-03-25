@@ -196,15 +196,20 @@ export class AsesorHojaControlInd implements OnInit {
     // Usamos actualizarCredito (PUT) para eludir la validación del POST /pagos del backend
     this.clienteService.actualizarCredito(this.creditoActivo._id, payloadUpdate).subscribe({
       next: (res) => {
+        const isOffline = res.offline;
+        const message = isOffline
+          ? 'El pago se ha guardado localmente (Sin internet) y se subirá automáticamente.'
+          : `Se abonaron $${montoPagado} correctamente.`;
+
         Swal.fire({
           icon: 'success',
-          title: '¡Pago Registrado!',
-          text: `Se abonaron $${montoPagado} correctamente.`,
-          timer: 2000,
+          title: isOffline ? 'Guardado Local' : '¡Pago Registrado!',
+          text: message,
+          timer: 3000,
           showConfirmButton: false
         });
         
-        // Refrescar datos
+        // Refrescar datos (cargará de Dexie si seguimos offline)
         this.cargarDatos();
       },
       error: (err) => {

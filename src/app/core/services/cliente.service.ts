@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
-import { Observable, forkJoin, of, throwError } from 'rxjs';
+import { Observable, forkJoin, of, throwError, from } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 import { DexieService } from '../database/dexie.service';
 import { environment } from '../../../environments/environment';
@@ -72,30 +72,121 @@ export class ClienteService {
    * Obtiene la lista de clientes (el backend filtra si es Asesor o Administrador).
    */
   getClientes(): Observable<any> {
-    return this.http.get(`${this.apiUrlCliente}`);
+    return this.http.get(`${this.apiUrlCliente}`).pipe(
+      map((clientes: any) => {
+        // Guardar en Dexie para uso offline
+        if (Array.isArray(clientes)) {
+          this.dexie.table('clientes').clear().then(() => {
+            this.dexie.table('clientes').bulkAdd(clientes);
+          });
+        }
+        return clientes;
+      }),
+      catchError(error => {
+        if (!navigator.onLine || error.status === 0) {
+          console.log('[ClienteService] Cargando clientes desde Dexie (Offline)');
+          return from(this.dexie.table('clientes').toArray());
+        }
+        return throwError(() => error);
+      })
+    );
   }
+
 
   /**
    * Obtiene todos los créditos (incluyendo los individuales).
    */
   getCreditos(): Observable<any> {
-    return this.http.get(`${this.apiUrlCredito}/`);
+    return this.http.get(`${this.apiUrlCredito}/`).pipe(
+      map((res: any) => {
+        const creditos = res.creditos || res || [];
+        if (Array.isArray(creditos)) {
+          this.dexie.table('creditos').clear().then(() => {
+            this.dexie.table('creditos').bulkAdd(creditos);
+          });
+        }
+        return res;
+      }),
+      catchError(error => {
+        if (!navigator.onLine || error.status === 0) {
+          console.log('[ClienteService] Cargando créditos desde Dexie (Offline)');
+          return from(this.dexie.table('creditos').toArray()).pipe(
+            map(creditos => ({ creditos })) // Envolver en objeto para mantener compatibilidad
+          );
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
    * Registra un pago para un crédito (mismo endpoint que en grupos).
    */
   registrarPago(creditoId: string, pagoParams: any): Observable<any> {
-    return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      return this.guardarPagoLocal(creditoId, pagoParams);
+    }
+
+    return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
+      catchError(error => {
+        if (!navigator.onLine || error.status === 0) {
+          return this.guardarPagoLocal(creditoId, pagoParams);
+        }
+        return throwError(() => error);
+      })
+    );
   }
 
   /**
-   * Actualiza un crédito mediante PUT para eludir la validación estricta de 'miembro'
-   * sin modificar el backend. (Workaround para el issue 500)
+   * Actualiza un crédito mediante PUT
    */
   actualizarCredito(creditoId: string, payload: any): Observable<any> {
-    return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload);
+    const isOnline = navigator.onLine;
+    if (!isOnline) {
+      return this.guardarUpdateCreditoLocal(creditoId, payload);
+    }
+
+    return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload).pipe(
+      catchError(error => {
+        if (!navigator.onLine || error.status === 0) {
+          return this.guardarUpdateCreditoLocal(creditoId, payload);
+        }
+        return throwError(() => error);
+      })
+    );
   }
+
+  private guardarPagoLocal(creditoId: string, pagoParams: any): Observable<any> {
+    return from(
+      this.dexie.syncQueue.add({
+        type: 'POST_PAGO',
+        data: { creditoId, pagoParams },
+        timestamp: Date.now()
+      })
+    ).pipe(
+      map(() => ({
+        offline: true,
+        message: 'Pago individual guardado localmente (Sin internet).'
+      }))
+    );
+  }
+
+  private guardarUpdateCreditoLocal(creditoId: string, payload: any): Observable<any> {
+    return from(
+      this.dexie.syncQueue.add({
+        type: 'PUT_CREDITO',
+        data: { creditoId, payload },
+        timestamp: Date.now()
+      })
+    ).pipe(
+      map(() => ({
+        offline: true,
+        message: 'Actualización de crédito guardada localmente (Sin internet).'
+      }))
+    );
+  }
+
 
   private guardarLocal(payload: any): Observable<any> {
     return of({
