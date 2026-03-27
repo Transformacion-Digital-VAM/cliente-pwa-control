@@ -34,6 +34,8 @@ export class ClienteService {
     const bodyCliente = {
       nombre: payload.nombreCliente,
       diaPago: payload.diaPago,
+      tipoPago: payload.tipoPago,
+      grupo: payload.nombreGrupo || '',
       asesor: payload.asesor
     };
 
@@ -50,7 +52,13 @@ export class ClienteService {
           saldoTotal: payload.saldoInicial, // El admin ingresa el saldo inicial
           saldoPendiente: payload.saldoInicial,
           fechaPrimerPago: payload.fechaPrimerPago,
-          garantia: payload.garantia || 0
+          garantia: payload.garantia || 0,
+          montoSolicitado: payload.montoSolicitado,
+          tasaInteres: payload.tasaInteres,
+          equivalenciaMeses: payload.equivalenciaMeses,
+          garantiaPredial: payload.garantiaPredial,
+          grupoOpcional: payload.nombreGrupo,
+          frecuenciaPago: payload.tipoPago
         };
 
         return this.http.post(`${this.apiUrlCredito}/`, bodyCredito).pipe(

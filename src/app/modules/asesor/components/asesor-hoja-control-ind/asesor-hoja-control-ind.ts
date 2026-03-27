@@ -141,6 +141,27 @@ export class AsesorHojaControlInd implements OnInit {
             <label class="block text-sm font-medium text-slate-700 mb-1">Monto a abonar</label>
             <input type="number" id="montoAbonar" class="swal2-input border-slate-300 focus:ring-blue-500 rounded-lg text-center font-bold" value="${pagoPactado}" min="1">
           </div>
+          <div>
+            <label class="block text-sm font-medium text-slate-700 mb-1">Método(s) de Pago</label>
+            <div class="flex flex-wrap justify-center gap-2 mt-2">
+              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
+                <input type="checkbox" name="metodoPago" value="EFECTIVO" checked class="rounded text-blue-600">
+                <span class="text-xs font-bold text-slate-600 uppercase">Efectivo</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
+                <input type="checkbox" name="metodoPago" value="TRANSFERENCIA" class="rounded text-blue-600">
+                <span class="text-xs font-bold text-slate-600 uppercase">Transferencia</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
+                <input type="checkbox" name="metodoPago" value="DEPOSITO" class="rounded text-blue-600">
+                <span class="text-xs font-bold text-slate-600 uppercase">Deposito</span>
+              </label>
+              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
+                <input type="checkbox" name="metodoPago" value="TARJETA" class="rounded text-blue-600">
+                <span class="text-xs font-bold text-slate-600 uppercase">Tarjeta</span>
+              </label>
+            </div>
+          </div>
         </div>
       `,
       showCancelButton: true,
@@ -149,23 +170,31 @@ export class AsesorHojaControlInd implements OnInit {
       confirmButtonColor: '#2563eb',
       cancelButtonColor: '#94a3b8',
       preConfirm: () => {
-        const input = document.getElementById('montoAbonar') as HTMLInputElement;
-        const monto = parseFloat(input.value);
+        const inputMonto = document.getElementById('montoAbonar') as HTMLInputElement;
+        const checkboxes = document.querySelectorAll('input[name="metodoPago"]:checked') as NodeListOf<HTMLInputElement>;
+        
+        const monto = parseFloat(inputMonto.value);
+        const metodos = Array.from(checkboxes).map(cb => cb.value);
+        
         if (!monto || monto <= 0) {
           Swal.showValidationMessage('Ingresa un monto válido mayor a 0');
           return false;
         }
-        return monto;
+        if (metodos.length === 0) {
+          Swal.showValidationMessage('Selecciona al menos un método de pago');
+          return false;
+        }
+        return { monto, metodo: metodos.join(', ') };
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        const montoPagado = result.value;
-        this.procesarPagoEnServidor(montoPagado);
+        const { monto, metodo } = result.value;
+        this.procesarPagoEnServidor(monto, metodo);
       }
     });
   }
 
-  procesarPagoEnServidor(montoPagado: number): void {
+  procesarPagoEnServidor(montoPagado: number, metodoPago: string): void {
     Swal.fire({
       title: 'Procesando...',
       text: 'Guardando el pago del cliente',
@@ -180,7 +209,8 @@ export class AsesorHojaControlInd implements OnInit {
       numeroPago: numeroNuevo,
       montoPagado: montoPagado,
       fechaPago: new Date(),
-      pagoSolidario: false
+      pagoSolidario: false,
+      metodoPago: metodoPago
     };
 
     const nuevosPagos = [...(this.creditoActivo.pagos || []), nuevoPago];

@@ -21,7 +21,7 @@ export class AsesorHojaControl implements OnInit {
   grupo: any = null;
   miembros: any[] = [];
 
-  pagos: { [miembroId: string]: { monto: number, ahorro: number, solidario: boolean, montoSolidario: number, miembroSolidarioId: string, fecha: string } } = {};
+  pagos: { [miembroId: string]: { monto: number, ahorro: number, solidario: boolean, montoSolidario: number, miembroSolidarioId: string, fecha: string, metodoPago: string, selectedMetodos: string[] } } = {};
   expandedMiembroId: string | null = null;
   showAhorroModal: boolean = false;
 
@@ -79,7 +79,7 @@ export class AsesorHojaControl implements OnInit {
         this.miembros = miembrosAll.filter((m: any) => (m.grupo?._id === id) || (m.grupo === id));
         this.miembros.forEach(m => {
           // Default state for form
-          this.pagos[m._id] = { monto: 0, ahorro: 0, solidario: false, montoSolidario: 0, miembroSolidarioId: '', fecha: new Date().toISOString().split('T')[0] };
+          this.pagos[m._id] = { monto: 0, ahorro: 0, solidario: false, montoSolidario: 0, miembroSolidarioId: '', fecha: new Date().toISOString().split('T')[0], metodoPago: 'EFECTIVO', selectedMetodos: ['EFECTIVO'] };
 
           // Encontrar su credito activo para historial
           const credito = creditosAll.find((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
@@ -136,6 +136,26 @@ export class AsesorHojaControl implements OnInit {
   onPagoChange(): void {
     this.cdr.detectChanges();
   }
+  
+  toggleMetodo(miembroId: string, metodo: string): void {
+    const p = this.pagos[miembroId];
+    if (!p.selectedMetodos) p.selectedMetodos = [];
+    
+    const index = p.selectedMetodos.indexOf(metodo);
+    if (index > -1) {
+      if (p.selectedMetodos.length > 1) {
+        p.selectedMetodos.splice(index, 1);
+      }
+    } else {
+      p.selectedMetodos.push(metodo);
+    }
+    p.metodoPago = p.selectedMetodos.join(', ');
+    this.onPagoChange();
+  }
+
+  isMetodoSelected(miembroId: string, metodo: string): boolean {
+    return this.pagos[miembroId]?.selectedMetodos?.includes(metodo) || false;
+  }
 
   guardarPagos(): void {
     const pagosFilterIds = Object.keys(this.pagos);
@@ -174,7 +194,8 @@ export class AsesorHojaControl implements OnInit {
         peticiones.push(this.grupoService.registrarPago(miembroActual.creditoId, {
           montoPagado: p.monto,
           fechaPago: p.fecha,
-          pagoSolidario: false
+          pagoSolidario: false,
+          metodoPago: p.metodoPago
         }));
       }
 
@@ -184,7 +205,8 @@ export class AsesorHojaControl implements OnInit {
           montoPagado: p.montoSolidario,
           fechaPago: p.fecha,
           pagoSolidario: true,
-          miembro: p.miembroSolidarioId // El destino (Beneficiario)
+          miembro: p.miembroSolidarioId, // El destino (Beneficiario)
+          metodoPago: p.metodoPago
         }));
       }
 

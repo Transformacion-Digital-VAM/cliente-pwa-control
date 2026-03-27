@@ -31,8 +31,8 @@ export class GrupoService {
         }
 
         // Adaptamos el payload de Grupo para esquivar error de 'integrantes' en Backend
-        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, ...resto } = payload;
-        const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo };
+        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, ...resto } = payload;
+        const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo, plazoSemanas, plazoMeses };
 
         // Intentar POST del Grupo
         return this.http.post(`${this.apiUrlGrupo}/create`, bodyGrupo).pipe(
@@ -68,7 +68,10 @@ export class GrupoService {
                                     ciclo: cicloActual || 1,
                                     tipoCredito: integ.tipoCredito || 'CC',
                                     pagoPactado: integ.pagoPactado,
-                                    fechaPrimerPago: fechaPrimerPago
+                                    fechaPrimerPago: fechaPrimerPago,
+                                    montoSolicitado: integ.montoSolicitado,
+                                    tasaInteres: integ.tasaInteres,
+                                    semanas: plazoSemanas || 16
                                 };
                                 return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
                             });

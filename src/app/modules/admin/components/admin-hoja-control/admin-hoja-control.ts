@@ -27,9 +27,12 @@ export class AdminHojaControl implements OnInit {
       asesor: ['', Validators.required],
       cicloActual: [1, [Validators.required, Validators.min(1)]],
       tasa: [0, [Validators.required, Validators.min(0)]],
+      plazoSemanas: [16, [Validators.required, Validators.min(1)]],
+      plazoMeses: [4, [Validators.required, Validators.min(1)]],
       diaVisita: ['Lunes', Validators.required],
       fechaPrimerPago: ['', Validators.required],
       horaVisita: ['', Validators.required],
+      porcentajeGarantia: [5, [Validators.required, Validators.min(0)]],
       integrantes: this.fb.array([])
     });
   }
@@ -39,6 +42,53 @@ export class AdminHojaControl implements OnInit {
       this.cargarAsesores();
     }
     this.addIntegrante(); // Añadir un integrante por defecto al inicio
+    this.setupSubscriptions();
+  }
+
+  setupSubscriptions() {
+    // Escuchar cambios en la tasa general, semanas y meses para recalcular todos
+    this.hojaControlForm.valueChanges.subscribe((value) => {
+      // Evitar loop infinito si no es necesario (por eso verificamos en el formArray individual)
+      // Pero para tasa, si cambia la tasa general, actualizamos las individuales si queremos
+      // Dejaremos que individualmente se recalcule la tabla
+    });
+
+    this.hojaControlForm.get('tasa')?.valueChanges.subscribe(tasaValor => {
+      // Al cambiar la tasa general, actualizamos la tasa de todos los integrantes
+      this.integrantes.controls.forEach(ctrl => {
+        ctrl.get('tasaInteres')?.setValue(tasaValor, { emitEvent: true });
+      });
+    });
+
+    // Escuchar cambios en plazos para recalcular todos los pagos pactados
+    this.hojaControlForm.get('plazoSemanas')?.valueChanges.subscribe(() => {
+      this.recularTodosLosPagos();
+    });
+    this.hojaControlForm.get('plazoMeses')?.valueChanges.subscribe(() => {
+      this.recularTodosLosPagos();
+    });
+  }
+
+  recularTodosLosPagos() {
+    this.integrantes.controls.forEach(ctrl => {
+      this.calcularPagoPactado(ctrl as FormGroup);
+    });
+  }
+
+  calcularPagoPactado(integranteForm: FormGroup) {
+    const monto = integranteForm.get('montoSolicitado')?.value || 0;
+    const tasa = integranteForm.get('tasaInteres')?.value || 0;
+    const semanas = this.hojaControlForm.get('plazoSemanas')?.value || 16;
+    const meses = this.hojaControlForm.get('plazoMeses')?.value || 4;
+
+    if (semanas > 0) {
+      // (((Monto * (Tasa/100)) * Meses) + Monto) / Semanas
+      const interes = monto * (tasa / 100) * meses;
+      const saldoTotal = interes + monto;
+      const pagoPactado = saldoTotal / semanas;
+      
+      integranteForm.get('pagoPactado')?.setValue(Number(pagoPactado.toFixed(2)), { emitEvent: false });
+    }
   }
 
   cargarAsesores(): void {
@@ -62,14 +112,29 @@ export class AdminHojaControl implements OnInit {
   }
 
   addIntegrante() {
+    // Obtener la tasa general actual para asignarla por defecto
+    const tasaGeneralActual = this.hojaControlForm.get('tasa')?.value || 0;
+
     const integranteForm = this.fb.group({
       nombre: ['', Validators.required],
       apellidos: ['', Validators.required],
       tipoCredito: ['CC', Validators.required],
       cargo: ['', Validators.required],
-      pagoPactado: [0, [Validators.required, Validators.min(0)]]
+      montoSolicitado: ['', [Validators.required, Validators.min(0)]],
+      pagoPactado: ['', [Validators.required, Validators.min(0)]],
+      tasaInteres: [tasaGeneralActual, [Validators.required, Validators.min(0)]]
     });
+
+    // Suscripción para recalcular si cambia el monto o la tasa individual
+    integranteForm.get('montoSolicitado')?.valueChanges.subscribe(() => {
+      this.calcularPagoPactado(integranteForm);
+    });
+    integranteForm.get('tasaInteres')?.valueChanges.subscribe(() => {
+      this.calcularPagoPactado(integranteForm);
+    });
+
     this.integrantes.push(integranteForm);
+    this.calcularPagoPactado(integranteForm); // Calcular inicial
   }
 
   removeIntegrante(index: number) {
@@ -134,7 +199,10 @@ export class AdminHojaControl implements OnInit {
     this.hojaControlForm.reset({
       diaVisita: 'Lunes',
       cicloActual: 1,
-      tasa: 0
+      tasa: 0,
+      plazoSemanas: 16,
+      plazoMeses: 4,
+      porcentajeGarantia: 5
     });
     this.integrantes.clear();
     this.addIntegrante();

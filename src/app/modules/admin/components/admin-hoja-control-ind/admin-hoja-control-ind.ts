@@ -28,18 +28,55 @@ export class AdminHojaControlInd implements OnInit {
       ciclo: [1, [Validators.required, Validators.min(1)]],
       asesor: ['', Validators.required],
       fechaPrimerPago: ['', Validators.required],
-      saldoInicial: [0, [Validators.required, Validators.min(0)]],
+      montoSolicitado: ['', [Validators.required, Validators.min(0)]],
+      tasaInteres: [0, [Validators.required, Validators.min(0)]],
+      equivalenciaMeses: [4, [Validators.required, Validators.min(1)]],
+      saldoInicial: [0], 
       garantia: [0, [Validators.required, Validators.min(0)]],
+      garantiaPredial: [''],
       periodo: ['Semanal', Validators.required],
-      noPagos: [1, [Validators.required, Validators.min(1)]],
+      tipoPago: ['Semanal', Validators.required],
+      semanas: [16, [Validators.required, Validators.min(1)]],
+      noPagos: [16, [Validators.required, Validators.min(1)]],
       diaPago: ['Lunes', Validators.required],
-      pagoPactado: [0, [Validators.required, Validators.min(0)]]
+      pagoPactado: [0, [Validators.required, Validators.min(0)]],
+      nombreGrupo: ['']
     });
   }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       this.cargarAsesores();
+    }
+    this.setupSubscriptions();
+  }
+
+  setupSubscriptions() {
+    this.hojaControlIndForm.valueChanges.subscribe(() => {
+      this.calcularPagoYTotal();
+    });
+  }
+
+  calcularPagoYTotal() {
+    const monto = this.hojaControlIndForm.get('montoSolicitado')?.value || 0;
+    const tasa = this.hojaControlIndForm.get('tasaInteres')?.value || 0;
+    const meses = this.hojaControlIndForm.get('equivalenciaMeses')?.value || 4;
+    const noPagos = this.hojaControlIndForm.get('noPagos')?.value || 16;
+    
+    // Garantia liquida automatica 5%
+    const garantiaCalculada = monto * 0.05;
+
+    if (noPagos > 0) {
+      const interes = monto * (tasa / 100) * meses;
+      const saldoTotal = interes + monto;
+      const pagoPactado = saldoTotal / noPagos;
+      
+      this.hojaControlIndForm.patchValue({
+        pagoPactado: Number(pagoPactado.toFixed(2)),
+        garantia: Number(garantiaCalculada.toFixed(2)),
+        saldoInicial: saldoTotal,
+        semanas: noPagos // Mantener sincronizado
+      }, { emitEvent: false });
     }
   }
 
@@ -110,12 +147,19 @@ export class AdminHojaControlInd implements OnInit {
   cancelar() {
     this.hojaControlIndForm.reset({
       ciclo: 1,
+      montoSolicitado: '',
+      tasaInteres: 0,
+      equivalenciaMeses: 4,
       saldoInicial: 0,
       garantia: 0,
+      garantiaPredial: '',
       periodo: 'Semanal',
-      noPagos: 1,
+      tipoPago: 'Semanal',
+      noPagos: 16,
+      semanas: 16,
       diaPago: 'Lunes',
-      pagoPactado: 0
+      pagoPactado: 0,
+      nombreGrupo: ''
     });
   }
 }

@@ -5,6 +5,8 @@ export interface Integrante {
     tipoCredito?: string;
     cargo: string;
     pagoPactado: number;
+    montoSolicitado?: number;
+    tasaInteres?: number;
 }
 
 export interface GrupoPayload {
@@ -16,5 +18,8 @@ export interface GrupoPayload {
     diaVisita: string;
     fechaPrimerPago: string;
     horaVisita: string;
+    plazoSemanas?: number;
+    plazoMeses?: number;
+    porcentajeGarantia?: number;
     integrantes: Integrante[];
 }

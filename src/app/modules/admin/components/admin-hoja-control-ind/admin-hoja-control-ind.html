@@ -1,11 +1,12 @@
 <div
-  class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 text-slate-900 font-sans flex flex-col items-center p-0 md:p-8 2xl:p-12">
+  class="min-h-screen bg-gradient-to-br from-slate-100 to-slate-200 text-slate-900 font-sans flex flex-col items-center p-0">
   <div
-    class="w-full max-w-screen-xl max-h-[100vh] md:max-h-[calc(100vh-4rem)] xl:max-h-[calc(100vh-5rem)] bg-white border border-slate-200 md:rounded-2xl shadow-2xl flex flex-col overflow-hidden">
+    class="w-full bg-white border border-slate-200 shadow-2xl flex flex-col">
 
+    <br>
     <!-- HEADER -->
     <div
-      class="px-6 py-5 border-b border-blue-700 bg-blue-600 shrink-0 flex justify-between items-center rounded-t-2xl">
+      class="px-6 py-5 border-b border-blue-700 bg-blue-600 shrink-0 flex justify-between items-center">
       <div class="flex items-center space-x-3">
         <div class="p-2.5 bg-white/20 rounded-xl shadow-sm">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"
@@ -16,48 +17,37 @@
         </div>
         <h2 class="text-white text-xl font-bold tracking-tight">Hoja de Control Individual</h2>
       </div>
-      <span class="hidden md:block text-[10px] font-black text-blue-900 uppercase tracking-widest text-right">VAMOS A
-        MEJORAR S.A. DE C.V. SOFOM ENR</span>
+      <span class="hidden md:block text-[10px] font-black text-blue-900 uppercase tracking-widest text-right">VAMOS A MEJORAR S.A. DE C.V. SOFOM ENR</span>
     </div>
 
-    <div class="flex-1 overflow-y-auto w-full">
-      <form [formGroup]="hojaControlIndForm" (ngSubmit)="guardar()" class="p-6 md:p-8 space-y-8">
-        <!-- SECCIÓN: Información del Cliente y Asesor -->
-        <section class="space-y-5">
-          <div class="flex items-center space-x-3 border-b border-slate-200 pb-2">
-            <span class="h-4 w-1 bg-blue-600 rounded-full"></span>
-            <h3 class="text-slate-800 font-bold text-xs uppercase tracking-widest">Información del Cliente</h3>
+    <br>
+    <div class="w-full" style="margin-left: 20px; margin-right: 20px; border-radius: 20px;">
+      <form [formGroup]="hojaControlIndForm" (ngSubmit)="guardar()" class="p-6 md:p-8 space-y-10">
+        <!-- SECCIÓN: Información del Cliente -->
+        <section class="space-y-6">
+          <div class="flex items-center space-x-3 border-b border-slate-200 pb-3">
+            <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
+            <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Información General</h3>
           </div>
 
-          <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-end">
-
-            <div class="lg:col-span-6 space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Nombre del Cliente <span
-                  class="text-red-500">*</span></label>
+          <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+            <!-- Nombre del Cliente -->
+            <div class="lg:col-span-5 space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide ml-1">Nombre del Cliente <span class="text-red-500">*</span></label>
               <input type="text" formControlName="nombreCliente"
-                class="w-full bg-slate-100 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
                 placeholder="Ej. Juan Pérez García">
             </div>
 
-            <div class="hidden lg:block lg:col-span-2"></div>
-
-            <div class="lg:col-span-1 space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Ciclo <span
-                  class="text-red-500">*</span></label>
-              <input type="number" formControlName="ciclo"
-                class="w-full bg-slate-100 border border-slate-200 rounded-xl px-2 py-3.5 text-sm text-center placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
-                placeholder="1" min="1">
-            </div>
-
-            <div class="lg:col-span-3 space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Asesor <span
-                  class="text-red-500">*</span></label>
+            <!-- Asesor Responsable -->
+            <div class="lg:col-span-2 space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide ml-1">Asesor Responsable <span class="text-red-500">*</span></label>
               <div class="relative">
                 <select formControlName="asesor"
-                  class="w-full text-slate-900 border border-slate-200 rounded-xl px-5 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
-                  <option value="" disabled selected>Seleccione el asesor</option>
+                  class="w-full bg-slate-50 text-slate-900 border border-slate-200 rounded-xl px-5 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
+                  <option value="" disabled>Seleccione el asesor</option>
                   @for (asesor of asesores; track asesor._id) {
-                  <option [value]="asesor._id">{{ asesor.username }}</option>
+                    <option [value]="asesor._id">{{ asesor.username }}</option>
                   }
                 </select>
                 <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
@@ -68,83 +58,152 @@
               </div>
             </div>
 
+            <!-- Ciclo -->
+            <div class="lg:col-span-1 space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide text-center">Ciclo <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="ciclo"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-2 py-3.5 text-sm text-center placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                placeholder="1" min="1">
+            </div>
+
+            <!-- Nombre del Grupo (Opcional) -->
+            <div class="lg:col-span-4 space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide ml-1">Nombre del Grupo (Opcional)</label>
+              <input type="text" formControlName="nombreGrupo"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                placeholder="Ej. Grupo Esperanza">
+            </div>
           </div>
         </section>
 
-        <!-- SECCIÓN: Detalles del Crédito -->
-        <section class="space-y-5">
-          <div class="flex items-center space-x-2 px-1">
-            <span class="h-4 w-1 bg-blue-600 rounded-full"></span>
-            <h3 class="text-slate-800 font-bold text-xs uppercase tracking-widest">Detalles del Crédito</h3>
+        <!-- SECCIÓN: Configuración del Crédito -->
+        <section class="space-y-6">
+          <div class="flex items-center space-x-3 border-b border-slate-200 pb-3">
+            <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
+            <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Configuración del Crédito</h3>
           </div>
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-5">
-            <!-- Pago Pactado -->
-            <div class="space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Pago Pactado <span
-                  class="text-red-500">*</span></label>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <!-- Frecuencia -->
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Frecuencia de Pago <span class="text-red-500">*</span></label>
               <div class="relative">
-                <span class="absolute left-4 top-3.5 text-slate-400 text-sm">$</span>
-                <input type="number" formControlName="pagoPactado"
-                  class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3.5 text-sm font-bold text-blue-700 placeholder:text-blue-300 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
-                  placeholder="0.00">
+                <select formControlName="tipoPago"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
+                  <option value="Semanal">Semanal</option>
+                  <option value="Bisemanal">Bisemanal</option>
+                  <option value="Quincenal">Quincenal</option>
+                  <option value="Catorcenal">Catorcenal</option>
+                  <option value="Mensual">Mensual</option>
+                </select>
+                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
               </div>
             </div>
-            <!-- Saldo Inicial -->
-            <!-- <div class="space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Saldo Inicial <span class="text-red-500">*</span></label>
-              <div class="relative">
-                <span class="absolute left-4 top-3.5 text-slate-400 text-sm">$</span>
-                <input type="number" formControlName="saldoInicial" class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm" placeholder="0.00">
-              </div>
-            </div> -->
-            <!-- Periodo de Pago -->
-            <!-- <div class="space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Periodo <span class="text-red-500">*</span></label>
-              <select formControlName="periodo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
-                <option>Semanal</option>
-                <option>Catorcenal</option>
-                <option>Mensual</option>
-              </select>
-            </div> -->
-            <!-- No. de Pagos -->
-            <div class="space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">No. Pagos <span
-                  class="text-red-500">*</span></label>
+
+            <!-- Número de Pagos -->
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Número de Pagos <span class="text-red-500">*</span></label>
               <input type="number" formControlName="noPagos"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
-                placeholder="0">
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                placeholder="16">
             </div>
-            <!-- Garantía -->
-            <div class="space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Garantía <span
-                  class="text-red-500">*</span></label>
+
+            <!-- Día de Cobro -->
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Día de Cobro <span class="text-red-500">*</span></label>
               <div class="relative">
-                <span class="absolute left-4 top-3.5 text-slate-400 text-sm">$</span>
-                <input type="number" formControlName="garantia"
-                  class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-4 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                <select formControlName="diaPago"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
+                  <option>Lunes</option>
+                  <option>Martes</option>
+                  <option>Miércoles</option>
+                  <option>Jueves</option>
+                  <option>Viernes</option>
+                  <option>Sábado</option>
+                </select>
+                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </div>
+              </div>
+            </div>
+
+            <!-- Fecha Primer Pago -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Fecha primer pago <span class="text-red-500">*</span></label>
+              <input type="date" formControlName="fechaPrimerPago"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
+            </div>
+          </div>
+        </section>
+
+        <!-- SECCIÓN: Montos -->
+        <section class="space-y-6">
+          <div class="flex items-center space-x-3 border-b border-slate-200 pb-3">
+            <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
+            <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Montos y Garantía</h3>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <!-- Monto Solicitado -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Monto Solicitado <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <span class="absolute left-4 top-3.5 text-slate-400 text-sm font-medium">$</span>
+                <input type="number" formControlName="montoSolicitado"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-8 pr-5 py-3.5 text-sm font-bold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
                   placeholder="0.00">
               </div>
             </div>
-            <!-- Día de Pago -->
-            <div class="space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Día de Pago <span
-                  class="text-red-500">*</span></label>
-              <select formControlName="diaPago"
-                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
-                <option>Lunes</option>
-                <option>Martes</option>
-                <option>Miércoles</option>
-                <option>Jueves</option>
-                <option>Viernes</option>
-                <option>Sábado</option>
-              </select>
+
+            <!-- Tasa de Interés -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Tasa de Interés <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <input type="number" formControlName="tasaInteres"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-5 pr-8 py-3.5 text-sm font-bold text-slate-900 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                  placeholder="0" step="0.1">
+                <span class="absolute right-4 top-3.5 text-slate-400 text-sm font-medium">%</span>
+              </div>
             </div>
-            <div class="lg:col-span-2 space-y-1.5">
-              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Primer Pago <span
-                  class="text-red-500">*</span></label>
-              <input type="date" formControlName="fechaPrimerPago"
-                class="w-full text-slate-00 border border-slate-200 rounded-xl px-3 py-3.5 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
+
+            <!-- Equivalencia Meses -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Equivalencia en Meses <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="equivalenciaMeses"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                placeholder="4" min="1">
+            </div>
+
+            <!-- Pago Pactado (READONLY) -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Monto del Pago Pactado <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <span class="absolute left-4 top-3.5 text-slate-400 text-sm font-medium">$</span>
+                <input type="number" formControlName="pagoPactado" readonly tabindex="-1"
+                  class="w-full bg-slate-100 border border-slate-200 rounded-xl pl-8 pr-5 py-3.5 text-sm font-bold text-blue-700 placeholder:text-blue-300 focus:outline-none shadow-sm cursor-not-allowed"
+                  placeholder="0.00">
+              </div>
+            </div>
+
+            <!-- Garantía Efectiva (READONLY) -->
+            <div class="space-y-2">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Garantía Líquida <span class="text-red-500">*</span></label>
+              <div class="relative">
+                <span class="absolute left-4 top-3.5 text-slate-400 text-sm font-medium">$</span>
+                <input type="number" formControlName="garantia" readonly tabindex="-1"
+                  class="w-full bg-slate-100 border border-slate-200 rounded-xl pl-8 pr-5 py-3.5 text-sm placeholder:text-slate-400 focus:outline-none shadow-sm cursor-not-allowed"
+                  placeholder="0.00">
+              </div>
+            </div>
+
+            <!-- Garantía Predial -->
+            <div class="space-y-2 lg:col-span-3">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Garantía Predial / Hipotecaria (Opcional)</label>
+              <textarea formControlName="garantiaPredial" rows="2"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm resize-none"
+                placeholder="Detalle aquí si existe alguna garantía hipotecaria o predial (opcional)"></textarea>
             </div>
           </div>
         </section>
@@ -161,3 +220,19 @@
     </div>
   </div>
 </div>
+
+<style>
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 6px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #e2e8f0;
+    border-radius: 10px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+    background: #cbd5e1;
+  }
+</style>
