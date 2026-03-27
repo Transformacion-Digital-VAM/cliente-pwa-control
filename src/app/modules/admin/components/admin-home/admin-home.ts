@@ -267,14 +267,45 @@ export class AdminHome implements OnInit {
     this.activeTab = 'grupos';
   }
 
-  getNombreCoordinacion(id: any): string {
-    if (!id) return 'Sin Coor.';
-    const idStr = typeof id === 'object' ? id._id : id;
+  getNombreCoordinacion(item: any): string {
+    if (!item) return 'Sin Coor.';
+    
+    let idStr = null;
+    if (item.coordinacion) {
+      idStr = typeof item.coordinacion === 'object' ? item.coordinacion._id : item.coordinacion;
+    } else if (item.asesor) {
+      // Fallback para registros antiguos que no tengan el campo coordinacion guardado
+      const asesorId = typeof item.asesor === 'object' ? item.asesor._id : item.asesor;
+      const asesorInfo = this.asesoresList.find(a => a._id === asesorId);
+      if (asesorInfo && asesorInfo.coordinacion) {
+        idStr = typeof asesorInfo.coordinacion === 'object' ? asesorInfo.coordinacion._id : asesorInfo.coordinacion;
+      }
+    }
+
+    if (!idStr) return 'Sin Coor.';
+
     const coord = this.coordinacionesList.find(c => c._id === idStr);
     return coord ? coord.nombre : `ID: ${idStr.toString().substring(idStr.toString().length - 4)}`;
   }
 
   toggleGroup(groupId: string) {
     this.expandedGroups[groupId] = !this.expandedGroups[groupId];
+  }
+
+  getProgresoPagos(credito: any): string {
+    if (!credito) return '0/0';
+    const totalSemanas = credito.semanas || 16;
+    if (!credito.pagos || credito.pagos.length === 0) return `0/${totalSemanas}`;
+    
+    // Contamos el mayor numeroPago registrado
+    const numerosPagos = credito.pagos.map((p: any) => p.numeroPago);
+    const maxPago = numerosPagos.length > 0 ? Math.max(...numerosPagos) : 0;
+    
+    return `${maxPago}/${totalSemanas}`;
+  }
+
+  getUltimoPago(credito: any): any {
+    if (!credito || !credito.pagos || credito.pagos.length === 0) return null;
+    return credito.pagos[credito.pagos.length - 1];
   }
 }

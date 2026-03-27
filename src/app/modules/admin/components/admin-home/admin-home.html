@@ -1,44 +1,5 @@
 <div class="min-h-screen bg-slate-50 text-slate-800 font-sans flex flex-col">
   <main class="flex-1 overflow-y-auto p-8 space-y-10">
-
-    <!-- TARJETAS DE ACCESO (sin cambios) -->
-    <!-- <section class="grid grid-cols-1 md:grid-cols-2 gap-6">
-
-      <div routerLink="/hoja-control-admin" class="group relative bg-white rounded-3xl border border-blue-600 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden">
-        <div class="h-1.5 w-full bg-slate-100 group-hover:bg-blue-500 transition-colors duration-300"></div>
-        <div class="p-6">
-          <div class="flex justify-between items-start">
-            <div class="p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-500 transition-colors duration-300">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-blue-600 group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
-              </svg>
-            </div>
-          </div>
-          <div class="mt-8">
-            <h3 class="text-slate-900 text-xl font-black group-hover:text-blue-600 transition-colors duration-300">Crédito Comunal</h3>
-            <p class="text-slate-500 text-sm mt-1 font-medium">Gestión de grupos</p>
-          </div>
-        </div>
-      </div>
-
-      <div routerLink="/hoja-control-admin-ind" class="group relative bg-white rounded-3xl border border-blue-600 shadow-sm hover:shadow-md transition-all duration-300 cursor-pointer overflow-hidden">
-        <div class="h-1.5 w-full bg-slate-100 group-hover:bg-blue-500 transition-colors duration-300"></div>
-        <div class="p-6">
-          <div class="flex justify-between items-start">
-            <div class="p-4 bg-blue-50 rounded-2xl group-hover:bg-blue-500 transition-colors duration-300">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-blue-600 group-hover:text-white transition-colors duration-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-              </svg>
-            </div>
-          </div>
-          <div class="mt-8">
-            <h3 class="text-slate-900 text-xl font-black group-hover:text-blue-600 transition-colors duration-300">Crédito Individual</h3>
-            <p class="text-slate-500 text-sm mt-1 font-medium">Registro de clientes independientes.</p>
-          </div>
-        </div>
-      </div>
-    </section> -->
-
     <!-- SECCIÓN: Hojas Creadas Recientemente y Filtros -->
     <section class="space-y-6">
       <div class="bg-white border border-slate-200 rounded-[2rem] p-6 shadow-sm space-y-6">
@@ -161,8 +122,8 @@
                         <p class="font-bold text-slate-800 text-sm">{{ item.nombre }}</p>
                         <span *ngIf="item.tipo === 'INDIVIDUAL'" class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 uppercase tracking-wider">Individual</span>
                       </div>
-                      <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'GRUPO'">{{ item.integrantes?.length || 0 }} Integrantes | {{ getNombreCoordinacion(item.coordinacion) }}</p>
-                      <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'INDIVIDUAL'">{{ item.diaPago || 'N/A' }} | {{ getNombreCoordinacion(item.coordinacion) }}</p>
+                      <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'GRUPO'">{{ item.integrantes?.length || 0 }} Integrantes | {{ getNombreCoordinacion(item) }}</p>
+                      <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'INDIVIDUAL'">{{ item.diaPago || 'N/A' }} | {{ getNombreCoordinacion(item) }}</p>
                     </td>
                   <td class="px-6 py-5 flex items-center justify-center space-x-3">
                     <!-- Botones solo para Grupos -->
@@ -225,6 +186,9 @@
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Semanas</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Pago Pactado</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Saldo Total</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Avance</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Último Pago</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Método</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-indigo-50">
@@ -235,6 +199,17 @@
                             <td class="px-4 py-3 font-medium text-slate-500 text-sm">{{ getCreditoDeMiembro(m._id)?.semanas || 0 }}</td>
                             <td class="px-4 py-3 font-mono font-bold text-emerald-600 text-sm">{{ getCreditoDeMiembro(m._id)?.pagoPactado | currency:'MXN' }}</td>
                             <td class="px-4 py-3 font-mono font-bold text-emerald-700 text-sm">{{ getCreditoDeMiembro(m._id)?.saldoTotal | currency:'MXN' }}</td>
+                            <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">{{ getProgresoPagos(getCreditoDeMiembro(m._id)) }}</td>
+                            <td class="px-4 py-3 font-medium text-emerald-600 text-sm whitespace-nowrap">
+                              <ng-container *ngIf="getUltimoPago(getCreditoDeMiembro(m._id)) as ultimo; else noPagosG">
+                                <div>{{ ultimo.fechaPago | date:'dd/MMM' }}</div>
+                                <div class="text-xs text-slate-400 font-bold">{{ ultimo.montoPagado | currency:'MXN' }}</div>
+                              </ng-container>
+                              <ng-template #noPagosG><span class="text-slate-400 text-xs">-</span></ng-template>
+                            </td>
+                            <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">
+                              {{ getUltimoPago(getCreditoDeMiembro(m._id))?.metodoPago || '-' }}
+                            </td>
                           </tr>
                         </tbody>
                       </table>
@@ -253,6 +228,9 @@
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Semanas</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Pago Pactado</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Saldo Total</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Avance</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Último Pago</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Método</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-emerald-50">
@@ -261,6 +239,17 @@
                             <td class="px-4 py-3 font-medium text-slate-500 text-sm">{{ getCreditoDeCliente(item._id)?.semanas || 0 }}</td>
                             <td class="px-4 py-3 font-mono font-bold text-emerald-600 text-sm">{{ getCreditoDeCliente(item._id)?.pagoPactado | currency:'MXN' }}</td>
                             <td class="px-4 py-3 font-mono font-bold text-emerald-700 text-sm">{{ getCreditoDeCliente(item._id)?.saldoTotal | currency:'MXN' }}</td>
+                            <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">{{ getProgresoPagos(getCreditoDeCliente(item._id)) }}</td>
+                            <td class="px-4 py-3 font-medium text-emerald-600 text-sm whitespace-nowrap">
+                              <ng-container *ngIf="getUltimoPago(getCreditoDeCliente(item._id)) as ultimoI; else noPagosI">
+                                <div>{{ ultimoI.fechaPago | date:'dd/MMM' }}</div>
+                                <div class="text-xs text-emerald-400 font-bold">{{ ultimoI.montoPagado | currency:'MXN' }}</div>
+                              </ng-container>
+                              <ng-template #noPagosI><span class="text-emerald-400/50 text-xs">-</span></ng-template>
+                            </td>
+                            <td class="px-4 py-3 font-medium text-emerald-600/70 text-sm whitespace-nowrap">
+                              {{ getUltimoPago(getCreditoDeCliente(item._id))?.metodoPago || '-' }}
+                            </td>
                           </tr>
                         </tbody>
                       </table>
