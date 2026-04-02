@@ -1,5 +1,6 @@
 export interface Integrante {
     id?: string;
+    miembroId?: string; // Para identificar si ya existe el miembro
     nombre: string;
     apellidos: string;
     tipoCredito?: string;
@@ -10,6 +11,7 @@ export interface Integrante {
 }
 
 export interface GrupoPayload {
+    grupoId?: string; // Para identificar si el grupo ya existe
     nombreGrupo: string;
     clave: string;
     tipoCredito: string;

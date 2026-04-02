@@ -113,6 +113,8 @@ export class AsesorHojaControl implements OnInit {
             m.pagosAhorro = [];
             m.historialSolidario = false;
           }
+          
+          this.pagos[m._id].monto = Number(m.pagoPactado) || 0;
         });
         this.cdr.detectChanges();
       },

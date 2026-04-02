@@ -16,12 +16,11 @@ export interface UserLocation {
   providedIn: 'root'
 })
 export class LocationService {
-  // private apiUrl = 'http://localhost:3000/api/users/location';
   private apiUrl = `${environment.apiUrl}/users/location`;
 
   constructor(private http: HttpClient) { }
 
-  // Function to capture the current advisor's location
+  // Función para obtener la ubicación actual del asesor
   sendCurrentLocation(): Promise<void> {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -36,10 +35,7 @@ export class LocationService {
             lng: position.coords.longitude,
             timestamp: new Date()
           };
-          this.http.post(this.apiUrl, coords).subscribe({
-            next: (res) => console.log('Ubicación enviada al servidor:', res),
-            error: (err) => console.error('Error enviando ubicación:', err)
-          });
+          this.http.post(this.apiUrl, coords).subscribe();
           Swal.fire({
             icon: 'success',
             title: '¡Ubicación compartida!',
@@ -63,7 +59,7 @@ export class LocationService {
     });
   }
 
-  // Get locations for all advisors. Returning mock data for now until API is ready
+  // Obtener las ubicaciones de todos los asesores.
   getAdvisorsLocations(asesoresList: any[]): Observable<UserLocation[]> {
     const realLocations: UserLocation[] = asesoresList
       .filter((asesor) => asesor.lastLocation && asesor.lastLocation.lat && asesor.lastLocation.lng)

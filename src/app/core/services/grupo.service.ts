@@ -10,9 +10,6 @@ import { environment } from '../../../environments/environment';
     providedIn: 'root'
 })
 export class GrupoService {
-    // private apiUrlGrupo = 'http://localhost:3000/api/grupos';
-    // private apiUrlMiembro = 'http://localhost:3000/api/miembros';
-    // private apiUrlCredito = 'http://localhost:3000/api/creditos';
     private apiUrlGrupo = `${environment.apiUrl}/grupos`;
     private apiUrlMiembro = `${environment.apiUrl}/miembros`;
     private apiUrlCredito = `${environment.apiUrl}/creditos`;
@@ -25,17 +22,21 @@ export class GrupoService {
     crearGrupo(payload: GrupoPayload): Observable<any> {
         const isOnline = navigator.onLine;
 
-        // Si no hay conexión de antemano, directo a Dexie
+        // Si no hay conexión, directo a Dexie
         if (!isOnline) {
             return this.guardarLocal(payload);
         }
 
-        // Adaptamos el payload de Grupo para esquivar error de 'integrantes' en Backend
-        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, ...resto } = payload;
+        // Adaptación de payload de Grupo para esquivar error de 'integrantes' en Backend
+        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, grupoId, ...resto } = payload;
         const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo, plazoSemanas, plazoMeses };
 
-        // Intentar POST del Grupo
-        return this.http.post(`${this.apiUrlGrupo}/create`, bodyGrupo).pipe(
+        const grupoObs = grupoId
+            ? of({ _id: grupoId })
+            : this.http.post(`${this.apiUrlGrupo}/create`, bodyGrupo);
+
+        // Enviar un POST del Grupo o usar id existente
+        return grupoObs.pipe(
             switchMap((grupoGuardado: any) => {
                 // Enviar peticiones para cada Integrante
                 if (integrantes && integrantes.length > 0) {
@@ -56,7 +57,10 @@ export class GrupoService {
                             rol,
                             pagoPactado: integ.pagoPactado
                         };
-                        return this.http.post(`${this.apiUrlMiembro}/create`, bodyMiembro);
+
+                        return integ.miembroId
+                            ? of({ _id: integ.miembroId })
+                            : this.http.post(`${this.apiUrlMiembro}/create`, bodyMiembro);
                     });
 
                     return forkJoin(peticionesMiembros).pipe(
@@ -86,9 +90,9 @@ export class GrupoService {
                 return of(grupoGuardado);
             }),
             catchError(error => {
-                const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503 || error.status === 500;
+        const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503;
                 if (isNetworkError) {
-                    console.warn(`[Network Error] Status: ${error.status} - Usando guardado local (Dexie)`);
+                    console.warn(`[Network Error] Status: ${error.status} - Se guardo local`);
                     return this.guardarLocal(payload);
                 }
                 return throwError(() => error);
@@ -101,7 +105,6 @@ export class GrupoService {
     }
 
     getAsesores(): Observable<any> {
-        // return this.http.get(`http://localhost:3000/api/grupos/asesores`);
         return this.http.get(`${this.apiUrlGrupo}/asesores`);
     }
 
@@ -122,9 +125,8 @@ export class GrupoService {
             }),
             catchError(error => {
                 if (!navigator.onLine || error.status === 0) {
-                    console.log('[GrupoService] Cargando créditos desde Dexie (Offline)');
                     return from(this.dexie.table('creditos').toArray()).pipe(
-                        map(creditos => ({ creditos })) // Envolver en objeto para mantener compatibilidad
+                        map(creditos => ({ creditos }))
                     );
                 }
                 return throwError(() => error);
@@ -137,6 +139,11 @@ export class GrupoService {
         return this.http.get(`${this.apiUrlGrupo}/coordinacion`);
     }
 
+    actualizarCredito(creditoId: string, payload: any): Observable<any> {
+        return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload);
+    }
+
+    // Registrar pago por integrante de grupo
     registrarPago(creditoId: string, pagoParams: any): Observable<any> {
         const isOnline = navigator.onLine;
         if (!isOnline) {
@@ -153,6 +160,7 @@ export class GrupoService {
         );
     }
 
+    // Registrar ahorro por integrante de grupo
     registrarAhorro(creditoId: string, ahorroParams: any): Observable<any> {
         const isOnline = navigator.onLine;
         if (!isOnline) {
@@ -169,6 +177,7 @@ export class GrupoService {
         );
     }
 
+    // Guardar pago localmente
     private guardarPagoLocal(creditoId: string, pagoParams: any): Observable<any> {
         return from(
             this.dexie.syncQueue.add({
@@ -179,11 +188,13 @@ export class GrupoService {
         ).pipe(
             map(() => ({
                 offline: true,
-                message: 'Pago guardado localmente (Sin internet). Se sincronizará automáticamente.'
+                message: 'Pago guardado sin conexión. Se sincronizará automáticamente.'
             }))
         );
     }
 
+
+    // Guardar ahorro localmente
     private guardarAhorroLocal(creditoId: string, ahorroParams: any): Observable<any> {
         return from(
             this.dexie.syncQueue.add({
@@ -194,12 +205,13 @@ export class GrupoService {
         ).pipe(
             map(() => ({
                 offline: true,
-                message: 'Ahorro guardado localmente (Sin internet). Se sincronizará automáticamente.'
+                message: 'Ahorro guardado sin conexión. Se sincronizará automáticamente.'
             }))
         );
     }
 
 
+    // Guardar grupo localmente
     private guardarLocal(payload: GrupoPayload): Observable<any> {
         return from(
             this.dexie.syncQueue.add({

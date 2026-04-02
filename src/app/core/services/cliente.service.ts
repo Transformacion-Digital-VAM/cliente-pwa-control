@@ -9,7 +9,7 @@ import { environment } from '../../../environments/environment';
   providedIn: 'root'
 })
 export class ClienteService {
-  // Ajusta la IP según tu configuración actual (misma que en GrupoService)
+  // Ruta desde environment.ts
   private apiUrlCliente = `${environment.apiUrl}/clientes`;
   private apiUrlCredito = `${environment.apiUrl}/creditos`;
 
@@ -19,7 +19,7 @@ export class ClienteService {
   ) { }
 
   /**
-   * Crea un cliente individual y su crédito asociado.
+   * Crear un cliente individual y su crédito asociado.
    * Si no hay conexión, lo guarda en Dexie para sincronizar después.
    */
   crearClienteIndividual(payload: any): Observable<any> {
@@ -30,7 +30,7 @@ export class ClienteService {
       return this.guardarLocal(payload);
     }
 
-    // 1. Separamos los datos del cliente de los del crédito
+    // 1. Separar datos del cliente de los datos del credito (diferentes colecciones)
     const bodyCliente = {
       nombre: payload.nombreCliente,
       diaPago: payload.diaPago,
@@ -39,17 +39,17 @@ export class ClienteService {
       asesor: payload.asesor
     };
 
-    // 2. Intentar POST del Cliente
+    // 2. Intento de Post del cliente
     return this.http.post(`${this.apiUrlCliente}`, bodyCliente).pipe(
       switchMap((clienteGuardado: any) => {
         // 3. Crear el crédito asociado al cliente individual
         const bodyCredito = {
           cliente: clienteGuardado._id,
-          tipoCredito: 'Individual', // Forzamos tipo individual
+          tipoCredito: 'Individual', // Forzamos tipo individual 
           ciclo: payload.ciclo || 1,
           pagoPactado: payload.pagoPactado,
           semanas: payload.noPagos, // Usamos 'noPagos' como semanas/quincenas (según el periodo)
-          saldoTotal: payload.saldoInicial, // El admin ingresa el saldo inicial
+          saldoTotal: payload.saldoInicial, // El admin ingresa el montoSolicitado
           saldoPendiente: payload.saldoInicial,
           fechaPrimerPago: payload.fechaPrimerPago,
           garantia: payload.garantia || 0,
@@ -62,11 +62,11 @@ export class ClienteService {
         };
 
         return this.http.post(`${this.apiUrlCredito}/`, bodyCredito).pipe(
-          map(() => clienteGuardado) // Al final retornamos la info del cliente
+          map(() => clienteGuardado) // Al final se retorna la info del cliente
         );
       }),
       catchError(error => {
-        const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503 || error.status === 500;
+        const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503;
         if (isNetworkError) {
           console.warn(`[Network Error] Status: ${error.status} - Usando guardado local (Dexie) para Cliente Individual`);
           return this.guardarLocal(payload);
@@ -77,7 +77,8 @@ export class ClienteService {
   }
 
   /**
-   * Obtiene la lista de clientes (el backend filtra si es Asesor o Administrador).
+   * Obtiene la lista de clientes 
+   * (el backend filtra el user logueado si es Asesor o Admin).
    */
   getClientes(): Observable<any> {
     return this.http.get(`${this.apiUrlCliente}`).pipe(
@@ -92,7 +93,6 @@ export class ClienteService {
       }),
       catchError(error => {
         if (!navigator.onLine || error.status === 0) {
-          console.log('[ClienteService] Cargando clientes desde Dexie (Offline)');
           return from(this.dexie.table('clientes').toArray());
         }
         return throwError(() => error);
@@ -117,7 +117,6 @@ export class ClienteService {
       }),
       catchError(error => {
         if (!navigator.onLine || error.status === 0) {
-          console.log('[ClienteService] Cargando créditos desde Dexie (Offline)');
           return from(this.dexie.table('creditos').toArray()).pipe(
             map(creditos => ({ creditos })) // Envolver en objeto para mantener compatibilidad
           );
@@ -199,7 +198,7 @@ export class ClienteService {
   private guardarLocal(payload: any): Observable<any> {
     return of({
       offline: true,
-      message: 'Sin conexión: Guardado localmente (Simulado de momento para clientes individuales, falta implementar en dexie.service.ts).'
+      message: 'Sin conexión: Guardado localmente'
     });
     /* 
     Nota: Para soporte offline completo, debes agregar 'POST_CLIENTE' en el worker 

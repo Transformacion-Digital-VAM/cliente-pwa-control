@@ -1,0 +1,105 @@
+<div class="min-h-screen bg-slate-50 text-slate-800 font-sans p-6 md:p-10 flex flex-col">
+  <div class="max-w-7xl mx-auto w-full space-y-8">
+  
+    <!-- Header -->
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-black text-slate-900 tracking-tight">Actualizar Tipo de Crédito</h1>
+        <p class="text-slate-500 font-medium mt-1">Cambiar crédito C.C - R</p>
+      </div>
+      <button (click)="volverAInicio()" class="flex items-center space-x-2 text-slate-500 hover:text-slate-800 transition-colors bg-white px-4 py-2 rounded-xl border border-slate-200 shadow-sm font-bold text-sm">
+        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9.707 16.707a1 1 0 01-1.414 0l-6-6a1 1 0 010-1.414l6-6a1 1 0 011.414 1.414L5.414 9H17a1 1 0 110 2H5.414l4.293 4.293a1 1 0 010 1.414z" clip-rule="evenodd" /></svg>
+        <span>Volver a Inicio</span>
+      </button>
+    </div>
+
+    <!-- Main Card -->
+    <div class="bg-white border border-slate-200 rounded-[2rem] p-6 md:p-8 shadow-sm">
+      <form [formGroup]="form" class="space-y-8">
+        <!-- Búsqueda de Grupo -->
+        <div class="space-y-2 relative max-w-xl">
+          <label class="text-xs font-black text-slate-400 uppercase tracking-widest ml-2">Buscar Grupo</label>
+          <div class="relative">
+             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                <svg class="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" /></svg>
+             </div>
+             <input type="text" formControlName="nombreGrupo" placeholder="Escribe el nombre del grupo..."
+                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-11 pr-4 py-3 text-sm font-medium focus:border-blue-500 focus:bg-white focus:ring-4 focus:ring-blue-100 outline-none transition-all"
+                    (focus)="showGrupoSuggestions = true"
+                    (blur)="hideGrupoSuggestions()" autocomplete="off">
+          </div>
+          
+          <!-- Dropdown Autocomplete -->
+          <div *ngIf="showGrupoSuggestions && filteredGrupos.length > 0" class="absolute z-50 w-full mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden">
+            <ul class="max-h-60 overflow-y-auto">
+              <li *ngFor="let g of filteredGrupos" (mousedown)="seleccionarGrupo(g)"
+                  class="px-4 py-3 hover:bg-slate-50 cursor-pointer border-b border-slate-50 last:border-0 flex items-center justify-between group transition-colors">
+                <div>
+                   <p class="text-sm font-bold text-slate-700 group-hover:text-blue-600 transition-colors">{{ g.nombre }}</p>
+                   <p class="text-[10px] text-slate-400 font-medium">Clave: {{ g.clave || 'N/A' }} | Integrantes: {{ g.integrantes?.length || 0 }}</p>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+
+        <!-- Tabla Integrantes -->
+        <div *ngIf="integrantes.length > 0" class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-lg font-bold text-slate-800">Integrantes del Grupo</h3>
+            <span class="px-3 py-1 bg-blue-50 text-blue-600 rounded-lg text-xs font-bold">{{ integrantes.length }} Miembros</span>
+          </div>
+
+          <div class="overflow-x-auto rounded-2xl border border-slate-200">
+            <table class="w-full text-left">
+              <thead class="bg-slate-50 border-b border-slate-200">
+                <tr>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Nombre Completo</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Rol</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Monto Sol.</th>
+                  <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Pago Pactado</th>
+                  <th class="px-6 py-4 text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50/50">Tipo Crédito</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100 text-sm" formArrayName="integrantes">
+                <tr *ngFor="let ctrl of integrantes.controls; let i = index" [formGroupName]="i" class="hover:bg-slate-50/50 transition-colors">
+                  <td class="px-6 py-4 font-bold text-slate-700">{{ ctrl.get('nombreCompleto')?.value }}</td>
+                  <td class="px-6 py-4 text-slate-500 font-medium">{{ ctrl.get('rol')?.value }}</td>
+                  <td class="px-6 py-4 text-slate-600 font-mono font-bold">{{ ctrl.get('montoSolicitado')?.value | currency:'MXN' }}</td>
+                  <td class="px-6 py-4 text-emerald-600 font-mono font-bold">{{ ctrl.get('pagoPactado')?.value | currency:'MXN' }}</td>
+                  <td class="px-6 py-3 bg-blue-50/20">
+                    <select formControlName="tipoCredito" 
+                            class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all cursor-pointer">
+                      <option *ngFor="let t of tiposCreditoOpciones" [value]="t">{{ t }}</option>
+                    </select>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <!-- Botones de Acción -->
+          <div class="flex justify-end gap-3 pt-4">
+            <button type="button" (click)="cancelar()"
+                    class="px-6 py-3 bg-slate-100 text-slate-600 rounded-xl text-sm font-bold hover:bg-slate-200 transition-all border border-slate-200 shadow-sm">
+              Cancelar
+            </button>
+            <button type="button" (click)="guardarCambios()"
+                    class="px-8 py-3 bg-blue-600 text-white rounded-xl text-sm font-bold hover:bg-blue-700 transition-all shadow-md shadow-blue-200 flex items-center space-x-2">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path d="M8 9a3 3 0 100-6 3 3 0 000 6zM8 11a6 6 0 016 6H2a6 6 0 016-6zM16 7a1 1 0 10-2 0v1h-1a1 1 0 100 2h1v1a1 1 0 102 0v-1h1a1 1 0 100-2h-1V7z"/></svg>
+              <span>Actualizar Créditos</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Estado Vacío Si no hay grupo -->
+        <div *ngIf="integrantes.length === 0 && !form.get('grupoId')?.value" class="py-12 flex flex-col items-center justify-center text-center opacity-60">
+           <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-slate-300 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" /></svg>
+           <p class="text-slate-500 font-bold text-lg">Selecciona un grupo para editar</p>
+           <p class="text-slate-400 text-sm mt-1">Podrás visualizar los integrantes y modificar su tipo de crédito.</p>
+        </div>
+
+      </form>
+    </div>
+  </div>
+</div>

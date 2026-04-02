@@ -47,8 +47,8 @@ export class NotificationService {
                 badge: '/icons/favicon-32x32.png',
                 ...opciones
             });
-            // Cerrar automáticamente después de 6 segundos
-            setTimeout(() => notif.close(), 6000);
+            // Cerrar automáticamente después de 7 segundos
+            setTimeout(() => notif.close(), 7000);
         } else if (Notification.permission !== 'denied') {
             // Reintentar pedir permiso
             Notification.requestPermission().then(permission => {
@@ -60,8 +60,9 @@ export class NotificationService {
         }
     }
 
-    // ─── Lógica de detección para Asesor ───
 
+
+    // ─── Lógica de detección para Asesor ───
     /**
      * Compara la lista de grupos actual con la almacenada localmente.
      * Si hay grupos nuevos, lanza una notificación por cada uno.
@@ -89,8 +90,8 @@ export class NotificationService {
         localStorage.setItem(key, JSON.stringify(idsActuales));
     }
 
-    // ─── Lógica de detección para Admin ───
 
+    // ─── Lógica de detección para Admin ───
     /**
      * Compara los saldos pendientes actuales con los almacenados.
      * Si un grupo que antes tenía saldo ahora tiene 0, notifica.
@@ -144,8 +145,8 @@ export class NotificationService {
         localStorage.setItem(key, JSON.stringify(nuevosSaldos));
     }
 
-    // ─── Notificación programada diaria para Asesor ───
 
+    // ─── Notificación programada diaria para Asesor ───
     /**
      * Programa una notificación a las 9:15 AM con el resumen del día.
      * Si ya pasaron las 9:15, se programa para el día siguiente.
@@ -168,18 +169,18 @@ export class NotificationService {
         const ultimoEnvio = localStorage.getItem(keyEnviado);
 
         if (ultimoEnvio === hoy) {
-            // Ya se notificó hoy, no programar de nuevo
+            // Ya se notificó, no programar de nuevo
             return;
         }
 
-        // Calcular las 9:15 AM de hoy
+        // Calcular las 9:15 AM 
         const target = new Date();
         target.setHours(9, 15, 0, 0);
 
         let delay = target.getTime() - ahora.getTime();
 
         if (delay <= 0) {
-            // Ya pasaron las 9:15 de hoy
+            // Ya pasaron las 9:15 am
             // Si el asesor abre la app después de las 9:15 y no se notificó hoy,
             // enviamos inmediatamente (con 3s de delay para que cargue bien la UI)
             delay = 3000;
@@ -204,10 +205,10 @@ export class NotificationService {
                 if (clientesCount > 0) partes.push(`${clientesCount} cliente${clientesCount > 1 ? 's' : ''}`);
                 mensaje = `Hoy tienes ${partes.join(' y ')} por visitar. ¡Buen día de trabajo!`;
             } else {
-                mensaje = 'No tienes grupos ni clientes individuales programados para hoy. ¡Día libre!';
+                mensaje = 'No tienes grupos ni clientes individuales programados para hoy.';
             }
 
-            this.mostrar('📋 Resumen del día', {
+            this.mostrar('Resumen del día', {
                 body: mensaje,
                 tag: 'resumen-diario'
             });
@@ -217,7 +218,7 @@ export class NotificationService {
     }
 
     /**
-     * Limpia todos los timers programados (llamar al destruir el componente).
+     * Limpia todos los timers programados.
      */
     limpiarTimerDiario(): void {
         if (this.timerDiarioId) {
@@ -228,17 +229,15 @@ export class NotificationService {
         this.timersRecordatorios = [];
     }
 
-    // ─── Recordatorio 10 min antes de la visita ───
 
+    // ─── Recordatorio 10 min antes de la visita ───
     /**
      * Programa una notificación 10 minutos antes de la hora de visita
      * para cada grupo del día. El campo horaVisita puede venir como
      * "09:00", "9:00", "14:30", etc.
      */
     programarRecordatoriosVisita(gruposDelDia: any[]): void {
-        console.log('[NotificationService] Iniciando programarRecordatoriosVisita...', { gruposDelDia });
         if (!isPlatformBrowser(this.platformId)) {
-            console.log('[NotificationService] abortado: no es browser');
             return;
         }
 
@@ -251,31 +250,26 @@ export class NotificationService {
         const keyRecordatorios = 'notif_recordatorios_enviados';
         const enviadosStr = localStorage.getItem(keyRecordatorios);
         const enviados: { [grupoId: string]: string } = enviadosStr ? JSON.parse(enviadosStr) : {};
-        console.log(`[NotificationService] Historial de recordatorios enviados:`, enviados);
 
         gruposDelDia.forEach((grupo: any) => {
             if (!grupo.horaVisita || !grupo._id) {
-                console.log(`[NotificationService] Grupo sin id o sin horaVisita:`, grupo);
                 return;
             }
 
             // Si ya se envió el recordatorio hoy para este grupo, saltar
             if (enviados[grupo._id] === hoy) {
-                console.log(`[NotificationService] Recordatorio ya enviado hoy para grupo ${grupo._id}`);
                 return;
             }
 
             // Parsear horaVisita (formato "HH:mm" o "H:mm")
             const partes = grupo.horaVisita.split(':');
             if (partes.length < 2) {
-                console.log(`[NotificationService] Formato de horaVisita invalido: ${grupo.horaVisita}`);
                 return;
             }
 
             const horaVisita = parseInt(partes[0], 10);
             const minVisita = parseInt(partes[1], 10);
             if (isNaN(horaVisita) || isNaN(minVisita)) {
-                console.log(`[NotificationService] hora/minuto invalido en: ${grupo.horaVisita}`);
                 return;
             }
 
@@ -286,14 +280,10 @@ export class NotificationService {
 
             const delay = recordatorioMs - ahora.getTime();
 
-            console.log(`[NotificationService] Evaluando grupo '${grupo.nombre}' - Hora visita: ${grupo.horaVisita}. Target: ${targetDate.toLocaleTimeString()}. RecordatorioMs: ${new Date(recordatorioMs).toLocaleTimeString()}. Delay: ${delay}ms (${Math.round(delay / 1000 / 60)} minutos). Ahora: ${ahora.toLocaleTimeString()}`);
-
             if (delay > 0) {
                 // La hora de recordatorio aún no ha pasado → programar
-                console.log(`[NotificationService] Programando timer para grupo '${grupo.nombre}' con delay de ${delay}ms`);
                 const timerId = setTimeout(() => {
-                    console.log(`[NotificationService] Disparando recordatorio INMEDIATO para grupo '${grupo.nombre}'`);
-                    this.mostrar('⏰ Recordatorio de visita', {
+                    this.mostrar('Recordatorio de visita', {
                         body: `En 10 minutos tienes visita al grupo "${grupo.nombre || grupo.clave}" (${grupo.horaVisita})`,
                         tag: `recordatorio-${grupo._id}`
                     });
@@ -305,8 +295,6 @@ export class NotificationService {
                 }, delay);
 
                 this.timersRecordatorios.push(timerId);
-            } else {
-                console.log(`[NotificationService] NO se programa timer para grupo '${grupo.nombre}' porque el delay es <= 0`);
             }
         });
     }

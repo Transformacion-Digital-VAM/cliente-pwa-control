@@ -27,9 +27,17 @@
 
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 items-end">
             <!-- Nombre del Grupo -->
-            <div class="lg:col-span-5 space-y-2">
+            <div class="lg:col-span-4 space-y-4 space-y-2 relative">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo <span class="text-red-500">*</span></label>
-              <input type="text" formControlName="nombreGrupo" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="Nombre del Grupo">
+              <input type="text" formControlName="nombreGrupo" (focus)="showGrupoSuggestions = true; filtrarGrupos(hojaControlForm.get('nombreGrupo')?.value)" (blur)="hideGrupoSuggestions()" autocomplete="off"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="Nombre del Grupo">
+              <ul *ngIf="showGrupoSuggestions && filteredGrupos.length > 0" class="absolute z-50 w-full bg-white border border-slate-200 mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+                <li *ngFor="let grupo of filteredGrupos" (mousedown)="seleccionarGrupo(grupo)"
+                    class="px-4 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
+                  {{ grupo.nombre }}
+                  <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 uppercase">Ciclo {{ grupo.cicloActual }} • Clave: {{ grupo.clave }}</span>
+                </li>
+              </ul>
             </div>
 
             <!-- Clave -->
@@ -39,7 +47,7 @@
             </div>
 
             <!-- Asesor -->
-            <div class="lg:col-span-3 space-y-2">
+            <div class="lg:col-span-2 space-y-2">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asesor <span class="text-red-500">*</span></label>
               <div class="relative">
                 <select formControlName="asesor" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-10 hover:border-blue-400">
@@ -72,7 +80,9 @@
 
             <div class="lg:col-span-1 space-y-2">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Plazo (Meses) <span class="text-red-500">*</span></label>
-              <input type="number" formControlName="plazoMeses" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="4" min="1">
+              <input type="number" formControlName="plazoMeses"
+                class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-center text-slate-500 font-bold outline-none cursor-not-allowed transition-all"
+                placeholder="—" readonly tabindex="-1">
             </div>
           </div>
         </section>
@@ -90,9 +100,10 @@
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de Visita <span class="text-red-500">*</span></label>
               <input type="time" formControlName="horaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
-            <div class="space-y-1 w-48">
+            <div class="space-y-1 w-48 relative">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago <span class="text-red-500">*</span></label>
-              <input type="date" formControlName="fechaPrimerPago" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              <input type="date" formControlName="fechaPrimerPago"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
 
             <div class="flex-1"></div> <!-- Spacer to push the next item to the right -->
@@ -119,11 +130,12 @@
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-16">No.</th>
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre del Integrante <span class="text-red-500">*</span></th>
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo Credito <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-48">Cargo <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Monto Solicitado <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Pago Pactado <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo Credito <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest w-48">Cargo <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Monto Solicitado <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Pago Pactado <span class="text-red-500">*</span></th>
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tasa de Interés <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">S.T<span class="text-red-500"></span></th>
                     <th class="px-6 py-4 text-center text-xs font-bold text-red-500 uppercase tracking-widest">Acción</th>
                   </tr>
                 </thead>
@@ -131,7 +143,17 @@
                   <tr *ngFor="let integrante of integrantes.controls; let i = index" [formGroupName]="i" class="hover:bg-slate-100/50 transition-colors">
                     <td class="px-6 py-4 text-sm font-bold text-slate-400">{{ (i + 1).toString().padStart(2, '0') }}</td>
                     <td class="px-6 py-4">
-                      <input type="text" formControlName="nombre" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Nombre">
+                      <div class="relative">
+                        <input type="text" formControlName="nombre" (focus)="showMiembroSuggestions[i] = true; filtrarMiembros(integrantes.at(i).get('nombre')?.value, i)" (blur)="hideMiembroSuggestions(i)" autocomplete="off"
+                          class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all shadow-sm" placeholder="Nombre">
+                        <ul *ngIf="showMiembroSuggestions[i] && filteredMiembros[i].length > 0" class="absolute z-50 w-full min-w-[200px] bg-white border border-slate-200 mt-1 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                          <li *ngFor="let m of filteredMiembros[i]" (mousedown)="seleccionarMiembro(m, i)"
+                              class="px-4 py-2 border-b border-slate-50 hover:bg-emerald-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
+                            {{ m.nombre }} {{ m.apellidos }}
+                            <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 truncate uppercase">Rol: {{ m.rol || 'INTEGRANTE' }}</span>
+                          </li>
+                        </ul>
+                      </div>
                     </td>
                     <td class="px-6 py-4">
                       <input type="text" formControlName="apellidos" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Apellidos">
@@ -153,13 +175,24 @@
                       </select>
                     </td>
                     <td class="px-6 py-4 w-48">
-                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span><input type="number" formControlName="montoSolicitado" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00"></div>
+                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
+                        <input type="number" formControlName="montoSolicitado" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00"></div>
                     </td>
                     <td class="px-6 py-4 w-48">
-                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span><input type="number" formControlName="pagoPactado" class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none text-slate-600 font-bold transition-all" placeholder="0.00" readonly></div>
+                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
+                        <input type="number" formControlName="pagoPactado" class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none text-slate-600 font-bold transition-all" placeholder="0.00"></div>
                     </td>
                     <td class="px-6 py-4 w-36">
-                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">%</span><input type="number" formControlName="tasaInteres" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00" step="0.01"></div>
+                      <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">%</span>
+                        <input type="number" formControlName="tasaInteres" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00" step="0.01"></div>
+                    </td>
+                    <td class="px-6 py-4 w-36">
+                      <div class="relative">
+                        <span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
+                        <span class="block w-full bg-slate-100 border border-slate-200 rounded-lg p-2 pl-6 text-sm text-slate-700 font-bold">
+                          {{ (integrante.value.pagoPactado || 0) * (hojaControlForm.get('plazoSemanas')?.value || 0) | number:'1.2-2' }}
+                        </span>
+                      </div>
                     </td>
                     <td class="px-6 py-4 text-center">
                       <button type="button" (click)="removeIntegrante(i)" class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm">✕</button>

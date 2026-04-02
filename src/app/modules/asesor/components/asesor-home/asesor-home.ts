@@ -51,7 +51,7 @@ export class AsesorHome implements OnInit, OnDestroy {
         }
       }
       this.obtenerGruposDeHoy();
-      
+
       // Solicitar ubicación automáticamente de forma silenciosa/transparente (SOLO UNA VEZ POR SESIÓN)
       setTimeout(() => {
         if (!sessionStorage.getItem('ubicacion_compartida_hoy')) {
@@ -163,20 +163,14 @@ export class AsesorHome implements OnInit, OnDestroy {
         // ------------------------------------------------------------------------------------------------ //
         this.clienteService.getClientes().subscribe({
           next: (clientes: any[]) => {
-            console.log('Clientes obtenidos del servicio:', clientes);
-            console.log('hoyStr actual:', this.hoyStr);
-
             const clientesDelDia = (clientes || []).filter((c: any) => {
               if (!c.diaPago) return false;
 
               // Remove accents and convert to lowercase for robust comparison
               const diaPago = c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
               const diaActual = this.hoyStr.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-              console.log(`Comparando diaPago [${diaPago}] con diaActual [${diaActual}] para cliente:`, c.nombre);
               return diaPago === diaActual;
             });
-
-            console.log('Clientes del día:', clientesDelDia);
 
             this.clientesHoy = clientesDelDia.filter((c: any) => {
               let tienePagoHoy = false;
@@ -187,11 +181,9 @@ export class AsesorHome implements OnInit, OnDestroy {
                 (cred.tipoCredito === 'Individual' || cred.cliente) &&
                 (cred.cliente?._id === c._id || cred.cliente === c._id)
               );
-              console.log(`Crédito encontrado para ${c.nombre}:`, creditoCliente);
 
               if (creditoCliente) {
                 if (creditoCliente.pagos && creditoCliente.pagos.some((p: any) => {
-                  console.log(`Pago evaluado (${p.fechaPago}) vs ${hoyIsoPrefix}`);
                   return p.fechaPago && p.fechaPago.startsWith(hoyIsoPrefix)
                 })) {
                   tienePagoHoy = true;
@@ -201,17 +193,13 @@ export class AsesorHome implements OnInit, OnDestroy {
                 }
               }
 
-              console.log(`tienePagoHoy: ${tienePagoHoy}, estaLiquidado: ${estaLiquidado} para cliente: ${c.nombre}`);
-
               // Ocultamos si ya tiene pago hoy, o si su crédito está liquidado
               return !tienePagoHoy && !estaLiquidado;
             });
 
-            console.log('Clientes finales a mostrar:', this.clientesHoy);
-            
             // Programar notificación diaria a las 9:15 AM con el resumen (incluyendo grupos e individuales)
             this.notificationService.programarNotificacionDiaria(this.gruposHoy.length, this.clientesHoy.length);
-            
+
             this.cdr.detectChanges();
           },
           error: (err) => {

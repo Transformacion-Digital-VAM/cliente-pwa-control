@@ -2,6 +2,8 @@ import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angu
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormBuilder, FormGroup, ReactiveFormsModule, Validators } from '@angular/forms';
 import Swal from 'sweetalert2';
+
+// Servicios
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { ClienteService } from '../../../../core/services/cliente.service';
 
@@ -14,7 +16,14 @@ import { ClienteService } from '../../../../core/services/cliente.service';
 })
 export class AdminHojaControlInd implements OnInit {
   hojaControlIndForm: FormGroup;
+
+  // Datos para listas y filtros
   asesores: any[] = [];
+  clientesTotales: any[] = [];
+  clientesFiltrados: any[] = [];
+
+  // Control de UI
+  showClienteSuggestions: boolean = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -24,29 +33,30 @@ export class AdminHojaControlInd implements OnInit {
     private cdr: ChangeDetectorRef
   ) {
     this.hojaControlIndForm = this.fb.group({
+      idCliente: [''],
       nombreCliente: ['', Validators.required],
       ciclo: [1, [Validators.required, Validators.min(1)]],
       asesor: ['', Validators.required],
-      fechaPrimerPago: ['', Validators.required],
+      fechaPrimerPago: ['', Validators.required], // El input date necesita YYYY-MM-DD
       montoSolicitado: ['', [Validators.required, Validators.min(0)]],
-      tasaInteres: [0, [Validators.required, Validators.min(0)]],
+      tasaInteres: [7, [Validators.required, Validators.min(0)]],
       equivalenciaMeses: [4, [Validators.required, Validators.min(1)]],
-      saldoInicial: [0], 
+      saldoInicial: [0],
       garantia: [0, [Validators.required, Validators.min(0)]],
       garantiaPredial: [''],
-      periodo: ['Semanal', Validators.required],
       tipoPago: ['Semanal', Validators.required],
-      semanas: [16, [Validators.required, Validators.min(1)]],
       noPagos: [16, [Validators.required, Validators.min(1)]],
       diaPago: ['Lunes', Validators.required],
       pagoPactado: [0, [Validators.required, Validators.min(0)]],
-      nombreGrupo: ['']
+      nombreGrupo: [''],
+      semanas: [16]
     });
   }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       this.cargarAsesores();
+      this.cargarClientes();
     }
     this.setupSubscriptions();
   }
@@ -57,109 +67,134 @@ export class AdminHojaControlInd implements OnInit {
     });
   }
 
+  // --- LÓGICA DE FILTRADO Y SELECCIÓN ---
+
+  onSearchCliente(event: any) {
+    const term = (event.target.value || '').toLowerCase();
+    this.showClienteSuggestions = true;
+
+    if (!term.trim()) {
+      this.clientesFiltrados = [];
+      return;
+    }
+
+    this.clientesFiltrados = this.clientesTotales.filter(c =>
+      `${c.nombre} ${c.apellidos || ''}`.toLowerCase().includes(term)
+    );
+  }
+
+  seleccionarCliente(cliente: any) {
+    // 1. EXTRAER Y FORMATEAR FECHA: de "2026-03-27T23:04..." a "2026-03-27"
+    let fechaLimpia = '';
+    const fechaOriginal = cliente.fechaPrimerPago || cliente.createdAt; // Intenta usar la fecha de pago o la de creación
+
+    if (fechaOriginal) {
+      // Split por la 'T' para quedarnos solo con la parte YYYY-MM-DD
+      fechaLimpia = fechaOriginal.split('T')[0];
+    }
+
+    // 2. PARCHEAR VALORES
+    this.hojaControlIndForm.patchValue({
+      idCliente: cliente._id,
+      nombreCliente: `${cliente.nombre} ${cliente.apellidos || ''}`.trim(),
+      asesor: cliente.asesor?._id || cliente.asesor || '',
+      fechaPrimerPago: fechaLimpia, // Ahora sí se mostrará en el input date
+      diaPago: cliente.diaPago || 'Lunes',
+      tipoPago: cliente.tipoPago || 'Semanal',
+      nombreGrupo: cliente.grupo || ''
+    });
+
+    this.showClienteSuggestions = false;
+    this.cdr.detectChanges();
+  }
+
+  hideClienteSuggestions() {
+    setTimeout(() => {
+      this.showClienteSuggestions = false;
+      this.cdr.detectChanges();
+    }, 250);
+  }
+
+  // --- CÁLCULOS ---
+
   calcularPagoYTotal() {
-    const monto = this.hojaControlIndForm.get('montoSolicitado')?.value || 0;
-    const tasa = this.hojaControlIndForm.get('tasaInteres')?.value || 0;
-    const meses = this.hojaControlIndForm.get('equivalenciaMeses')?.value || 4;
-    const noPagos = this.hojaControlIndForm.get('noPagos')?.value || 16;
-    
-    // Garantia liquida automatica 5%
-    const garantiaCalculada = monto * 0.05;
+    const values = this.hojaControlIndForm.getRawValue();
+    const monto = values.montoSolicitado || 0;
+    const tasa = values.tasaInteres || 0;
+    const meses = values.equivalenciaMeses || 4;
+    const noPagos = values.noPagos || 16;
+
+    const garantiaCalculada = monto * 0.10;
 
     if (noPagos > 0) {
       const interes = monto * (tasa / 100) * meses;
       const saldoTotal = interes + monto;
       const pagoPactado = saldoTotal / noPagos;
-      
+
       this.hojaControlIndForm.patchValue({
         pagoPactado: Number(pagoPactado.toFixed(2)),
         garantia: Number(garantiaCalculada.toFixed(2)),
         saldoInicial: saldoTotal,
-        semanas: noPagos // Mantener sincronizado
+        semanas: noPagos
       }, { emitEvent: false });
     }
   }
 
+  // --- CARGA DE DATOS ---
+
   cargarAsesores(): void {
     this.grupoService.getAsesores().subscribe({
       next: (data) => {
-        if (data && Array.isArray(data)) {
-          this.asesores = data;
-        } else {
-          this.asesores = [];
-        }
+        this.asesores = Array.isArray(data) ? data : [];
         this.cdr.detectChanges();
       },
-      error: (err) => {
-        console.error('Error al cargar asesores:', err);
-        this.asesores = [];
-        this.cdr.detectChanges();
-      }
+      error: (err) => console.error('Error al cargar asesores:', err)
     });
   }
 
+  cargarClientes(): void {
+    this.clienteService.getClientes().subscribe({
+      next: (data) => {
+        this.clientesTotales = data || [];
+      },
+      error: (err) => console.error('Error al cargar miembros:', err)
+    });
+  }
+
+  // --- GUARDADO ---
+
   guardar() {
     if (this.hojaControlIndForm.valid) {
-      const payload = this.hojaControlIndForm.value;
-
       Swal.fire({
         title: 'Guardando...',
-        text: 'Por favor espera mientras guardamos la información.',
+        text: 'Por favor espera.',
         allowOutsideClick: false,
-        didOpen: () => {
-          Swal.showLoading();
-        }
+        didOpen: () => Swal.showLoading()
       });
 
-      this.clienteService.crearClienteIndividual(payload).subscribe({
-        next: (resp) => {
-          Swal.fire({
-            icon: 'success',
-            title: '¡Éxito!',
-            text: 'Hoja de control individual y crédito guardados correctamente.',
-            confirmButtonColor: '#3085d6'
-          });
+      this.clienteService.crearClienteIndividual(this.hojaControlIndForm.value).subscribe({
+        next: () => {
+          Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Registro guardado.' });
           this.cancelar();
         },
         error: (err) => {
-          console.error("Error al crear cliente individual:", err);
-          Swal.fire({
-            icon: 'error',
-            title: 'Error de servidor',
-            text: err.message || 'Ocurrió un error al guardar el cliente y crédito.',
-            confirmButtonColor: '#d33'
-          });
+          Swal.fire({ icon: 'error', title: 'Error', text: err.message });
         }
       });
-
     } else {
       this.hojaControlIndForm.markAllAsTouched();
-      Swal.fire({
-        icon: 'warning',
-        title: 'Campos incompletos',
-        text: 'Por favor, completa correctamente todos los campos obligatorios marcados en rojo.',
-        confirmButtonColor: '#f59e0b'
-      });
-      console.error('Formulario inválido:', this.hojaControlIndForm.value);
     }
   }
 
   cancelar() {
     this.hojaControlIndForm.reset({
       ciclo: 1,
-      montoSolicitado: '',
-      tasaInteres: 0,
+      tasaInteres: 7,
       equivalenciaMeses: 4,
-      saldoInicial: 0,
-      garantia: 0,
-      garantiaPredial: '',
-      periodo: 'Semanal',
       tipoPago: 'Semanal',
       noPagos: 16,
-      semanas: 16,
-      diaPago: 'Lunes',
-      pagoPactado: 0,
-      nombreGrupo: ''
+      diaPago: 'Lunes'
     });
+    this.clientesFiltrados = [];
   }
 }

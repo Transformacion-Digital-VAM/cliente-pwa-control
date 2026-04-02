@@ -233,6 +233,92 @@ export class AdminHome implements OnInit {
     window.open(url, '_blank');
   }
 
+  async descargarInfoGrupoRefil(grupo: any, event: Event) {
+    event.stopPropagation();
+
+    // 1. Obtener los créditos activos del grupo para calcular la última semana pagada
+    let ciclo = 1;
+    let maxPagoGlobal = 0;
+    let semanasTotales = 16;
+    const creditosDelGrupo: any[] = [];
+
+    if (grupo.integrantes && grupo.integrantes.length > 0) {
+      grupo.integrantes.forEach((m: any) => {
+        const c = this.getCreditoDeMiembro(m._id);
+        if (c) creditosDelGrupo.push(c);
+      });
+
+      if (creditosDelGrupo.length > 0) {
+        ciclo = creditosDelGrupo[0].ciclo || 1;
+        
+        creditosDelGrupo.forEach(c => {
+          if (c.semanas && c.semanas > semanasTotales) {
+            semanasTotales = c.semanas;
+          }
+          if (c.pagos && c.pagos.length > 0) {
+            const numerosPagos = c.pagos.map((p: any) => p.numeroPago);
+            const maxC = Math.max(...numerosPagos);
+            if (maxC > maxPagoGlobal) {
+              maxPagoGlobal = maxC;
+            }
+          }
+        });
+      }
+    }
+
+    if (creditosDelGrupo.length === 0) {
+      Swal.fire('Atención', 'Este grupo no tiene créditos activos para generar hoja de control.', 'warning');
+      return;
+    }
+
+    // 2. Determinar cuáles semanas siguen disponibles (no pagadas aún)
+    const semanasDisponibles: number[] = [];
+    let inicio = maxPagoGlobal >= semanasTotales ? semanasTotales : maxPagoGlobal + 1;
+    
+    // Por si quieren generar la misma semana actual
+    if (maxPagoGlobal > 0 && maxPagoGlobal < semanasTotales) {
+        // Añadimos opcionalmente la última pagada tambien
+        semanasDisponibles.push(maxPagoGlobal);
+    } else if (maxPagoGlobal === 0) {
+        inicio = 1;
+    }
+
+    for (let i = inicio; i <= semanasTotales; i++) {
+      if (!semanasDisponibles.includes(i)) {
+          semanasDisponibles.push(i);
+      }
+    }
+
+    const inputOptions: { [key: string]: string } = {};
+    semanasDisponibles.forEach(sem => {
+      inputOptions[sem.toString()] = `Semana ${sem}`;
+    });
+
+    // 3. Abrir SweetAlert para pedir selección de semana a imprimir
+    const { value: semanaSeleccionada, isConfirmed } = await Swal.fire({
+      title: 'H.C. Refiles',
+      text: 'Selecciona la semana en la que inicia el Refil:',
+      input: 'select',
+      inputOptions,
+      inputPlaceholder: 'Selecciona una semana',
+      showCancelButton: true,
+      confirmButtonText: 'Generar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+           // En Swal.fire devuelves string con el error directamente
+           return 'Debes seleccionar una semana';
+        }
+        return null;
+      }
+    });
+
+    if (isConfirmed && semanaSeleccionada) {
+      const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?soloRefiles=true&semanaInicioRefil=${semanaSeleccionada}`;
+      window.open(url, '_blank');
+    }
+  }
+
   descargarInfoIndividual(cliente: any, event: Event) {
     event.stopPropagation();
     

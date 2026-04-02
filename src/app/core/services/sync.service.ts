@@ -9,9 +9,6 @@ import { environment } from '../../../environments/environment';
     providedIn: 'root'
 })
 export class SyncService {
-    // private apiUrlGrupo = 'http://localhost:3000/api/grupos';
-    // private apiUrlMiembro = 'http://localhost:3000/api/miembros';
-    // private apiUrlCredito = 'http://localhost:3000/api/creditos';
     private apiUrlGrupo = `${environment.apiUrl}/grupos`;
     private apiUrlMiembro = `${environment.apiUrl}/miembros`;
     private apiUrlCredito = `${environment.apiUrl}/creditos`;
@@ -30,7 +27,6 @@ export class SyncService {
     private initSyncListener() {
         // Al recuperar conexión
         window.addEventListener('online', () => {
-            console.log('[SyncService] Conexión detectada (online event).');
             this.syncData();
         });
 
@@ -38,7 +34,6 @@ export class SyncService {
         this.appRef.isStable.pipe(
             first(isStable => isStable === true)
         ).subscribe(() => {
-            console.log('[SyncService] App estable, verificando conexión...');
             if (navigator.onLine) {
                 this.syncData();
             }
@@ -54,8 +49,6 @@ export class SyncService {
         try {
             const items = await this.dexie.syncQueue.toArray();
             if (items.length === 0) return;
-
-            console.log(`[SyncService] Encontrados ${items.length} elementos para sincronizar.`);
 
             for (const item of items) {
                 if (item.type === 'POST_GRUPO') {
@@ -108,41 +101,37 @@ export class SyncService {
                         }
 
                         await this.dexie.syncQueue.delete(item.id!);
-                        console.log(`[SyncService] Sincronización exitosa para elemento ${item.id}`);
                     } catch (error: any) {
-                        console.error(`[SyncService] Error al sincronizar elemento ${item.id}`, error);
+                        console.error(`Error al sincronizar elemento ${item.id}`, error);
                     }
                 } else if (item.type === 'POST_PAGO') {
                     try {
                         const { creditoId, pagoParams } = item.data;
                         await firstValueFrom(this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams));
                         await this.dexie.syncQueue.delete(item.id!);
-                        console.log(`[SyncService] Pago sincronizado correctamente: ${item.id}`);
                     } catch (error: any) {
-                        console.error(`[SyncService] Error al sincronizar Pago ${item.id}`, error);
+                        console.error(` Error al sincronizar Pago ${item.id}`, error);
                     }
                 } else if (item.type === 'POST_AHORRO') {
                     try {
                         const { creditoId, ahorroParams } = item.data;
                         await firstValueFrom(this.http.post(`${this.apiUrlCredito}/${creditoId}/ahorro`, ahorroParams));
                         await this.dexie.syncQueue.delete(item.id!);
-                        console.log(`[SyncService] Ahorro sincronizado correctamente: ${item.id}`);
                     } catch (error: any) {
-                        console.error(`[SyncService] Error al sincronizar Ahorro ${item.id}`, error);
+                        console.error(`Error al sincronizar Ahorro ${item.id}`, error);
                     }
                 } else if (item.type === 'PUT_CREDITO') {
                     try {
                         const { creditoId, payload } = item.data;
                         await firstValueFrom(this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload));
                         await this.dexie.syncQueue.delete(item.id!);
-                        console.log(`[SyncService] Crédito actualizado correctamente: ${item.id}`);
                     } catch (error: any) {
-                        console.error(`[SyncService] Error al sincronizar actualización de Crédito ${item.id}`, error);
+                        console.error(`Error al sincronizar actualización de Crédito ${item.id}`, error);
                     }
                 }
             }
         } catch (e) {
-            console.error('[SyncService] Error accediendo a la base de datos local', e);
+            console.error('Error accediendo a la base de datos local', e);
         }
     }
 }
