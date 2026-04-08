@@ -1,4 +1,4 @@
 export const environment = {
-    production: true,
-    apiUrl: 'http://192.168.1.86:3000/api'
+    production: false,
+    apiUrl: 'https://servidor-pwa-control.onrender.com/api'
 };

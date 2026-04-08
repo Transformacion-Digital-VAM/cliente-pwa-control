@@ -11,6 +11,7 @@ import { AsesorHojaControlInd } from './modules/asesor/components/asesor-hoja-co
 import { AdminMapaAsesores } from './modules/admin/components/admin-mapa-asesores/admin-mapa-asesores';
 import { AdminActualizarTipoCredito } from './modules/admin/components/admin-actualizar-tipo-credito/admin-actualizar-tipo-credito';
 import { roleGuard, noAuthGuard } from './core/guards/auth.guard';
+import { HomeGerencia } from './modules/gerencia/home-gerencia/home-gerencia';
 
 
 export const routes: Routes = [
@@ -22,6 +23,7 @@ export const routes: Routes = [
     { path: 'mapa-asesores', component: AdminMapaAsesores, canActivate: [roleGuard(['admin'])] },
     { path: 'hoja-control-asesor/:id', component: AsesorHojaControl, canActivate: [roleGuard(['user', 'asesor'])] },
     { path: 'home-admin', component: AdminHome, canActivate: [roleGuard(['admin'])] },
+    { path: 'home-gerencia', component: HomeGerencia, canActivate: [roleGuard(['gerencia'])] },
     { path: 'home-asesor', component: AsesorHome, canActivate: [roleGuard(['user', 'asesor'])] },
     { path: 'grupos-asesor', component: AsesorListaGrupos, canActivate: [roleGuard(['user', 'asesor'])] },
     { path: 'clientes-asesor', component: AsesorListaClientes, canActivate: [roleGuard(['user', 'asesor'])] },
