@@ -1,57 +1,401 @@
 <div class="min-h-screen bg-slate-50 font-sans pb-24 lg:pb-8 flex flex-col">
+
     <!-- Header -->
     <div class="bg-blue-600 shadow-md relative z-10">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between items-center py-4">
-                <div class="flex items-center space-x-4">
-                    <div>
-                        <h1 class="text-2xl font-bold text-white tracking-tight flex items-center gap-2">
-                            Mapa de Asesores
-                        </h1>
-                        <p class="text-blue-100 text-sm font-medium">Visualiza la ubicación actual</p>
-                    </div>
+                <div>
+                    <h1 class="text-2xl font-bold text-white tracking-tight">Mapa & Ubicaciones</h1>
+                    <p class="text-blue-100 text-sm font-medium">Asesores activos y pagos geolocalizados</p>
                 </div>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex gap-1 pb-1">
+                <button (click)="cambiarTab('asesores')" [class]="tabActual === 'asesores'
+        ? 'px-5 py-2 rounded-t-lg bg-white text-blue-700 font-bold text-sm shadow'
+        : 'px-5 py-2 rounded-t-lg bg-blue-700/40 text-white/80 font-semibold text-sm hover:bg-blue-700/60 transition'">
+
+                    <i class="bi bi-people-fill mr-2"></i>
+                    Asesores Activos
+                </button>
+
+                <button (click)="cambiarTab('pagos')" [class]="tabActual === 'pagos'
+        ? 'px-5 py-2 rounded-t-lg bg-white text-blue-700 font-bold text-sm shadow'
+        : 'px-5 py-2 rounded-t-lg bg-blue-700/40 text-white/80 font-semibold text-sm hover:bg-blue-700/60 transition'">
+
+                    <i class="bi bi-cash-stack mr-2"></i>
+                    Historial de Pagos
+
+                    <span *ngIf="todosPagos.length > 0"
+                        class="ml-1 bg-yellow-400 text-yellow-900 text-xs font-black px-1.5 py-0.5 rounded-full">
+                        {{ todosPagos.length }}
+                    </span>
+                </button>
             </div>
         </div>
     </div>
 
-    <!-- Contenido principal -->
-    <main class="flex-1 w-full flex flex-col pt-6">
-        <div class="flex-1 w-full px-4 sm:px-6 lg:px-8 mb-6 h-full min-h-[500px]">
-            <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-[calc(100vh-200px)] relative">
-                <!-- Capa del mapa -->
-                <div id="map" class="w-full h-full z-0"></div>
-                
-                <div *ngIf="cargando" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10 transition-opacity">
-                    <div class="text-center">
-                        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                        <p class="text-slate-600 font-medium">Cargando ubicaciones...</p>
-                    </div>
-                </div>
+    <!-- Contenido -->
+    <main class="flex-1 w-full flex flex-col pt-6 gap-6 px-4 sm:px-6 lg:px-8 mb-6 max-w-7xl mx-auto w-full">
 
-                <div *ngIf="!cargando && errorMsg" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-90 z-10 p-4">
-                    <div class="bg-red-50 p-6 rounded-2xl max-w-sm text-center border border-red-100 shadow-lg">
-                        <svg class="h-12 w-12 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                        </svg>
-                        <h3 class="text-lg font-bold text-slate-800 mb-1">Hubo un problema</h3>
-                        <p class="text-slate-600 text-sm">{{ errorMsg }}</p>
-                    </div>
-                </div>
+        <!-- ============================================================ -->
+        <!-- TAB 1: ASESORES ACTIVOS                                       -->
+        <!-- ============================================================ -->
+        <ng-container *ngIf="tabActual === 'asesores'">
 
-                <div *ngIf="!cargando && asesoresLocations.length === 0 && !errorMsg" class="absolute inset-0 flex items-center justify-center bg-white bg-opacity-80 z-10 p-4">
-                    <div class="text-center bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
-                        <div class="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <svg class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z" />
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                            </svg>
-                        </div>
-                        <h3 class="text-xl font-bold text-slate-800 tracking-tight">Sin asesores</h3>
-                        <p class="text-slate-500 mt-2">No hay asesores compartiendo su ubicación.</p>
-                    </div>
+            <div *ngIf="cargandoAsesores"
+                class="flex flex-col items-center justify-center p-10 bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p class="text-slate-600 font-medium">Cargando ubicaciones de asesores...</p>
+            </div>
+
+            <div *ngIf="!cargandoAsesores && errorMsg"
+                class="flex items-center justify-center bg-white p-10 rounded-2xl border border-red-200 shadow-sm">
+                <div class="text-center">
+                    <h3 class="text-lg font-bold text-slate-800 mb-1">Hubo un problema</h3>
+                    <p class="text-slate-600 text-sm">{{ errorMsg }}</p>
                 </div>
             </div>
-        </div>
+
+            <div *ngIf="!cargandoAsesores && branches.length === 0 && !errorMsg"
+                class="flex items-center justify-center bg-white p-10 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="text-center">
+                    <div class="bg-amber-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="h-8 w-8 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.242-4.243a8 8 0 1111.314 0z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 tracking-tight">Sin asesores activos</h3>
+                    <p class="text-slate-500 mt-2">No hay asesores compartiendo su ubicación.</p>
+                </div>
+            </div>
+
+            <ng-container *ngIf="!cargandoAsesores && branches.length > 0">
+
+                <!-- ── PESTAÑAS DE COORDINACIÓN ── -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+
+                    <!-- Barra de pestañas -->
+                    <div class="flex overflow-x-auto border-b border-slate-200 bg-slate-50">
+                        <button *ngFor="let branch of branches" (click)="seleccionarCoordinacion(branch.name)"
+                            class="relative flex-shrink-0 px-6 py-3.5 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 border-r border-slate-200"
+                            [class.bg-white]="coordinacionActiva === branch.name"
+                            [class.text-blue-700]="coordinacionActiva === branch.name"
+                            [class.text-slate-500]="coordinacionActiva !== branch.name">
+                            <svg class="h-3.5 w-3.5 flex-shrink-0" fill="none" stroke="currentColor"
+                                viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                    d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                            </svg>
+                            {{ branch.name | uppercase }}
+                            <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full transition-all"
+                                [class.bg-blue-600]="coordinacionActiva === branch.name"
+                                [class.text-white]="coordinacionActiva === branch.name"
+                                [class.bg-slate-200]="coordinacionActiva !== branch.name"
+                                [class.text-slate-600]="coordinacionActiva !== branch.name">
+                                {{ branch.locations.length }}
+                            </span>
+                            <span *ngIf="coordinacionActiva === branch.name"
+                                class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></span>
+                        </button>
+                    </div>
+
+                    <!-- Contenido de la pestaña activa -->
+                    <ng-container *ngIf="branchActiva">
+
+                        <!-- Barra: nombre + buscador de asesor -->
+                        <div
+                            class="px-5 py-3 border-b border-slate-100 flex flex-col sm:flex-row gap-3 items-start sm:items-center">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-black text-slate-800 uppercase tracking-tight">{{
+                                    branchActiva.name }}</span>
+                                <span
+                                    class="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded-full">
+                                    {{ branchActiva.locations.length }} activos
+                                </span>
+                            </div>
+                            <div class="relative sm:ml-auto w-full sm:w-56">
+                                <svg class="absolute left-3 top-2.5 h-4 w-4 text-slate-400" fill="none"
+                                    viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input type="text" [(ngModel)]="asesorBusqueda" placeholder="Buscar asesor..."
+                                    class="w-full border border-slate-200 bg-slate-50 rounded-xl pl-9 pr-4 py-2 text-sm focus:ring-2 focus:ring-blue-300 focus:border-blue-400 focus:bg-white outline-none transition-all">
+                            </div>
+                        </div>
+
+                        <!-- Chips de asesores filtrados -->
+                        <div class="px-5 py-3 flex flex-wrap gap-2 border-b border-slate-100 min-h-[48px]">
+                            <span *ngFor="let loc of asesoresFiltradosDeBranch"
+                                class="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                                {{ loc.username }}
+                            </span>
+                            <span *ngIf="asesoresFiltradosDeBranch.length === 0 && asesorBusqueda"
+                                class="text-xs text-slate-400 italic self-center">
+                                Sin asesores que coincidan con "{{ asesorBusqueda }}"
+                            </span>
+                        </div>
+
+                        <!-- Mapa de la coordinación activa -->
+                        <div class="h-[420px] lg:h-[520px] relative w-full z-0 p-1 bg-slate-100">
+                            <div [id]="'map-' + branches.indexOf(branchActiva)"
+                                class="w-full h-full rounded-b-xl overflow-hidden shadow-inner"></div>
+                        </div>
+
+                    </ng-container>
+                </div>
+
+            </ng-container>
+
+        </ng-container>
+
+        <!-- ============================================================ -->
+        <!-- TAB 2: HISTORIAL DE PAGOS CON UBICACIÓN                      -->
+        <!-- ============================================================ -->
+        <ng-container *ngIf="tabActual === 'pagos'">
+            <!-- Cargando -->
+            <div *ngIf="cargandoPagos"
+                class="flex flex-col items-center justify-center p-10 bg-white rounded-2xl shadow-sm border border-slate-200">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+                <p class="text-slate-600 font-medium">Cargando historial de pagos...</p>
+            </div>
+
+            <ng-container *ngIf="!cargandoPagos">
+
+                <!-- Sin datos -->
+                <div *ngIf="todosPagos.length === 0"
+                    class="flex items-center justify-center bg-white p-10 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="text-center">
+                        <div class="text-5xl mb-4"><span class="material-icons"
+                                style="color: #f54242;">where_to_vote</span></div>
+                        <h3 class="text-xl font-bold text-slate-800">Sin pagos geolocalizados aún</h3>
+                        <p class="text-slate-500 mt-2 text-sm">Los pagos registrados con GPS aparecerán aquí.</p>
+                    </div>
+                </div>
+
+                <ng-container *ngIf="todosPagos.length > 0">
+
+                    <!-- ── PESTAÑAS DE COORDINACIÓN ── -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="flex overflow-x-auto border-b border-slate-200 bg-slate-50">
+                            <!-- Tab "Todas" -->
+                            <button (click)="filtroCoordinacion = ''; aplicarFiltros()"
+                                class="relative flex-shrink-0 px-5 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 border-r border-slate-200"
+                                [class.bg-white]="filtroCoordinacion === ''"
+                                [class.text-blue-700]="filtroCoordinacion === ''"
+                                [class.text-slate-500]="filtroCoordinacion !== ''">
+                                Todas
+                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full transition-all"
+                                    [class.bg-blue-600]="filtroCoordinacion === ''"
+                                    [class.text-white]="filtroCoordinacion === ''"
+                                    [class.bg-slate-200]="filtroCoordinacion !== ''"
+                                    [class.text-slate-600]="filtroCoordinacion !== ''">
+                                    {{ todosPagos.length }}
+                                </span>
+                                <span *ngIf="filtroCoordinacion === ''"
+                                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></span>
+                            </button>
+                            <!-- Una pestaña por coordinación -->
+                            <button *ngFor="let coord of coordinacionesPagos"
+                                (click)="filtroCoordinacion = coord; aplicarFiltros()"
+                                class="relative flex-shrink-0 px-5 py-3 text-xs font-bold uppercase tracking-wider whitespace-nowrap transition-all flex items-center gap-2 border-r border-slate-200"
+                                [class.bg-white]="filtroCoordinacion === coord"
+                                [class.text-blue-700]="filtroCoordinacion === coord"
+                                [class.text-slate-500]="filtroCoordinacion !== coord">
+                                {{ coord }}
+                                <span class="text-[10px] font-black px-1.5 py-0.5 rounded-full transition-all"
+                                    [class.bg-blue-600]="filtroCoordinacion === coord"
+                                    [class.text-white]="filtroCoordinacion === coord"
+                                    [class.bg-slate-200]="filtroCoordinacion !== coord"
+                                    [class.text-slate-600]="filtroCoordinacion !== coord">
+                                    {{ getCountPagosByCoord(coord) }}
+                                </span>
+                                <span *ngIf="filtroCoordinacion === coord"
+                                    class="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600"></span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Filtros (asesor, grupo, fecha) -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+                        <div class="flex flex-wrap gap-3 items-end">
+                            <div class="flex-1 min-w-[160px]">
+                                <label
+                                    class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Asesor</label>
+                                <input type="text" [(ngModel)]="filtroAsesor" (ngModelChange)="aplicarFiltros()"
+                                    placeholder="Buscar asesor..."
+                                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+                            </div>
+                            <div class="flex-1 min-w-[160px]">
+                                <label
+                                    class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Grupo</label>
+                                <input type="text" [(ngModel)]="filtroGrupo" (ngModelChange)="aplicarFiltros()"
+                                    placeholder="Buscar grupo..."
+                                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+                            </div>
+                            <div class="flex-1 min-w-[160px]">
+                                <label
+                                    class="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">Fecha</label>
+                                <input type="date" [(ngModel)]="filtroFecha" (ngModelChange)="aplicarFiltros()"
+                                    class="w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-400 focus:outline-none">
+                            </div>
+                            <button (click)="limpiarFiltros()"
+                                class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 font-semibold text-sm rounded-lg transition">
+                                Limpiar
+                            </button>
+                            <div class="ml-auto bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 text-center">
+                                <span class="text-2xl font-black text-blue-700">{{ pagosFiltrados.length }}</span>
+                                <span class="block text-xs text-blue-500 font-semibold">pagos encontrados</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Mapa de pagos -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-5 py-3 border-b border-slate-100 flex items-center gap-2 bg-slate-50">
+                            <div class="w-4 h-4 rounded-full bg-blue-700 flex items-center justify-center">
+                                <span class="text-white text-xs font-black">$</span>
+                            </div>
+                            <span class="font-bold text-slate-700 text-sm">
+                                Mapa — {{ pagosFiltrados.length }} pagos geolocalizados
+                            </span>
+                            <span class="text-xs text-slate-400 ml-2">Click en un marcador para ver detalle</span>
+                        </div>
+                        <div class="h-[420px] w-full relative z-0 bg-slate-100 p-1">
+                            <div id="pago-map" class="w-full h-full rounded-xl overflow-hidden shadow-inner"></div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de pagos -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div class="px-5 py-4 border-b border-slate-100 bg-slate-50 flex items-center justify-between">
+                            <span class="font-bold text-slate-700">Registros de pagos</span>
+                            <span class="text-xs text-slate-400">Página {{ paginaActual }} de {{ totalPaginas }}</span>
+                        </div>
+
+                        <!-- Tabla desktop -->
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead>
+                                    <tr class="bg-slate-50 border-b border-slate-200">
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            Fecha</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            Grupo / Cliente</th>
+                                        <th
+                                            class="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            Asesor</th>
+                                        <th
+                                            class="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            Monto Total</th>
+                                        <th
+                                            class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            Método</th>
+                                        <th
+                                            class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                            Coords</th>
+                                        <th
+                                            class="px-4 py-3 text-center text-xs font-bold text-slate-500 uppercase tracking-wide">
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr *ngFor="let p of paginasPagos; let i = index"
+                                        [class]="i % 2 === 0 ? 'bg-white hover:bg-blue-50/40 transition' : 'bg-slate-50/50 hover:bg-blue-50/40 transition'">
+
+                                        <td class="px-4 py-3 text-slate-600 text-xs whitespace-nowrap">
+                                            {{ formatFecha(p.fechaPago) }}
+                                        </td>
+
+                                        <!-- Nombre del grupo con badge de integrantes -->
+                                        <td class="px-4 py-3">
+                                            <div class="flex items-center gap-2">
+                                                <span class="font-bold text-slate-800 text-sm">{{ p.grupo }}</span>
+                                                <span *ngIf="p.esGrupo && p.count > 1"
+                                                    class="text-[10px] font-black bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full whitespace-nowrap">
+                                                    {{ p.count }} integrantes
+                                                </span>
+                                                <span *ngIf="!p.esGrupo"
+                                                    class="text-[10px] font-black bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full">
+                                                    Individual
+                                                </span>
+                                            </div>
+                                        </td>
+
+                                        <td class="px-4 py-3 text-slate-600 text-xs">{{ p.asesor || '—' }}</td>
+
+                                        <td class="px-4 py-3 text-right">
+                                            <span class="font-bold text-emerald-700">${{ p.totalMonto.toFixed(2)
+                                                }}</span>
+                                        </td>
+
+                                        <td class="px-4 py-3 text-center">
+                                            <span [ngClass]="{
+                                                'bg-green-100 text-green-700': p.metodoPago === 'EFECTIVO',
+                                                'bg-blue-100 text-blue-700': p.metodoPago === 'TRANSFERENCIA',
+                                                'bg-purple-100 text-purple-700': p.metodoPago === 'TARJETA',
+                                                'bg-orange-100 text-orange-700': p.metodoPago === 'DEPOSITO',
+                                                'bg-slate-100 text-slate-600': !p.metodoPago || p.metodoPago === 'MIXTO'
+                                            }" class="inline-block px-2 py-0.5 rounded-full text-xs font-bold">
+                                                {{ p.metodoPago || '—' }}
+                                            </span>
+                                        </td>
+
+                                        <td class="px-4 py-3 text-center">
+                                            <span class="text-xs font-mono text-slate-400">
+                                                {{ p.ubicacion?.latitud?.toFixed(4) }},<br>{{
+                                                p.ubicacion?.longitud?.toFixed(4) }}
+                                            </span>
+                                        </td>
+
+                                        <td class="px-4 py-3 text-center">
+                                            <button *ngIf="p.ubicacion?.latitud" (click)="verEnMapa(p)"
+                                                title="Ver en mapa"
+                                                class="inline-flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold rounded-lg transition">
+                                                 <i class="bi bi-geo-alt-fill mr-2"></i>Mapa
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Paginación -->
+                        <div *ngIf="totalPaginas > 1"
+                            class="flex items-center justify-center gap-2 px-5 py-4 border-t border-slate-100">
+                            <button (click)="irAPagina(paginaActual - 1)" [disabled]="paginaActual === 1"
+                                class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                                ‹ Anterior
+                            </button>
+                            <ng-container *ngFor="let n of pageNumbers">
+                                <button (click)="irAPagina(n)"
+                                    [class]="n === paginaActual
+                                        ? 'px-3 py-1.5 rounded-lg text-sm font-bold bg-blue-600 text-white border border-blue-600'
+                                        : 'px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 transition'">
+                                    {{ n }}
+                                </button>
+                            </ng-container>
+                            <button (click)="irAPagina(paginaActual + 1)" [disabled]="paginaActual === totalPaginas"
+                                class="px-3 py-1.5 rounded-lg text-sm font-semibold border border-slate-200 text-slate-600 hover:bg-slate-100 disabled:opacity-30 disabled:cursor-not-allowed transition">
+                                Siguiente ›
+                            </button>
+                        </div>
+
+                    </div>
+
+                </ng-container>
+
+            </ng-container>
+
+        </ng-container>
+
     </main>
 </div>

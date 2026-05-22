@@ -127,6 +127,7 @@
                                     <thead class="bg-slate-50 border-b border-slate-200">
                                         <tr>
                                             <th scope="col" class="px-6 py-3 font-semibold text-slate-700">#</th>
+                                            <th scope="col" class="px-6 py-3 font-semibold text-slate-700">Recibo</th>
                                             <th scope="col" class="px-6 py-3 font-semibold text-slate-700">Fecha</th>
                                             <th scope="col" class="px-6 py-3 font-semibold text-slate-700 text-right">Monto</th>
                                         </tr>
@@ -135,6 +136,7 @@
                                         @for (pago of creditoActivo.pagos; track $index) {
                                             <tr class="hover:bg-slate-50 transition-colors">
                                                 <td class="px-6 py-4 font-medium text-slate-900">{{ $index + 1 }}</td>
+                                                <td class="px-6 py-4 font-medium text-slate-600">#{{ pago.numeroRecibo || 'N/A' }}</td>
                                                 <td class="px-6 py-4">{{ pago.fechaPago | date:'dd/MM/yyyy HH:mm' }}</td>
                                                 <td class="px-6 py-4 font-bold text-emerald-600 text-right">${{ pago.montoPagado | number:'1.2-2' }}</td>
                                             </tr>

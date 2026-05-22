@@ -1,5 +1,5 @@
 import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
-import { RouterLink, Router, NavigationEnd } from '@angular/router';
+import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DexieService } from '../../../core/database/dexie.service';
@@ -7,7 +7,7 @@ import { DexieService } from '../../../core/database/dexie.service';
 @Component({
   selector: 'app-navbar',
   standalone: true,
-  imports: [RouterLink, CommonModule],
+  imports: [RouterLink, RouterLinkActive, CommonModule],
   templateUrl: './navbar.html',
   styleUrl: './navbar.css',
 })
@@ -53,7 +53,22 @@ export class Navbar implements OnInit, OnDestroy {
 
   get isAdmin(): boolean {
     if (isPlatformBrowser(this.platformId)) {
-      return localStorage.getItem('userRole') === 'admin';
+      const role = localStorage.getItem('userRole');
+      return role === 'admin';
+    }
+    return false;
+  }
+
+  get isSuperAdmin(): boolean {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('userRole') === 'superadmin';
+    }
+    return false;
+  }
+
+  get isMaster(): boolean {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('userRole') === 'master';
     }
     return false;
   }

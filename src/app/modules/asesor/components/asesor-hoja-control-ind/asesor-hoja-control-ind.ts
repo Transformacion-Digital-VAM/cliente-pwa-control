@@ -4,6 +4,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import Swal from 'sweetalert2';
 import { ClienteService } from '../../../../core/services/cliente.service';
 import { AuthService } from '../../../../core/services/auth.service';
+import { LocationService } from '../../../../core/services/location.service';
 
 @Component({
   selector: 'app-asesor-hoja-control-ind',
@@ -29,7 +30,8 @@ export class AsesorHojaControlInd implements OnInit {
     private router: Router,
     private clienteService: ClienteService,
     private cdr: ChangeDetectorRef,
-    private authService: AuthService
+    private authService: AuthService,
+    private locationService: LocationService
   ) { }
 
   ngOnInit(): void {
@@ -135,31 +137,46 @@ export class AsesorHojaControlInd implements OnInit {
     Swal.fire({
       title: 'Registrar Pago',
       html: `
-        <div class="space-y-4">
-          <p class="text-sm text-slate-600">Monto pactado: <strong class="text-blue-700">$${pagoPactado}</strong></p>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Monto a abonar</label>
-            <input type="number" id="montoAbonar" class="swal2-input border-slate-300 focus:ring-blue-500 rounded-lg text-center font-bold" value="${pagoPactado}" min="1">
+        <div class="space-y-3">
+          <p class="text-sm text-slate-600 mb-4">Monto pactado: <strong class="text-blue-700">$${pagoPactado}</strong></p>
+          
+          <div class="flex items-center space-x-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest w-24 text-right">No. Recibo <span class="text-red-500">*</span></span>
+            <div class="relative flex-1">
+              <span class="absolute left-3 top-2.5 text-slate-400 font-bold">#</span>
+              <input type="number" id="numeroRecibo" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="000" min="1" required>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-slate-700 mb-1">Método(s) de Pago</label>
-            <div class="flex flex-wrap justify-center gap-2 mt-2">
-              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
-                <input type="checkbox" name="metodoPago" value="EFECTIVO" checked class="rounded text-blue-600">
-                <span class="text-xs font-bold text-slate-600 uppercase">Efectivo</span>
-              </label>
-              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
-                <input type="checkbox" name="metodoPago" value="TRANSFERENCIA" class="rounded text-blue-600">
-                <span class="text-xs font-bold text-slate-600 uppercase">Transferencia</span>
-              </label>
-              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
-                <input type="checkbox" name="metodoPago" value="DEPOSITO" class="rounded text-blue-600">
-                <span class="text-xs font-bold text-slate-600 uppercase">Deposito</span>
-              </label>
-              <label class="flex items-center space-x-2 bg-slate-50 px-3 py-2 rounded-lg border border-slate-200 cursor-pointer hover:bg-blue-50 transition-colors">
-                <input type="checkbox" name="metodoPago" value="TARJETA" class="rounded text-blue-600">
-                <span class="text-xs font-bold text-slate-600 uppercase">Tarjeta</span>
-              </label>
+
+          <div class="flex items-center space-x-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest w-24 text-right">Efectivo</span>
+            <div class="relative flex-1">
+              <span class="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
+              <input type="number" id="montoEfectivo" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" value="${pagoPactado}" min="0">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest w-24 text-right">Transf.</span>
+            <div class="relative flex-1">
+              <span class="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
+              <input type="number" id="montoTransferencia" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="0" min="0">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest w-24 text-right">Depósito</span>
+            <div class="relative flex-1">
+              <span class="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
+              <input type="number" id="montoDeposito" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="0" min="0">
+            </div>
+          </div>
+
+          <div class="flex items-center space-x-3 bg-slate-50 p-2 rounded-lg border border-slate-100">
+            <span class="text-xs font-bold text-slate-500 uppercase tracking-widest w-24 text-right">Tarjeta</span>
+            <div class="relative flex-1">
+              <span class="absolute left-3 top-2.5 text-slate-400 font-bold">$</span>
+              <input type="number" id="montoTarjeta" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="0" min="0">
             </div>
           </div>
         </div>
@@ -170,31 +187,51 @@ export class AsesorHojaControlInd implements OnInit {
       confirmButtonColor: '#2563eb',
       cancelButtonColor: '#94a3b8',
       preConfirm: () => {
-        const inputMonto = document.getElementById('montoAbonar') as HTMLInputElement;
-        const checkboxes = document.querySelectorAll('input[name="metodoPago"]:checked') as NodeListOf<HTMLInputElement>;
-        
-        const monto = parseFloat(inputMonto.value);
-        const metodos = Array.from(checkboxes).map(cb => cb.value);
-        
-        if (!monto || monto <= 0) {
-          Swal.showValidationMessage('Ingresa un monto válido mayor a 0');
+        const valRecibo = parseInt((document.getElementById('numeroRecibo') as HTMLInputElement).value) || 0;
+        const valEf = parseFloat((document.getElementById('montoEfectivo') as HTMLInputElement).value) || 0;
+        const valTr = parseFloat((document.getElementById('montoTransferencia') as HTMLInputElement).value) || 0;
+        const valDe = parseFloat((document.getElementById('montoDeposito') as HTMLInputElement).value) || 0;
+        const valTa = parseFloat((document.getElementById('montoTarjeta') as HTMLInputElement).value) || 0;
+
+        if (valRecibo <= 0) {
+          Swal.showValidationMessage('Ingresa un número de recibo válido');
           return false;
         }
-        if (metodos.length === 0) {
-          Swal.showValidationMessage('Selecciona al menos un método de pago');
+
+        const monto = valEf + valTr + valDe + valTa;
+        if (monto <= 0) {
+          Swal.showValidationMessage('Ingresa un monto válido mayor a 0 en algún método');
           return false;
         }
-        return { monto, metodo: metodos.join(', ') };
+
+        const metodos = [];
+        if (valEf > 0) metodos.push('EFECTIVO');
+        if (valTr > 0) metodos.push('TRANSFERENCIA');
+        if (valDe > 0) metodos.push('DEPOSITO');
+        if (valTa > 0) metodos.push('TARJETA');
+
+        let metodoFinal = 'EFECTIVO';
+        if (metodos.length === 1) metodoFinal = metodos[0];
+        else if (metodos.length > 1) metodoFinal = 'MIXTO';
+
+        return {
+          montoPagado: monto,
+          metodoPago: metodoFinal,
+          efectivoCredito: valEf,
+          transferenciaCredito: valTr,
+          depositoCredito: valDe,
+          tarjetaCredito: valTa,
+          numeroRecibo: valRecibo
+        };
       }
     }).then((result) => {
       if (result.isConfirmed) {
-        const { monto, metodo } = result.value;
-        this.procesarPagoEnServidor(monto, metodo);
+        this.procesarPagoEnServidor(result.value);
       }
     });
   }
 
-  procesarPagoEnServidor(montoPagado: number, metodoPago: string): void {
+  procesarPagoEnServidor(pagoData: any): void {
     Swal.fire({
       title: 'Procesando...',
       text: 'Guardando el pago del cliente',
@@ -204,33 +241,21 @@ export class AsesorHojaControlInd implements OnInit {
       }
     });
 
-    const numeroNuevo = (this.creditoActivo.pagos?.length || 0) + 1;
-    const nuevoPago = {
-      numeroPago: numeroNuevo,
-      montoPagado: montoPagado,
-      fechaPago: new Date(),
-      pagoSolidario: false,
-      metodoPago: metodoPago
-    };
+    pagoData.fechaPago = new Date();
 
-    const nuevosPagos = [...(this.creditoActivo.pagos || []), nuevoPago];
-    const saldoRestante = (this.creditoActivo.saldoPendiente || 0) - montoPagado;
-    const nuevoEstado = saldoRestante <= 0 ? 'Liquidado' : 'Activo';
+    // Adjuntar ubicación si está disponible (permiso ya solicitado al arrancar)
+    const coords = this.locationService.getCurrentCoords();
+    if (coords) {
+      pagoData.ubicacion = coords;
+    }
 
-    const payloadUpdate = {
-      pagos: nuevosPagos,
-      saldoPendiente: Math.max(0, saldoRestante),
-      estado: nuevoEstado
-    };
-
-    // Usamos actualizarCredito (PUT) para eludir la validación del POST /pagos del backend
-    this.clienteService.actualizarCredito(this.creditoActivo._id, payloadUpdate).subscribe({
+    // Usamos registrarPago (POST) en el Service en lugar de actualizarCredito (PUT)
+    this.clienteService.registrarPago(this.creditoActivo._id, pagoData).subscribe({
       next: (res) => {
         const isOffline = res.offline;
         const message = isOffline
           ? 'El pago se ha guardado localmente (Sin internet) y se subirá automáticamente.'
-          : `Se abonaron $${montoPagado} correctamente.`;
-
+          : 'Se abonaron $' + pagoData.montoPagado + ' correctamente.';
         Swal.fire({
           icon: 'success',
           title: isOffline ? 'Guardado Local' : '¡Pago Registrado!',
@@ -239,7 +264,7 @@ export class AsesorHojaControlInd implements OnInit {
           showConfirmButton: false
         });
         
-        // Refrescar datos (cargará de Dexie si seguimos offline)
+        // Refrescar datos para que se vea el nuevo pago
         this.cargarDatos();
       },
       error: (err) => {

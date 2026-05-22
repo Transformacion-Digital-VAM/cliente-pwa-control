@@ -51,12 +51,17 @@ export class LoginComponent {
           user: String(this.loginData.username),
           token: String(response.token),
           role: response.user.role,
+          coordinacion: response.user.coordinacion,
           lastLogin: Date.now()
         });
 
         localStorage.setItem('userRole', response.user.role);
         localStorage.setItem('isLoggedIn', 'true');
-        localStorage.setItem('user', JSON.stringify({ username: response.user.username || this.loginData.username }));
+        localStorage.setItem('loginDate', new Date().toISOString().split('T')[0]);
+        localStorage.setItem('user', JSON.stringify({ 
+          username: response.user.username || this.loginData.username,
+          coordinacion: response.user.coordinacion
+        }));
 
         this.redirectByRole(response.user.role);
 
@@ -96,7 +101,11 @@ export class LoginComponent {
       // Por ahora, permitimos el paso si el usuario ya inició sesión antes en este equipo
       localStorage.setItem('userRole', localUser.role);
       localStorage.setItem('isLoggedIn', 'true');
-      localStorage.setItem('user', JSON.stringify({ username: localUser.user }));
+      localStorage.setItem('loginDate', new Date().toISOString().split('T')[0]);
+      localStorage.setItem('user', JSON.stringify({ 
+        username: localUser.user,
+        coordinacion: localUser.coordinacion
+      }));
       this.redirectByRole(localUser.role);
     } else {
       this.errorMessage = 'No hay datos de acceso guardados para este usuario o no hay conexión.';
@@ -104,7 +113,7 @@ export class LoginComponent {
   }
 
   private redirectByRole(role: string) {
-    if (role === 'admin') {
+    if (role === 'admin' || role === 'master') {
       this.router.navigate(['/home-admin']);
     } else {
       this.router.navigate(['/home-asesor']);

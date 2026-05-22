@@ -43,10 +43,12 @@ export class AdminHojaControlInd implements OnInit {
       equivalenciaMeses: [4, [Validators.required, Validators.min(1)]],
       saldoInicial: [0],
       garantia: [0, [Validators.required, Validators.min(0)]],
+      porcentajeGarantia: [10, [Validators.required, Validators.min(0)]],
       garantiaPredial: [''],
       tipoPago: ['Semanal', Validators.required],
       noPagos: [16, [Validators.required, Validators.min(1)]],
       diaPago: ['Lunes', Validators.required],
+      horaVisita: ['', Validators.required],
       pagoPactado: [0, [Validators.required, Validators.min(0)]],
       nombreGrupo: [''],
       semanas: [16]
@@ -101,6 +103,7 @@ export class AdminHojaControlInd implements OnInit {
       fechaPrimerPago: fechaLimpia, // Ahora sí se mostrará en el input date
       diaPago: cliente.diaPago || 'Lunes',
       tipoPago: cliente.tipoPago || 'Semanal',
+      horaVisita: cliente.horaVisita || '',
       nombreGrupo: cliente.grupo || ''
     });
 
@@ -123,8 +126,9 @@ export class AdminHojaControlInd implements OnInit {
     const tasa = values.tasaInteres || 0;
     const meses = values.equivalenciaMeses || 4;
     const noPagos = values.noPagos || 16;
+    const porcentajeGarantia = values.porcentajeGarantia || 0;
 
-    const garantiaCalculada = monto * 0.10;
+    const garantiaCalculada = monto * (porcentajeGarantia / 100);
 
     if (noPagos > 0) {
       const interes = monto * (tasa / 100) * meses;
@@ -193,7 +197,9 @@ export class AdminHojaControlInd implements OnInit {
       equivalenciaMeses: 4,
       tipoPago: 'Semanal',
       noPagos: 16,
-      diaPago: 'Lunes'
+      diaPago: 'Lunes',
+      horaVisita: '',
+      porcentajeGarantia: 10
     });
     this.clientesFiltrados = [];
   }

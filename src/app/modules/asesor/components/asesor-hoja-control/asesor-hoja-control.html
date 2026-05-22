@@ -20,7 +20,7 @@
   </div>
 
   <main class="px-4 pt-4 space-y-4 relative z-20 flex-1">
-    <!-- TARJETA DE GRUPO MÁS COMPACTA -->
+    <!-- TARJETA DE GRUPO -->
     @if (grupo) {
     <div class="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex justify-between items-center">
       <div class="flex items-center space-x-2">
@@ -44,9 +44,46 @@
         <p class="text-[10px] text-slate-400 font-bold uppercase">Clave</p>
         <p class="text-blue-600 font-black italic text-sm">{{ grupo.clave || '-' }}</p>
       </div>
+      <div class="flex flex-col space-y-1">
+        <div class="text-right">
+          <p class="text-[10px] text-slate-400 font-bold uppercase">Ciclo/Semana</p>
+          <p class="text-blue-600 font-black italic text-sm">{{ cicloGrupo }}/{{ semanaActualGrupo }}</p>
+        </div>
+        
+      </div>
     </div>
 
-    <!-- PRÓXIMA VISITA MÁS SUTIL -->
+    <div class="px-1 mb-4">
+      <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 flex space-x-1">
+        <button (click)="cambiarTab('COMUNAL')"
+          [class]="currentTab === 'COMUNAL' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
+          class="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200">
+          Comunal
+        </button>
+        <button (click)="cambiarTab('REFIL')"
+          [class]="currentTab === 'REFIL' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
+          class="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200">
+          Refil
+        </button>
+        <button (click)="cambiarTab('MAGICO')"
+          [class]="currentTab === 'MAGICO' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
+          class="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200">
+          Mágicos
+        </button>
+      </div>
+    </div>
+
+    <!-- NÚMERO DE RECIBO -->
+    <div class="px-1 mb-4 flex items-center space-x-2 animate-in fade-in zoom-in duration-300">
+      <div class="bg-indigo-50 border border-indigo-100 p-2 rounded-xl flex-1 flex items-center shadow-inner">
+        <label class="text-[10px] font-black text-indigo-500 uppercase tracking-wider mr-3 whitespace-nowrap">N° Recibo <span class="text-indigo-400">({{ currentTab | slice:0:3 }})</span></label>
+        <input type="text" [(ngModel)]="numeroRecibos[currentTab]" 
+          class="w-full bg-white border-0 rounded py-1.5 px-2 text-sm font-black text-indigo-700 outline-none focus:ring-2 focus:ring-indigo-300 shadow-sm"
+          placeholder="Ej. 12345">
+      </div>
+    </div>
+
+    <!-- PRÓXIMA VISITA -->
     <div class="bg-blue-600/5 border border-blue-100 p-3 rounded-xl flex items-center justify-between">
       <div class="flex items-center space-x-2">
         <div class="bg-blue-600 p-1.5 rounded-lg">
@@ -78,14 +115,17 @@
     </div>
     <!-- TARJETAS DE INTEGRANTES -->
     <div class="space-y-3">
-      @for (miembro of miembros; track miembro._id; let i = $index) {
+      <!-- @for (miembro of miembros; track miembro._id; let i = $index) { -->
+      @for (miembro of miembrosFiltrados; track miembro._id; let i = $index) {
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
-        [class.ring-2]="expandedMiembroId === miembro._id" [class.ring-blue-500]="expandedMiembroId === miembro._id">
+        [class.ring-2]="expandedMiembroId === miembro._id" [class.ring-blue-500]="expandedMiembroId === miembro._id"
+        [class.opacity-60]="miembro.yaPagoHoy">
 
         <!-- MEMBER HEADER (Clickable to expand) -->
         <div class="px-4 py-3 flex justify-between items-center cursor-pointer active:bg-slate-50 transition-colors"
-          (click)="togglePagoForm(miembro._id)" [class.bg-blue-50]="expandedMiembroId === miembro._id"
-          [class.bg-slate-50]="expandedMiembroId !== miembro._id">
+          (click)="!miembro.yaPagoHoy && togglePagoForm(miembro._id)" [class.bg-blue-50]="expandedMiembroId === miembro._id"
+          [class.bg-slate-50]="expandedMiembroId !== miembro._id"
+          [class.cursor-not-allowed]="miembro.yaPagoHoy">
 
           <div class="flex items-center space-x-3 w-full">
             <span
@@ -103,20 +143,28 @@
                       'Integrante' }}</p>
                     <span class="bg-indigo-100 text-indigo-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{{
                       miembro.tipoCredito || 'N/A' }}</span>
+                    @if(miembro.yaPagoHoy) {
+                      <span class="bg-emerald-100 text-emerald-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-1" title="Folio: {{ miembro.folioHoy }}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-2 w-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
+                        COMPLETO (Folio: {{ miembro.folioHoy }})
+                      </span>
+                    } @else if(miembro.folioHoy) {
+                      <span class="bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-1" title="Folio: {{ miembro.folioHoy }}">
+                        (Folio: {{ miembro.folioHoy }})
+                      </span>
+                    }
                   </div>
                 </div>
-                <!-- <div class="text-right">
-                    <span class="block text-[8px] font-bold text-slate-400 uppercase">Pagado</span>
-                    <span class="text-xs font-black text-blue-600">${{ (miembro.totalPagado || 0) | number:'1.2-2' }}</span>
-                  </div> -->
                 <div class="flex items-center space-x-3 text-right">
                   <div>
-                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Total Pagado</span>
-                    <span class="text-[13px] font-black text-blue-600">${{ (miembro.totalPagado || 0) | number:'1.2-2' }}</span>
+                    <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Pagado</span>
+                    <span class="text-[13px] font-black text-blue-600">${{ (miembro.totalPagado || 0) | number:'1.2-2'
+                      }}</span>
                   </div>
                   <div>
                     <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Restante</span>
-                    <span class="text-[13px] font-black text-rose-600">${{ (miembro.creditoPendiente || 0) | number:'1.2-2' }}</span>
+                    <span class="text-[13px] font-black text-rose-600">${{ (miembro.creditoPendiente || 0) |
+                      number:'1.2-2' }}</span>
                   </div>
                 </div>
 
@@ -126,7 +174,7 @@
               @if (miembro.historialSolidario) {
               <div class="mt-1">
                 <span
-                  class="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded pl-1 pr-1.5 font-black uppercase tracking-wider border border-amber-200">Solidario</span>
+                  class="text-[8px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded pl-1 pr-1.5 font-black uppercase tracking-wider border border-amber-200">Solidario (Falta ${{ miembro.pendienteSolidario | number:'1.2-2' }})</span>
               </div>
               }
             </div>
@@ -144,107 +192,215 @@
 
         <!-- PAYMENT FORM -->
         @if (expandedMiembroId === miembro._id) {
-        <div class="p-4 space-y-3 border-t border-slate-100 bg-white animate-in slide-in-from-top-2 duration-200">
-          <!-- HISTORIAL DE PAGOS (TABLA RESPONSIVA) -->
+        <div class="p-4 space-y-4 border-t border-slate-100 bg-white animate-in slide-in-from-top-2 duration-200">
 
-          <div class="flex items-center mb-1 bg-slate-50 p-2 rounded-lg border border-slate-100 justify-center">
-            <div class="text-center">
-              <span class="text-[9px] text-slate-500 font-bold uppercase tracking-wider block">Pago Pactado</span>
-              <span class="text-sm font-black text-emerald-600">${{ (miembro.pagoPactado || 0) | number:'1.2-2' }}</span>
+          <div class="space-y-2">
+            <div class="flex justify-between items-center">
+              <label class="block text-[10px] font-black text-blue-600 uppercase tracking-wider ml-1">Registrar Pago Hoy</label>
+              <span class="text-[10px] font-black text-slate-500 uppercase tracking-wider">Pactado ${{ (miembro.pagoPactado || 0) | number:'1.2-2' }}</span>
+            </div>
+            <div class="flex items-end ml-1 mb-1">
+              <span class="text-[10px] font-black text-slate-400 uppercase mr-1.5 mb-[3px]">Suma:</span>
+              <span class="text-blue-500 font-black text-sm mb-[1px]">$</span>
+              <span class="text-blue-600 font-black text-xl ml-0.5 leading-none">{{ (pagos[miembro._id].monto || 0) | number:'1.2-2' }}</span>
+            </div>
+            <div class="flex flex-col space-y-2 bg-white p-2 rounded-lg border border-slate-100">
+              <div class="flex items-center space-x-3">
+                <span class="text-[9px] text-slate-400 font-bold uppercase mr-1">T. Pago</span>
+                @for (metodo of ['E', 'T', 'D', 'TJ']; track metodo) {
+                <label class="inline-flex items-center space-x-1 cursor-pointer text-[11px] font-bold text-slate-700">
+                  <input type="checkbox" (change)="toggleMetodo(miembro._id, metodo, 'pago')"
+                    [checked]="isMetodoSelected(miembro._id, metodo, 'pago')"
+                    class="h-3.5 w-3.5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 accent-blue-600">
+                  <span>{{metodo}}</span>
+                </label>
+                }
+              </div>
+              @if (pagos[miembro._id]?.selectedMetodosPago?.length > 0) {
+              <div class="grid grid-cols-2 gap-2 mt-1">
+                @for (metodo of ['E', 'T', 'D', 'TJ']; track metodo) {
+                  @if (isMetodoSelected(miembro._id, metodo, 'pago')) {
+                    <div class="flex items-center space-x-1.5 animate-in fade-in duration-200 mt-1">
+                      <span class="text-[10px] font-black text-blue-600 w-4">{{ metodo }}</span>
+                      <div class="relative w-full">
+                        <span class="absolute left-2.5 top-2.5 text-blue-400 font-black text-xs">$</span>
+                        <input type="number" [(ngModel)]="pagos[miembro._id][getMetodoField(metodo, 'pago')]" (ngModelChange)="calcularTotalManual(miembro._id, 'pago')"
+                          class="w-full bg-slate-50 border border-blue-200 rounded-lg py-2 pl-7 pr-2 text-sm font-black outline-none focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0.00" (focus)="$event.target.select()">
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+              }
             </div>
           </div>
 
-          <!-- Cantidad otorgada (Comentado por ahora) -->
-          <div class="grid grid-cols-2 gap-3 mt-2">
-            <!-- Registrar Pago -->
-            <div class="space-y-1">
-              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Registrar Pago
-                Hoy</label>
-              <div class="relative">
-                <span class="absolute left-3 top-3 text-blue-400 font-black text-xs">$</span>
-                <input type="number" [(ngModel)]="pagos[miembro._id].monto" (ngModelChange)="onPagoChange()"
-                  class="w-full bg-slate-50 border border-blue-200 rounded-lg py-3 pl-8 pr-3 text-sm font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all shadow-inner"
-                  placeholder="0.00" style="min-height: 44px;">
-              </div>
+          <div class="space-y-2">
+            <label class="block text-[10px] font-black text-emerald-600 uppercase tracking-wider ml-1">Registrar Ahorro</label>
+            <div class="flex items-end ml-1 mb-1">
+              <span class="text-[10px] font-black text-slate-400 uppercase mr-1.5 mb-[3px]">Suma:</span>
+              <span class="text-emerald-500 font-black text-sm mb-[1px]">$</span>
+              <span class="text-emerald-600 font-black text-xl ml-0.5 leading-none">{{ (pagos[miembro._id].ahorro || 0) | number:'1.2-2' }}</span>
             </div>
-
-            <!-- Registrar Ahorro -->
-            <div class="space-y-1">
-              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Registrar
-                Ahorro</label>
-              <div class="relative">
-                <span class="absolute left-3 top-3 text-emerald-500 font-black text-xs">$</span>
-                <input type="number" [(ngModel)]="pagos[miembro._id].ahorro" (ngModelChange)="onPagoChange()"
-                  class="w-full bg-slate-50 border border-emerald-200 rounded-lg py-3 pl-8 pr-3 text-sm font-black text-slate-700 outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition-all shadow-inner"
-                  placeholder="0.00" style="min-height: 44px;">
+            <div class="flex flex-col space-y-2 bg-white p-2 rounded-lg border border-slate-100">
+              <div class="flex items-center space-x-3">
+                <span class="text-[9px] text-slate-400 font-bold uppercase mr-1">T. Pago</span>
+                @for (metodo of ['E', 'T', 'D', 'TJ']; track metodo) {
+                <label class="inline-flex items-center space-x-1 cursor-pointer text-[11px] font-bold text-slate-700">
+                  <input type="checkbox" (change)="toggleMetodo(miembro._id, metodo, 'ahorro')"
+                    [checked]="isMetodoSelected(miembro._id, metodo, 'ahorro')"
+                    class="h-3.5 w-3.5 text-emerald-600 border-slate-300 rounded focus:ring-emerald-500 accent-emerald-600">
+                  <span>{{metodo}}</span>
+                </label>
+                }
               </div>
+              @if (pagos[miembro._id]?.selectedMetodosAhorro?.length > 0) {
+              <div class="grid grid-cols-2 gap-2 mt-1">
+                @for (metodo of ['E', 'T', 'D', 'TJ']; track metodo) {
+                  @if (isMetodoSelected(miembro._id, metodo, 'ahorro')) {
+                    <div class="flex items-center space-x-1.5 animate-in fade-in duration-200 mt-1">
+                      <span class="text-[10px] font-black text-emerald-600 w-4">{{ metodo }}</span>
+                      <div class="relative w-full">
+                        <span class="absolute left-2.5 top-2.5 text-emerald-500 font-black text-xs">$</span>
+                        <input type="number" [(ngModel)]="pagos[miembro._id][getMetodoField(metodo, 'ahorro')]" (ngModelChange)="calcularTotalManual(miembro._id, 'ahorro')"
+                          class="w-full bg-slate-50 border border-emerald-200 rounded-lg py-2 pl-7 pr-2 text-sm font-black outline-none focus:ring-2 focus:ring-emerald-500 shadow-inner" placeholder="0.00" (focus)="$event.target.select()">
+                      </div>
+                    </div>
+                  }
+                }
+              </div>
+              }
             </div>
           </div>
 
+          <div class="space-y-4">
+            <!-- SECCIÓN 1: RECUPERACIÓN (Solo si tiene deuda previa) -->
+            @if(miembro.historialSolidario) {
+              <div class="space-y-2 border-b border-slate-50 pb-3">
+                <label class="block text-[9px] font-black text-blue-500 uppercase tracking-wider ml-1">¿Devolver Pago Solidario?</label>
+                <div class="flex flex-col gap-2 bg-blue-50/50 p-2 rounded-xl">
+                  <div class="flex items-center justify-between">
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" [(ngModel)]="pagos[miembro._id].recuperacionSolidario" (ngModelChange)="onPagoChange()"
+                        class="sr-only peer">
+                      <div
+                        class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600">
+                      </div>
+                      <span class="ml-2 text-[10px] font-black text-slate-500 peer-checked:text-blue-700 uppercase italic">
+                        {{ pagos[miembro._id].recuperacionSolidario ? 'Sí, devolverá' : 'No' }}
+                      </span>
+                    </label>
+                  </div>
+                  
+                  @if(pagos[miembro._id].recuperacionSolidario) {
+                    <div class="mt-2 pl-2 border-l-2 border-blue-200 space-y-3 animate-in slide-in-from-left-2 duration-200">
+                      <div class="flex items-end mb-1">
+                        <span class="text-[10px] font-black text-slate-400 uppercase mr-1.5 mb-[3px]">Suma Devuelta:</span>
+                        <span class="text-blue-500 font-black text-sm mb-[1px]">$</span>
+                        <span class="text-blue-600 font-black text-xl ml-0.5 leading-none">{{ (pagos[miembro._id].montoRecuperacion || 0) | number:'1.2-2' }}</span>
+                      </div>
+                      
+                      @if (miembro.prestadores && miembro.prestadores.length > 0) {
+                        @for (prestador of miembro.prestadores; track prestador.id; let pIdx = $index) {
+                          <div class="flex flex-col mb-2">
+                            <span class="text-[10px] font-bold text-slate-600 uppercase">{{ prestador.nombre }} <span class="text-rose-500">(Debe: ${{prestador.pendiente | number:'1.2-2'}})</span></span>
+                            <div class="relative w-full mt-1">
+                              <span class="absolute left-2.5 top-2 text-blue-500 font-black text-xs">$</span>
+                              <input type="number" [(ngModel)]="pagos[miembro._id].recuperacionesDetalle[pIdx].monto" (ngModelChange)="recalcularMontoRecuperacion(miembro._id)"
+                                class="w-full bg-white border border-blue-200 rounded-lg py-1.5 pl-7 pr-2 text-sm font-black outline-none focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="0.00" (focus)="$event.target.select()">
+                            </div>
+                          </div>
+                        }
+                      } @else {
+                        <div class="relative w-full mt-1">
+                          <span class="absolute left-2.5 top-2.5 text-blue-500 font-black text-xs">$</span>
+                          <input type="number" [(ngModel)]="pagos[miembro._id].montoRecuperacion" (ngModelChange)="onPagoChange()"
+                            class="w-full bg-white border border-blue-200 rounded-lg py-2 pl-7 pr-2 text-sm font-black outline-none focus:ring-2 focus:ring-blue-500 shadow-inner" placeholder="Cantidad General" (focus)="$event.target.select()">
+                        </div>
+                      }
+                    </div>
+                  }
+                </div>
+              </div>
+            }
 
-          <!-- Pago solidario y fecha -->
-          <div class="grid grid-cols-2 gap-3 mt-3">
-            <div class="space-y-1">
-              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">¿Hacer pago solidario?</label>
+            <!-- SECCIÓN 2: AYUDAR A OTRO (SOLIDARIO) -->
+            <div class="space-y-2">
+              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">¿Hacer pago solidario? (Apoyar a otro)</label>
               <div class="flex flex-col gap-2 pt-0.5">
                 <label class="relative inline-flex items-center cursor-pointer">
-                  <input type="checkbox" [(ngModel)]="pagos[miembro._id].solidario" (ngModelChange)="onPagoChange()" class="sr-only peer">
-                  <div class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-                  <span class="ml-2 text-[10px] font-black text-slate-500 peer-checked:text-amber-600 uppercase italic">{{ pagos[miembro._id].solidario ? 'Sí' : 'No' }}</span>
+                  <input type="checkbox" [(ngModel)]="pagos[miembro._id].solidario" (ngModelChange)="onPagoChange()"
+                    class="sr-only peer">
+                  <div
+                    class="w-10 h-5 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500">
+                  </div>
+                  <span
+                    class="ml-2 text-[10px] font-black text-slate-500 peer-checked:text-amber-600 uppercase italic">{{ pagos[miembro._id].solidario ? 'Sí, apoyará' : 'No' }}</span>
                 </label>
 
                 @if(pagos[miembro._id].solidario) {
-                <!-- NUEVO CAMPO MONTO SOLIDARIO -->
-                <div class="relative mt-1 animate-in fade-in zoom-in duration-200">
-                  <span class="absolute left-3 top-2.5 text-amber-500 font-black text-xs">$</span>
-                  <input type="number" [(ngModel)]="pagos[miembro._id].montoSolidario" (ngModelChange)="onPagoChange()"
-                    class="w-full bg-slate-50 border border-amber-200 rounded-lg py-2 pl-7 pr-2 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-amber-500 shadow-inner"
-                    placeholder="Monto solidario" style="min-height: 38px;">
-                </div>
+                <div class="mt-2 pl-2 border-l-2 border-amber-200 space-y-3 animate-in slide-in-from-left-2 duration-200">
+                  <!-- VALOR MONTO SOLIDARIO -->
+                  <div class="flex items-end mb-1">
+                    <span class="text-[10px] font-black text-slate-400 uppercase mr-1.5 mb-[3px]">Suma Apoyo:</span>
+                    <span class="text-amber-500 font-black text-sm mb-[1px]">$</span>
+                    <span class="text-amber-600 font-black text-xl ml-0.5 leading-none">{{ (pagos[miembro._id].montoSolidario || 0) | number:'1.2-2' }}</span>
+                  </div>
 
-                <!-- SELECCIONAR A QUIÉN -->
-                <div
-                  class="relative mt-2 border border-amber-200 rounded-lg bg-slate-50 focus-within:ring-2 focus-within:ring-amber-500 shadow-inner overflow-hidden animate-in fade-in zoom-in duration-200">
-                  <select [(ngModel)]="pagos[miembro._id].miembroSolidarioId"
-                    class="w-full bg-transparent py-2 px-3 pr-8 text-xs font-black text-slate-700 outline-none appearance-none cursor-pointer">
-                    <option value="" disabled selected>¿A quién apoya?</option>
-                    @for (m of miembros; track m._id) {
-                    @if(m._id !== miembro._id) {
-                    <option [value]="m._id">{{ m.nombre }} {{ m.apellidos }}</option>
+                  <!-- LISTA DE BENEFICIARIOS -->
+                  <div class="space-y-2 mt-2">
+                    <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider">Beneficiarios del Apoyo</label>
+                    @for (ben of pagos[miembro._id].beneficiariosSolidarios; track $index; let bIdx = $index) {
+                    <div class="flex items-center gap-2">
+                      <div class="relative flex-1 border border-amber-200 rounded-lg bg-slate-50 focus-within:ring-2 focus-within:ring-amber-500 shadow-inner overflow-hidden">
+                        <select [(ngModel)]="ben.miembro"
+                          class="w-full bg-transparent py-2 px-3 pr-8 text-xs font-black text-slate-700 outline-none appearance-none cursor-pointer">
+                          <option value="" disabled selected>¿A quién apoya?</option>
+                          @for (m of miembros; track m._id) {
+                            @if(m._id !== miembro._id) {
+                              <option [value]="m._id">{{ m.nombre }} {{ m.apellidos }}</option>
+                            }
+                          }
+                        </select>
+                        <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none text-amber-500">
+                          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
+                          </svg>
+                        </div>
+                      </div>
+                      
+                      <!-- Nuevo: Selector de método de pago -->
+                      <div class="relative w-16">
+                        <select [(ngModel)]="ben.metodo" (ngModelChange)="recalcularMontoSolidario(miembro._id)" class="w-full bg-white border border-amber-200 rounded-lg py-2 px-1 text-[10px] font-black outline-none focus:ring-2 focus:ring-amber-500 shadow-inner appearance-none cursor-pointer text-center text-amber-700">
+                          <option value="E">E</option>
+                          <option value="T">T</option>
+                          <option value="D">D</option>
+                          <option value="TJ">TJ</option>
+                        </select>
+                      </div>
+
+                      <div class="relative w-20">
+                        <span class="absolute left-2 top-2.5 text-amber-500 font-black text-xs">$</span>
+                        <input type="number" [(ngModel)]="ben.monto" (ngModelChange)="recalcularMontoSolidario(miembro._id)"
+                          class="w-full bg-white border border-amber-200 rounded-lg py-2 pl-5 pr-1 text-sm font-black outline-none focus:ring-2 focus:ring-amber-500 shadow-inner" placeholder="0.00" (focus)="$event.target.select()">
+                      </div>
+                      
+                      <button (click)="eliminarBeneficiario(miembro._id, bIdx)" class="p-1 text-red-500 hover:bg-red-50 rounded-lg transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </div>
                     }
-                    }
-                  </select>
-                  <div class="absolute inset-y-0 right-2 flex items-center pointer-events-none text-amber-500">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M19 9l-7 7-7-7"></path>
-                    </svg>
+                    
+                    <button (click)="agregarBeneficiario(miembro._id)" class="w-full py-2 border-2 border-dashed border-amber-300 rounded-lg text-amber-600 text-[10px] font-black uppercase tracking-wider hover:bg-amber-50 transition-colors flex items-center justify-center gap-1 mt-1">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                      </svg>
+                      Añadir persona
+                    </button>
                   </div>
                 </div>
-                }
-              </div>
-            </div>
-
-            <!-- Fecha de Pago -->
-            <div class="space-y-1">
-              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Fecha</label>
-              <input type="date" [(ngModel)]="pagos[miembro._id].fecha"
-                class="w-full bg-slate-50 border border-slate-200 rounded-lg p-2 text-xs font-black text-slate-700 outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
-                style="min-height: 38px;">
-            </div>
-
-            <!-- Método de Pago -->
-            <div class="col-span-2 space-y-2 mt-2">
-              <label class="block text-[9px] font-black text-slate-400 uppercase tracking-wider ml-1">Método(s) de Pago</label>
-              <div class="flex flex-wrap gap-2">
-                @for (metodo of ['EFECTIVO', 'TRANSFERENCIA', 'DEPOSITO', 'TARJETA']; track metodo) {
-                  <button type="button" (click)="toggleMetodo(miembro._id, metodo)"
-                    [ngClass]="{
-                      'bg-blue-600 text-white border-blue-600 shadow-md transform scale-105': isMetodoSelected(miembro._id, metodo),
-                      'bg-slate-50 text-slate-500 border-slate-200 hover:border-blue-300': !isMetodoSelected(miembro._id, metodo)
-                    }"
-                    class="px-3 py-1.5 rounded-full border text-[10px] font-black uppercase tracking-tight transition-all duration-200 active:scale-95">
-                    {{ metodo }}
-                  </button>
                 }
               </div>
             </div>
@@ -257,20 +413,35 @@
       }
     </div> <!-- end of cards -->
 
+
+
     <!-- GUARDAR CAMBIOS BUTTON Y SUMA EN TIEMPO REAL -->
     <div class="py-6 flex flex-col items-center sticky bottom-14 z-10 p-2 gap-3" style="pointer-events: none;">
       <!-- Suma en tiempo real -->
-      <div class="px-4 py-2 rounded-2xl text-xs font-black shadow-xl flex items-center space-x-2 transition-colors duration-300"
-           [ngClass]="{
-             'bg-rose-500 text-white shadow-rose-200': totalCapturado < totalEsperado,
-             'bg-emerald-500 text-white shadow-emerald-200': totalCapturado === totalEsperado && totalEsperado > 0,
-             'bg-amber-500 text-white shadow-amber-200': totalCapturado > totalEsperado,
-             'bg-slate-400 text-white shadow-slate-200': totalEsperado === 0
+      <div
+        class="px-4 py-2 rounded-2xl text-xs font-black shadow-xl flex items-center space-x-2 transition-colors duration-300"
+        [ngClass]="{
+             'bg-rose-500 text-white shadow-rose-200': totalCapturado < totalEsperado || totalEsperado === 0,
+             'bg-emerald-500 text-white shadow-emerald-200': totalCapturado >= totalEsperado && totalEsperado > 0
            }">
-         <span class="tracking-wide">Capturado: ${{ totalCapturado | number:'1.2-2' }}</span>
-         <span class="opacity-50">/</span>
-         <span class="tracking-wide opacity-90">Total: ${{ totalEsperado | number:'1.2-2' }}</span>
+        <span class="tracking-wide">Capturado: ${{ (totalCapturado > totalEsperado ? totalEsperado : totalCapturado) | number:'1.2-2' }}</span>
+        <span class="opacity-50">/</span>
+        <span class="tracking-wide opacity-90">Total: ${{ totalEsperado | number:'1.2-2' }}</span>
       </div>
+
+      <!-- Suma de saldo extra / Excedente -->
+      @if (totalExcedente > 0) {
+      <div class="px-4 py-1.5 rounded-full text-[10px] font-black bg-blue-100 text-blue-700 shadow-sm border border-blue-200 animate-in fade-in slide-in-from-top-2">
+        <span class="tracking-wide uppercase">Saldo Extra: +${{ totalExcedente | number:'1.2-2' }}</span>
+      </div>
+      }
+
+      <!-- Solidario Devuelto -->
+      @if (totalDevuelto > 0) {
+      <div class="px-4 py-1.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-700 shadow-sm border border-purple-200 animate-in fade-in slide-in-from-top-2">
+        <span class="tracking-wide uppercase">Solidario-Devuelto: +${{ totalDevuelto | number:'1.2-2' }}</span>
+      </div>
+      }
 
       <button type="button" (click)="guardarPagos()" style="pointer-events: auto;"
         class="flex items-center justify-center w-12 h-12 text-white bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 hover:bg-gradient-to-br focus:ring-4 focus:outline-none focus:ring-blue-300 dark:focus:ring-blue-800 shadow-lg shadow-blue-500/50 dark:shadow-lg dark:shadow-blue-800/80 rounded-full">
@@ -281,6 +452,8 @@
       </button>
 
     </div>
+
+
   </main>
 
   <!-- BARRA INFERIOR -->
@@ -329,7 +502,10 @@
           <h3 class="text-lg leading-6 font-black text-white italic tracking-tight uppercase" id="modal-title">
             Historial de Garantía
           </h3>
-          <p class="text-blue-200 text-xs font-medium mt-1 uppercase tracking-wider">Incremento de Garantía</p>
+          <div class="flex items-center space-x-2 mt-1">
+            <p class="text-blue-200 text-xs font-medium uppercase tracking-wider">Total Acumulado:</p>
+            <span class="text-white text-base font-black">${{ totalAhorradoGrupo | number:'1.2-2' }}</span>
+          </div>
         </div>
         <button type="button"
           class="bg-blue-700/50 rounded-full p-2 text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
@@ -345,7 +521,7 @@
       <!-- Body con scroll -->
       <div class="px-4 py-5 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
         <div class="flex flex-col space-y-4">
-          @for(miembro of miembros; track miembro._id; let i = $index) {
+          @for(miembro of miembrosConAhorro; track miembro._id; let i = $index) {
           <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col space-y-2">
             <div class="flex justify-between items-center border-b border-slate-100 pb-2">
               <span class="font-bold text-slate-800 text-sm flex items-center">
@@ -386,7 +562,9 @@
             </div>
           </div>
           } @empty {
-          <p class="text-center text-slate-400 text-xs font-bold py-4">No hay integrantes registrados.</p>
+          <div class="bg-white p-6 rounded-xl border border-slate-200 border-dashed text-center">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Aún no hay ahorros registrados en este grupo.</p>
+          </div>
           }
         </div>
       </div>

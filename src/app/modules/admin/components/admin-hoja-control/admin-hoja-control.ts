@@ -46,7 +46,7 @@ export class AdminHojaControl implements OnInit {
       diaVisita: ['Lunes', Validators.required],
       fechaPrimerPago: ['', Validators.required],
       horaVisita: ['', Validators.required],
-      porcentajeGarantia: [5, [Validators.required, Validators.min(0)]],
+      porcentajeGarantia: [10, [Validators.min(0)]],
       integrantes: this.fb.array([])
     });
   }
@@ -319,6 +319,7 @@ export class AdminHojaControl implements OnInit {
     const ctrl = this.integrantes.at(index);
     ctrl.patchValue({
       miembroId: miembro._id,
+      creditoId: creditoActivo?._id || null,
       nombre: miembro.nombre,
       apellidos: miembro.apellidos,
       cargo: miembro.rol ? miembro.rol.toLowerCase() : 'vocal',
@@ -354,6 +355,7 @@ export class AdminHojaControl implements OnInit {
 
     const integranteForm = this.fb.group({
       miembroId: [miembro?._id || ''],
+      creditoId: [creditoActivo?._id || null],
       nombre: [miembro?.nombre || '', Validators.required],
       apellidos: [miembro?.apellidos || '', Validators.required],
       tipoCredito: [creditoActivo?.tipoCredito || 'CC', Validators.required],
@@ -373,6 +375,7 @@ export class AdminHojaControl implements OnInit {
       const currentMiembroId = integranteForm.get('miembroId')?.value;
       if (currentMiembroId && !this.miembrosLocales.find(m => m.nombre === val && m._id === currentMiembroId)) {
         integranteForm.get('miembroId')?.setValue('', { emitEvent: false });
+        integranteForm.get('creditoId')?.setValue(null, { emitEvent: false });
       }
     });
 
@@ -467,7 +470,7 @@ export class AdminHojaControl implements OnInit {
       tasa: 0,
       plazoSemanas: 16,
       plazoMeses: 4,
-      porcentajeGarantia: 5
+      porcentajeGarantia: 10
     });
     // Deshabilitar solo plazoMeses (es calculado)
     this.hojaControlForm.get('plazoMeses')?.disable();

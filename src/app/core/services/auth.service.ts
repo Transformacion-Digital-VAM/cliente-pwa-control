@@ -8,8 +8,6 @@ import { environment } from '../../../environments/environment';
     providedIn: 'root'
 })
 export class AuthService {
-    // private apiUrl = 'http://localhost:3000/api/users';
-    // private apiUrl = 'http://192.168.1.237:3000/api/users';
     private apiUrl = `${environment.apiUrl}/users`;
 
     constructor(private http: HttpClient, private dexie: DexieService) { }
@@ -21,18 +19,34 @@ export class AuthService {
                     // this.http.post('http://localhost:3000/api/users/login', credentials)
                     this.http.post(`${this.apiUrl}/login`, credentials)
                 );
+                console.log('[AuthService] Login exitoso, guardando sesión en Dexie');
+                
                 // Persistimos sesión para uso offline futuro
-                await this.dexie.user_session.put({
+                const sessionData = {
                     user: credentials.user,
                     role: response.user.role,
                     token: response.token,
-                    lastLogin: Date.now()
-                });
+                    lastLogin: Date.now(),
+                    username: response.user.username || credentials.user,
+                    coordinacion: response.user.coordinacion
+                };
+                
+                try {
+                    await this.dexie.user_session.put(sessionData);
+                    console.log('[AuthService] Sesión guardada correctamente en Dexie:', sessionData.user);
+                } catch (dexieError) {
+                    console.error('[AuthService] Error guardando en Dexie:', dexieError);
+                }
+                
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userRole', response.user.role);
-                localStorage.setItem('user', JSON.stringify({ username: response.user.username || credentials.user }));
+                localStorage.setItem('user', JSON.stringify({ 
+                    username: response.user.username || credentials.user,
+                    coordinacion: response.user.coordinacion
+                }));
                 return response;
             } catch (error) {
+                console.error('[AuthService] Error en login online:', error);
                 return this.attemptOfflineLogin(credentials.user);
             }
         } else {
@@ -59,6 +73,7 @@ export class AuthService {
     async logout() {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userRole');
+        localStorage.removeItem('loginDate');
         await this.dexie.user_session.clear();
     }
 }

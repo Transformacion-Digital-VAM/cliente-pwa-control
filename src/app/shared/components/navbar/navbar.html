@@ -8,17 +8,35 @@
 
     <!-- Enlaces de navegación (solo para usuarios autenticados) -->
     <div class="hidden md:flex items-center space-x-10" *ngIf="isUserLoggedIn">
+
+      <!-- SUPERADMIN: acceso completo incluyendo mapa -->
+      <ng-container *ngIf="isSuperAdmin">
+        <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
+        <a routerLink="/hoja-control-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Grupal</a>
+        <a routerLink="/hoja-control-admin-ind" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Individual</a>
+        <a routerLink="/mapa-asesores" routerLinkActive="text-blue-600 font-bold"
+          class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1">
+          Mapa & Ubicaciones
+        </a>
+      </ng-container>
+
+      <!-- ADMIN: acceso a registros (sin mapa global) -->
       <ng-container *ngIf="isAdmin">
         <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
         <a routerLink="/hoja-control-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Grupal</a>
         <a routerLink="/hoja-control-admin-ind" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Individual</a>
-        <a routerLink="/mapa-asesores" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Mapa Asesores</a>
       </ng-container>
 
+      <!-- MASTER: solo inicio -->
+      <ng-container *ngIf="isMaster">
+        <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
+      </ng-container>
+
+      <!-- ASESOR / USER -->
       <ng-container *ngIf="isUser">
         <a routerLink="/home-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
-        <!-- <a routerLink="/hoja-control-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors"></a> -->
       </ng-container>
+
     </div>
 
     <!-- Botones de autenticación y perfil -->

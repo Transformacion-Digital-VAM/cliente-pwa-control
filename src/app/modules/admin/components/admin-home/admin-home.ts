@@ -27,9 +27,13 @@ export class AdminHome implements OnInit {
 
   // Filtros
   searchTerm: string = '';
+  asesorSearchTerm: string = '';
   selectedCoordinacionId: string = 'todas';
   selectedAsesorId: string = 'todos';
   activeTab: 'grupos' | 'individuales' = 'grupos';
+
+  userRole: string = '';
+  userCoordinacion: string = '';
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -40,6 +44,20 @@ export class AdminHome implements OnInit {
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
+      this.userRole = localStorage.getItem('userRole') || '';
+      const userStr = localStorage.getItem('user');
+      if (userStr) {
+        try {
+          const u = JSON.parse(userStr);
+          this.userCoordinacion = u.coordinacion || '';
+        } catch(e) {}
+      }
+
+      if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+        this.selectedCoordinacionId = this.userCoordinacion;
+      } else if ((this.userRole === 'master' || this.userRole === 'superadmin') && !this.userCoordinacion) {
+        Swal.fire('Atención', `Este usuario es ${this.userRole} pero no se detectó una coordinación asignada en su cuenta. Revisa en la base de datos si se guardó el ID correctamente al crearlo.`, 'warning');
+      }
       this.cargarDatos();
     }
   }
@@ -63,9 +81,15 @@ export class AdminHome implements OnInit {
       coordinaciones: this.grupoService.getCoordinaciones()
     }).subscribe({
       next: (res: any) => {
-        // Guardar asesores y coordinaciones
+        // Guardar asesores
         this.asesoresList = res.asesores || [];
-        this.coordinacionesList = res.coordinaciones || [];
+        
+        let allCoordinaciones = res.coordinaciones || [];
+        if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+          this.coordinacionesList = allCoordinaciones.filter((c: any) => c._id === this.userCoordinacion);
+        } else {
+          this.coordinacionesList = allCoordinaciones;
+        }
 
         // Extraer coordinaciones únicas
         const coordMap = new Map();
@@ -139,6 +163,39 @@ export class AdminHome implements OnInit {
     });
   }
 
+  /** Asesores de la coordinación activa filtrados por el buscador de texto */
+  get filteredAsesoresListBySearch() {
+    const base = this.filteredAsesoresList;
+    if (!this.asesorSearchTerm || !this.asesorSearchTerm.trim()) return base;
+    const term = this.asesorSearchTerm.toLowerCase().trim();
+    return base.filter(a => (a.username || a.nombre || '').toLowerCase().includes(term));
+  }
+
+  /** Número de elementos (grupos/individuales según tab) que pertenecen a una coordinación */
+  getCountByCoordinacion(coordId: string): number {
+    return this.elementosPrincipales.filter(item => {
+      if (this.activeTab === 'grupos' && item.tipo !== 'GRUPO') return false;
+      if (this.activeTab === 'individuales' && item.tipo !== 'INDIVIDUAL') return false;
+      const itemAsesorId = item.asesor?._id || item.asesor;
+      const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
+      const asesorDelElemento = this.asesoresList.find(a => a._id === idAComparar);
+      if (!asesorDelElemento) return false;
+      const aCoordId = (asesorDelElemento.coordinacion && typeof asesorDelElemento.coordinacion === 'object') ? asesorDelElemento.coordinacion._id : asesorDelElemento.coordinacion;
+      return aCoordId === coordId;
+    }).length;
+  }
+
+  /** Número de elementos del tab actual que pertenecen a un asesor específico */
+  getCountByAsesor(asesorId: string): number {
+    return this.elementosPrincipales.filter(item => {
+      if (this.activeTab === 'grupos' && item.tipo !== 'GRUPO') return false;
+      if (this.activeTab === 'individuales' && item.tipo !== 'INDIVIDUAL') return false;
+      const itemAsesorId = item.asesor?._id || item.asesor;
+      const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
+      return idAComparar === asesorId;
+    }).length;
+  }
+
   get filteredGrupos() {
     return this.filteredElementos; // Hacemos alias para evitar modificar demasiado si hay usos externos, aunque preferiremos filteredElementos
   }
@@ -197,7 +254,7 @@ export class AdminHome implements OnInit {
     );
   }
 
-  descargarInfoGrupo(grupo: any, event: Event) {
+  async descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
     
     // Buscar el ciclo del grupo a partir de sus créditos
@@ -210,12 +267,37 @@ export class AdminHome implements OnInit {
       }
     }
 
-    // Descargar el PDF completo (3 hojas juntas)
-    const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}`;
-    window.open(url, '_blank');
+    const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
+      title: 'Hoja de Control',
+      text: 'Selecciona cómo deseas imprimir la hoja:',
+      input: 'select',
+      inputOptions: {
+        'completa': 'Completa (Todas las semanas)',
+        '1': 'Semana 1 a 8',
+        '9': 'Semana 9 a 16'
+      },
+      inputPlaceholder: 'Selecciona una opción',
+      showCancelButton: true,
+      confirmButtonText: 'Generar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+           return 'Debes seleccionar una opción';
+        }
+        return null;
+      }
+    });
+
+    if (isConfirmed && opcionSeleccionada) {
+      let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}`;
+      if (opcionSeleccionada !== 'completa') {
+        url += `?semanaInicio=${opcionSeleccionada}`;
+      }
+      window.open(url, '_blank');
+    }
   }
 
-  descargarInfoGrupoLlena(grupo: any, event: Event) {
+  async descargarInfoGrupoLlena(grupo: any, event: Event) {
     event.stopPropagation();
     
     // Buscar el ciclo del grupo a partir de sus créditos
@@ -228,9 +310,34 @@ export class AdminHome implements OnInit {
       }
     }
 
-    // Descargar el PDF completo pero lleno
-    const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
-    window.open(url, '_blank');
+    const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
+      title: 'Hoja de Control (Llena)',
+      text: 'Selecciona cómo deseas imprimir la hoja:',
+      input: 'select',
+      inputOptions: {
+        'completa': 'Completa (Todas las semanas)',
+        '1': 'Semana 1 a 8',
+        '9': 'Semana 9 a 16'
+      },
+      inputPlaceholder: 'Selecciona una opción',
+      showCancelButton: true,
+      confirmButtonText: 'Generar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+           return 'Debes seleccionar una opción';
+        }
+        return null;
+      }
+    });
+
+    if (isConfirmed && opcionSeleccionada) {
+      let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
+      if (opcionSeleccionada !== 'completa') {
+        url += `&semanaInicio=${opcionSeleccionada}`;
+      }
+      window.open(url, '_blank');
+    }
   }
 
   async descargarInfoGrupoRefil(grupo: any, event: Event) {
@@ -349,7 +456,13 @@ export class AdminHome implements OnInit {
 
   limpiarFiltros() {
     this.searchTerm = '';
-    this.selectedCoordinacionId = 'todas';
+    this.asesorSearchTerm = '';
+    if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+      this.selectedCoordinacionId = this.userCoordinacion;
+    } else {
+      this.selectedCoordinacionId = 'todas';
+    }
+    this.selectedAsesorId = 'todos';
     this.activeTab = 'grupos';
   }
 
@@ -390,8 +503,22 @@ export class AdminHome implements OnInit {
     return `${maxPago}/${totalSemanas}`;
   }
 
+  // getUltimoPago(credito: any): any {
+  //   if (!credito || !credito.pagos || credito.pagos.length === 0) return null;
+  //   return credito.pagos[credito.pagos.length - 1];
+  // }
   getUltimoPago(credito: any): any {
-    if (!credito || !credito.pagos || credito.pagos.length === 0) return null;
-    return credito.pagos[credito.pagos.length - 1];
+  if (!credito || !credito.pagos || credito.pagos.length === 0) return null;
+  
+  const pago = { ...credito.pagos[credito.pagos.length - 1] };
+  
+  if (pago.fechaPago) {
+    const fecha = new Date(pago.fechaPago);
+    fecha.setHours(fecha.getHours() + 6);
+    pago.fechaPago = fecha;
   }
+  
+  return pago;
+}
+  
 }

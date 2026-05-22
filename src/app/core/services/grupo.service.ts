@@ -28,8 +28,10 @@ export class GrupoService {
         }
 
         // Adaptación de payload de Grupo para esquivar error de 'integrantes' en Backend
-        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, grupoId, ...resto } = payload;
-        const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo, plazoSemanas, plazoMeses };
+        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, grupoId, porcentajeGarantia, ...resto } = payload;
+        const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo, plazoSemanas, plazoMeses, porcentajeGarantia };
+
+        console.log('[GrupoService] Enviando grupo:', bodyGrupo);
 
         const grupoObs = grupoId
             ? of({ _id: grupoId })
@@ -38,6 +40,7 @@ export class GrupoService {
         // Enviar un POST del Grupo o usar id existente
         return grupoObs.pipe(
             switchMap((grupoGuardado: any) => {
+                console.log('[GrupoService] Grupo guardado exitosamente:', grupoGuardado);
                 // Enviar peticiones para cada Integrante
                 if (integrantes && integrantes.length > 0) {
                     const peticionesMiembros = integrantes.map(integ => {
@@ -75,7 +78,8 @@ export class GrupoService {
                                     fechaPrimerPago: fechaPrimerPago,
                                     montoSolicitado: integ.montoSolicitado,
                                     tasaInteres: integ.tasaInteres,
-                                    semanas: plazoSemanas || 16
+                                    semanas: plazoSemanas || 16,
+                                    porcentajeGarantia: porcentajeGarantia !== undefined ? porcentajeGarantia : 10
                                 };
                                 return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
                             });
@@ -90,11 +94,27 @@ export class GrupoService {
                 return of(grupoGuardado);
             }),
             catchError(error => {
-        const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503;
+                const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503;
+                const isAuthError = error.status === 401 || error.status === 403;
+
+                console.error('[GrupoService] Error al crear grupo:', {
+                    status: error.status,
+                    statusText: error.statusText,
+                    message: error.message,
+                    isNetworkError,
+                    isAuthError,
+                    error: error.error
+                });
+
                 if (isNetworkError) {
-                    console.warn(`[Network Error] Status: ${error.status} - Se guardo local`);
+                    console.warn(`[Network Error] Status: ${error.status} - Se guardó localmente`);
                     return this.guardarLocal(payload);
                 }
+
+                if (isAuthError) {
+                    console.error('[AuthError] No estás autenticado. Por favor inicia sesión nuevamente.');
+                }
+
                 return throwError(() => error);
             })
         );
@@ -139,6 +159,9 @@ export class GrupoService {
         return this.http.get(`${this.apiUrlGrupo}/coordinacion`);
     }
 
+    getPagosConUbicacion(): Observable<any> {
+        return this.http.get(`${this.apiUrlCredito}/pagos-con-ubicacion`);
+    }
     actualizarCredito(creditoId: string, payload: any): Observable<any> {
         return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload);
     }

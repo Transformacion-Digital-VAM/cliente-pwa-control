@@ -81,8 +81,22 @@ export class AsesorListaGrupos implements OnInit {
                                     this.gruposResumen[grupoId].pagosTotal += totalPagado;
 
                                     // Check solidario
-                                    const tieneSolidario = credito.pagos && credito.pagos.some((p: any) => p.pagoSolidario === true);
-                                    if (tieneSolidario) {
+                                    let activeSolidario = false;
+                                    if (credito.pagos && credito.pagos.length > 0) {
+                                        const mIdStr = m._id.toString();
+                                        const deudas = credito.pagos.filter((p: any) => {
+                                            const isSolidario = p.pagoSolidario === true || p.pagoSolidario === 'true';
+                                            if (!isSolidario) return false;
+                                            const prestadorId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario || '').toString();
+                                            return prestadorId !== '' && prestadorId !== mIdStr;
+                                        });
+                                        const recuperaciones = credito.pagos.filter((p: any) => p.recuperacionSolidario === true);
+                                        const totalAdeudadoSolidario = deudas.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
+                                        const totalDevueltoSolidario = recuperaciones.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
+                                        activeSolidario = (totalAdeudadoSolidario - totalDevueltoSolidario) > 0;
+                                    }
+
+                                    if (activeSolidario) {
                                         this.gruposResumen[grupoId].tieneSolidarios = true;
                                     }
                                 }

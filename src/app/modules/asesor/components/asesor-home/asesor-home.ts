@@ -16,6 +16,7 @@ import { ClienteService } from '../../../../core/services/cliente.service';
 })
 export class AsesorHome implements OnInit, OnDestroy {
   gruposHoy: any[] = [];
+  gruposEnAtraso: any[] = [];
   hoyStr: string = '';
 
   // 1. AGREGAMOS LA PROPIEDAD QUE FALTA
@@ -109,7 +110,6 @@ export class AsesorHome implements OnInit, OnDestroy {
     const hoy = new Date();
     this.hoyStr = dias[hoy.getDay()];
 
-    // Obtener prefix YYYY-MM-DD según zona horaria local para comparar con la BD
     const year = hoy.getFullYear();
     const month = String(hoy.getMonth() + 1).padStart(2, '0');
     const day = String(hoy.getDate()).padStart(2, '0');
@@ -123,90 +123,191 @@ export class AsesorHome implements OnInit, OnDestroy {
         const grupos = res.gruposAll || [];
         const creditosAll = res.creditosAll.creditos || res.creditosAll || [];
 
-        // Verificar si hay grupos nuevos asignados → notificar
         this.notificationService.verificarNuevosGrupos(grupos);
 
-        const gruposDelDia = grupos.filter((g: any) => {
-          const diaVisita = g.diaVisita ? g.diaVisita.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
-          const diaActual = this.hoyStr.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-          return diaVisita === diaActual;
-        });
+        const normalize = (s: string) =>
+          s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
 
-        // Filtrar los que YA tienen un pago registrado hoy (por si ya se visitaron)
-        this.gruposHoy = gruposDelDia.filter((g: any) => {
+        const toLocalPrefix = (d: Date): string => {
+          const yy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yy}-${mm}-${dd}`;
+        };
+
+        const calcPagosGrupo = (g: any, fechaPrefix: string) => {
           const integrantes = g.integrantes ? g.integrantes.map((i: any) => i._id || i) : [];
-          let tienePagoHoy = false;
-
+          let totalEsperado = 0;
+          let totalPagado = 0;
           for (const c of creditosAll) {
             const miembroId = c.miembro?._id || c.miembro;
             if (integrantes.includes(miembroId)) {
-              // Revisa si hay pagos que comiencen con la fecha de hoy
-              if (c.pagos && c.pagos.some((p: any) => p.fechaPago && p.fechaPago.startsWith(hoyIsoPrefix))) {
-                tienePagoHoy = true;
-                break;
-              }
-              // O ahorros
-              if (c.ahorro && c.ahorro.pagosAhorro && c.ahorro.pagosAhorro.some((a: any) => a.fecha && a.fecha.startsWith(hoyIsoPrefix))) {
-                tienePagoHoy = true;
-                break;
-              }
+              totalEsperado += (Number(c.pagoPactado) || 0);
+              (c.pagos || [])
+                .filter((p: any) => p.fechaPago && p.fechaPago.startsWith(fechaPrefix))
+                .forEach((p: any) => {
+                  if (!p.recuperacionSolidario) {
+                    totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                  }
+                });
             }
           }
-          return !tienePagoHoy; // ¡Si NO tiene pago hoy, entonces se muestra!
+          return { totalEsperado, totalPagado };
+        };
+
+        const diaHoyNorm = normalize(this.hoyStr);
+        const gruposDelDia = grupos.filter((g: any) => normalize(g.diaVisita || '') === diaHoyNorm);
+
+        this.gruposHoy = gruposDelDia.filter((g: any) => {
+          const { totalEsperado, totalPagado } = calcPagosGrupo(g, hoyIsoPrefix);
+
+          g.totalEsperado = totalEsperado;
+          g.totalPagadoHoy = totalPagado;
+          g.pagoIncompleto = totalPagado > 0 && totalPagado < totalEsperado;
+          g.montoFaltante = Math.max(0, totalEsperado - totalPagado);
+          g.enAtraso = false;
+
+          if (totalEsperado === 0) return totalPagado === 0;
+          return totalPagado < totalEsperado;
         });
 
-        // Programar notificaciones 10 minutos antes de la hora de visita de cada grupo
+        const idsGruposHoy = new Set(this.gruposHoy.map((g: any) => g._id));
+        this.gruposEnAtraso = [];
+
+        // Helper: pagos en una fecha EXACTA (para detectar si el grupo no pagó ese día)
+        const calcPagosEnFecha = (g: any, fechaPrefix: string) => {
+          const integrantes = g.integrantes ? g.integrantes.map((i: any) => i._id || i) : [];
+          let totalEsperado = 0;
+          let totalPagado = 0;
+          for (const c of creditosAll) {
+            const miembroId = c.miembro?._id || c.miembro;
+            if (integrantes.includes(miembroId)) {
+              totalEsperado += (Number(c.pagoPactado) || 0);
+              (c.pagos || [])
+                .filter((p: any) => p.fechaPago && p.fechaPago.startsWith(fechaPrefix))
+                .forEach((p: any) => {
+                  if (!p.recuperacionSolidario) {
+                    totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                  }
+                });
+            }
+          }
+          return { totalEsperado, totalPagado };
+        };
+
+        // Helper: pagos DESDE una fecha hasta hoy (para calcular monto restante y si ya se cerró)
+        const calcPagosDesde = (g: any, fechaDesde: string) => {
+          const integrantes = g.integrantes ? g.integrantes.map((i: any) => i._id || i) : [];
+          let totalEsperado = 0;
+          let totalPagado = 0;
+          for (const c of creditosAll) {
+            const miembroId = c.miembro?._id || c.miembro;
+            if (integrantes.includes(miembroId)) {
+              totalEsperado += (Number(c.pagoPactado) || 0);
+              // Sumar TODOS los pagos registrados a partir del día de visita (>= fechaDesde)
+              (c.pagos || [])
+                .filter((p: any) => p.fechaPago && p.fechaPago >= fechaDesde)
+                .forEach((p: any) => {
+                  if (!p.recuperacionSolidario) {
+                    totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                  }
+                });
+            }
+          }
+          return { totalEsperado, totalPagado };
+        };
+
+        for (let delta = 1; delta <= 6; delta++) {
+          const fecha = new Date(hoy);
+          fecha.setDate(hoy.getDate() - delta);
+
+          // Parar en domingo (no cruzar semana laboral)
+          if (fecha.getDay() === 0) break;
+
+          const diaNom = dias[fecha.getDay()];
+          const diaNomNorm = normalize(diaNom);
+          const fechaPrefix = toLocalPrefix(fecha);
+
+          const gruposDiaPasado = grupos.filter(
+            (g: any) => normalize(g.diaVisita || '') === diaNomNorm
+          );
+
+          for (const g of gruposDiaPasado) {
+            if (idsGruposHoy.has(g._id)) continue;
+            if (this.gruposEnAtraso.some((x: any) => x._id === g._id)) continue;
+
+            // PASO 1: ¿El grupo no pagó completo en su día de visita?
+            const { totalEsperado: espDia, totalPagado: pagDia } = calcPagosEnFecha(g, fechaPrefix);
+            const noPagoEnSuDia = espDia === 0 ? pagDia === 0 : pagDia < espDia;
+            if (!noPagoEnSuDia) continue; // Sí pagó ese día → no es atraso
+
+            // PASO 2: ¿Sigue sin estar cubierto (incluyendo pagos tardíos registrados después)?
+            const { totalEsperado, totalPagado } = calcPagosDesde(g, fechaPrefix);
+            const sigueAbierto = totalEsperado === 0 ? totalPagado === 0 : totalPagado < totalEsperado;
+            if (!sigueAbierto) continue; // Ya lo cubrieron (aunque con fecha posterior) → ocultar
+
+            g.totalEsperado = totalEsperado;
+            g.totalPagadoHoy = totalPagado;
+            g.pagoIncompleto = totalPagado > 0 && totalPagado < totalEsperado;
+            g.montoFaltante = Math.max(0, totalEsperado - totalPagado);
+            g.enAtraso = true;
+            g.diaAtraso = diaNom;
+
+            this.gruposEnAtraso.push(g);
+          }
+        }
+
         this.notificationService.programarRecordatoriosVisita(this.gruposHoy);
 
-        // ------------------------------------------------------------------------------------------------ //
-        // LÓGICA PARA CLIENTES INDIVIDUALES
-        // ------------------------------------------------------------------------------------------------ //
         this.clienteService.getClientes().subscribe({
           next: (clientes: any[]) => {
             const clientesDelDia = (clientes || []).filter((c: any) => {
               if (!c.diaPago) return false;
-
-              // Remove accents and convert to lowercase for robust comparison
               const diaPago = c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
               const diaActual = this.hoyStr.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
               return diaPago === diaActual;
             });
 
             this.clientesHoy = clientesDelDia.filter((c: any) => {
-              let tienePagoHoy = false;
+              let totalPagadoHoy = 0;
+              let totalEsperadoHoy = 0;
               let estaLiquidado = false;
 
-              // Buscar el crédito de este cliente
               const creditoCliente = creditosAll.find((cred: any) =>
                 (cred.tipoCredito === 'Individual' || cred.cliente) &&
                 (cred.cliente?._id === c._id || cred.cliente === c._id)
               );
 
               if (creditoCliente) {
-                if (creditoCliente.pagos && creditoCliente.pagos.some((p: any) => {
-                  return p.fechaPago && p.fechaPago.startsWith(hoyIsoPrefix)
-                })) {
-                  tienePagoHoy = true;
-                }
+                totalEsperadoHoy = Number(creditoCliente.pagoPactado) || 0;
+                const pagosHoy = (creditoCliente.pagos || []).filter((p: any) =>
+                  p.fechaPago && p.fechaPago.startsWith(hoyIsoPrefix)
+                );
+                pagosHoy.forEach((p: any) => {
+                  totalPagadoHoy += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                });
                 if (creditoCliente.estado === 'Liquidado') {
                   estaLiquidado = true;
                 }
               }
 
-              // Ocultamos si ya tiene pago hoy, o si su crédito está liquidado
-              return !tienePagoHoy && !estaLiquidado;
+              c.totalEsperado = totalEsperadoHoy;
+              c.totalPagadoHoy = totalPagadoHoy;
+              c.pagoIncompleto = totalPagadoHoy > 0 && totalPagadoHoy < totalEsperadoHoy;
+              c.montoFaltante = Math.max(0, totalEsperadoHoy - totalPagadoHoy);
+
+              if (estaLiquidado) return false;
+              if (totalEsperadoHoy === 0) return totalPagadoHoy === 0;
+              return totalPagadoHoy < totalEsperadoHoy;
             });
 
-            // Programar notificación diaria a las 9:15 AM con el resumen (incluyendo grupos e individuales)
             this.notificationService.programarNotificacionDiaria(this.gruposHoy.length, this.clientesHoy.length);
-
             this.cdr.detectChanges();
           },
           error: (err) => {
             console.error('Error al obtener clientes para el home:', err);
           }
         });
-
       },
       error: (err) => {
         console.error('Error al obtener datos combinados para el home:', err);

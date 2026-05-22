@@ -13,7 +13,9 @@
         <span>{{ hoyStr }}</span>
       </h1>
       <p class="text-xs font-semibold text-white mt-0.5">
-        {{ vistaActual === 'grupos' ? gruposHoy.length + ' grupos' : clientesHoy.length + ' clientes' }} pendientes
+        {{ vistaActual === 'grupos'
+          ? (gruposHoy.length + gruposEnAtraso.length) + ' grupos'
+          : clientesHoy.length + ' clientes' }} pendientes
       </p>
     </div>
   </div>
@@ -125,6 +127,18 @@
             </svg>
           </button>
         </div>
+
+        <!-- NOTA DE PAGO INCOMPLETO (GRUPO) -->
+        @if (grupo.pagoIncompleto) {
+        <div class="mt-2 px-3 pb-3">
+          <div class="bg-rose-50 border border-rose-100 rounded-2xl p-2 flex items-center gap-2 animate-pulse">
+            <div class="bg-rose-500 w-2 h-2 rounded-full shadow-lg shadow-rose-200"></div>
+            <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">
+              Pago Incompleto: Faltan ${{ grupo.montoFaltante | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+        }
       </div>
       } @empty {
       <div
@@ -133,6 +147,72 @@
       </div>
       }
     </section>
+
+    <!-- ═══════════════════════════════════════════════
+         SECCIÓN: GRUPOS EN ATRASO (días anteriores)
+    ════════════════════════════════════════════════ -->
+    @if (gruposEnAtraso.length > 0) {
+    <section class="space-y-3 animate-in fade-in duration-300">
+      <div class="flex items-center gap-2">
+        <h2 class="text-xs font-black text-amber-500 uppercase tracking-widest">⚠ Fichas en Atraso</h2>
+        <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full">
+          {{ gruposEnAtraso.length }}
+        </span>
+      </div>
+
+      @for (grupo of gruposEnAtraso; track grupo._id) {
+      <div
+        class="bg-white p-3 rounded-3xl shadow-md border-2 border-amber-300 flex flex-col active:scale-[0.98] transition-transform"
+        (click)="verDetalleGrupo(grupo._id)">
+        <!-- Header de la tarjeta -->
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-4">
+            <div
+              class="h-14 w-14 bg-gradient-to-br from-amber-400 to-orange-500 text-white rounded-2xl flex items-center justify-center shadow-md shadow-amber-200">
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor"
+                class="w-8 h-8 opacity-90">
+                <path
+                  d="M4.5 6.375a4.125 4.125 0 1 1 8.25 0 4.125 4.125 0 0 1-8.25 0ZM14.25 8.625a3.375 3.375 0 1 1 6.75 0 3.375 3.375 0 0 1-6.75 0ZM1.5 19.125a7.125 7.125 0 0 1 14.25 0v.375h-14.25v-.375ZM16.5 19.125a6.75 6.75 0 0 1 6.75 0v.375h-6.75v-.375Z" />
+              </svg>
+            </div>
+            <div>
+              <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+              <div class="flex items-center flex-wrap gap-2 mt-1">
+                <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full tracking-wider uppercase">
+                  ATRASO · {{ grupo.diaAtraso }}
+                </span>
+                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{{
+                  grupo.horaVisita }}</span>
+                <span
+                  class="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full tracking-wider">{{
+                  grupo.clave }}</span>
+              </div>
+            </div>
+          </div>
+          <button class="bg-amber-100 p-3 rounded-full hover:bg-amber-200 transition-colors">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-amber-600" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </button>
+        </div>
+
+        <!-- Barra de atraso -->
+        <div class="mt-2 px-1 pb-1">
+          <div class="bg-amber-50 border border-amber-200 rounded-2xl p-2 flex items-center gap-2">
+            <div class="bg-amber-500 w-2 h-2 rounded-full shadow-lg shadow-amber-200 animate-pulse"></div>
+            <span class="text-[9px] font-black text-amber-700 uppercase tracking-widest leading-none">
+              Ficha sin cerrar del {{ grupo.diaAtraso }}
+              @if (grupo.montoFaltante > 0) {
+               · Faltan ${{ grupo.montoFaltante | number:'1.2-2' }}
+              }
+            </span>
+          </div>
+        </div>
+      </div>
+      }
+    </section>
+    }
     }
 
     @if (vistaActual === 'individuales') {
@@ -167,6 +247,18 @@
             </svg>
           </button>
         </div>
+
+        <!-- NOTA DE PAGO INCOMPLETO (INDIVIDUAL) -->
+        @if (cliente.pagoIncompleto) {
+        <div class="mt-2 px-3 pb-3">
+          <div class="bg-rose-50 border border-rose-100 rounded-2xl p-2 flex items-center gap-2 animate-pulse">
+            <div class="bg-rose-500 w-2 h-2 rounded-full shadow-lg shadow-rose-200"></div>
+            <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">
+              Pago Incompleto: Faltan ${{ cliente.montoFaltante | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+        }
       </div>
       } @empty {
       <div
