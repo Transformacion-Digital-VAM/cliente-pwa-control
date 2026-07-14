@@ -36,7 +36,8 @@ export class ClienteService {
       diaPago: payload.diaPago,
       tipoPago: payload.tipoPago,
       grupo: payload.nombreGrupo || '',
-      asesor: payload.asesor
+      asesor: payload.asesor,
+      horaVisita: payload.horaVisita
     };
 
     // 2. Intento de Post del cliente

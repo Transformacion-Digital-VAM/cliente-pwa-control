@@ -23,11 +23,13 @@ export class AuthService {
                 
                 // Persistimos sesión para uso offline futuro
                 const sessionData = {
+                    id: response.user.id || response.user._id,
                     user: credentials.user,
                     role: response.user.role,
                     token: response.token,
                     lastLogin: Date.now(),
                     username: response.user.username || credentials.user,
+                    nombre: response.user.nombre,
                     coordinacion: response.user.coordinacion
                 };
                 
@@ -41,7 +43,9 @@ export class AuthService {
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userRole', response.user.role);
                 localStorage.setItem('user', JSON.stringify({ 
+                    id: response.user.id || response.user._id,
                     username: response.user.username || credentials.user,
+                    nombre: response.user.nombre,
                     coordinacion: response.user.coordinacion
                 }));
                 return response;

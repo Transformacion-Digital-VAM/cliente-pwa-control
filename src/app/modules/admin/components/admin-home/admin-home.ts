@@ -8,11 +8,12 @@ import { ClienteService } from '../../../../core/services/cliente.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { environment } from '../../../../../environments/environment';
 import Swal from 'sweetalert2';
+import { UppercaseDirective } from '../../uppercase.directive';
 
 @Component({
   selector: 'app-admin-home',
   standalone: true,
-  imports: [CommonModule, RouterModule, FormsModule],
+  imports: [CommonModule, RouterModule, FormsModule, UppercaseDirective],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.css',
 })
@@ -49,7 +50,12 @@ export class AdminHome implements OnInit {
       if (userStr) {
         try {
           const u = JSON.parse(userStr);
-          this.userCoordinacion = u.coordinacion || '';
+          const rawCoord = u.coordinacion;
+          if (rawCoord && typeof rawCoord === 'object') {
+            this.userCoordinacion = rawCoord.$oid || rawCoord._id || rawCoord.id || '';
+          } else {
+            this.userCoordinacion = rawCoord || '';
+          }
         } catch(e) {}
       }
 
@@ -81,8 +87,17 @@ export class AdminHome implements OnInit {
       coordinaciones: this.grupoService.getCoordinaciones()
     }).subscribe({
       next: (res: any) => {
-        // Guardar asesores
-        this.asesoresList = res.asesores || [];
+        // Guardar asesores (filtrando por la coordinación de la ejecutiva si aplica)
+        const allAsesores = res.asesores || [];
+        if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+          this.asesoresList = allAsesores.filter((a: any) => {
+            const aCoord = a.coordinacion;
+            const aCoordId = (aCoord && typeof aCoord === 'object') ? (aCoord._id || aCoord.id) : aCoord;
+            return aCoordId && String(aCoordId) === String(this.userCoordinacion);
+          });
+        } else {
+          this.asesoresList = allAsesores;
+        }
         
         let allCoordinaciones = res.coordinaciones || [];
         if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
@@ -123,15 +138,40 @@ export class AdminHome implements OnInit {
             }
           });
         }
-        this.grupos = Object.values(tempGrupos);
+        let mappedGrupos = Object.values(tempGrupos);
 
         // Procesar clientes individuales
-        const clientesInd = res.clientes ? res.clientes.map((c: any) => ({
+        let clientesInd = res.clientes ? res.clientes.map((c: any) => ({
           ...c,
           tipo: 'INDIVIDUAL'
         })) : [];
 
-        // Combinar en lista principal
+        // SI es rol ejecutivo con sucursal/coordinación asignada, filtramos estrictamente
+        if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+          // Filtrar grupos
+          mappedGrupos = mappedGrupos.filter((g: any) => {
+            let gCoordId = g.coordinacion?._id || g.coordinacion;
+            if (!gCoordId && g.asesor) {
+              const asId = g.asesor._id || g.asesor;
+              const asInfo = allAsesores.find((a: any) => a._id === asId);
+              if (asInfo) gCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+            }
+            return gCoordId && String(gCoordId) === String(this.userCoordinacion);
+          });
+
+          // Filtrar clientes individuales
+          clientesInd = clientesInd.filter((c: any) => {
+            let cCoordId = c.coordinacion?._id || c.coordinacion;
+            if (!cCoordId && c.asesor) {
+              const asId = c.asesor._id || c.asesor;
+              const asInfo = allAsesores.find((a: any) => a._id === asId);
+              if (asInfo) cCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+            }
+            return cCoordId && String(cCoordId) === String(this.userCoordinacion);
+          });
+        }
+
+        this.grupos = mappedGrupos;
         this.elementosPrincipales = [...this.grupos, ...clientesInd];
 
         // Guardar créditos
@@ -168,7 +208,7 @@ export class AdminHome implements OnInit {
     const base = this.filteredAsesoresList;
     if (!this.asesorSearchTerm || !this.asesorSearchTerm.trim()) return base;
     const term = this.asesorSearchTerm.toLowerCase().trim();
-    return base.filter(a => (a.username || a.nombre || '').toLowerCase().includes(term));
+    return base.filter(a => (a.nombre || a.username || '').toLowerCase().includes(term));
   }
 
   /** Número de elementos (grupos/individuales según tab) que pertenecen a una coordinación */

@@ -98,11 +98,16 @@
           <p class="text-slate-700 font-bold text-xs">{{ grupo.diaVisita || '-' }} - {{ grupo.horaVisita || '-' }}</p>
         </div>
       </div>
-      <div>
+      <div class="flex gap-2">
         <button
           class="bg-blue-600 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-sm hover:bg-blue-700 transition"
           (click)="abrirModalAhorro()">
           AHORRO
+        </button>
+        <button
+          class="bg-indigo-600 text-white px-4 py-2 rounded-lg font-bold text-xs shadow-sm hover:bg-indigo-700 transition"
+          (click)="abrirModalPagos()">
+          PAGOS
         </button>
       </div>
     </div>
@@ -574,6 +579,85 @@
         <button type="button"
           class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-base font-bold text-white hover:bg-blue-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-xs uppercase tracking-wider transition-colors"
           (click)="cerrarModalAhorro()">
+          Cerrar
+        </button>
+      </div>
+    </div>
+  </div>
+  }
+
+  <!-- PAGOS DEL GRUPO MODAL -->
+  @if(showPagosModal) {
+  <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-0">
+    <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" (click)="cerrarModalPagos()"></div>
+
+    <div
+      class="relative bg-white rounded-2xl shadow-xl w-full max-w-lg overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+      <!-- Header -->
+      <div class="bg-indigo-600 px-4 py-4 sm:px-6 flex justify-between items-center z-10">
+        <div>
+          <h3 class="text-lg leading-6 font-black text-white italic tracking-tight uppercase" id="modal-title">
+            Pagos del Grupo
+          </h3>
+          <div class="flex items-center space-x-2 mt-1">
+            <p class="text-indigo-200 text-xs font-medium uppercase tracking-wider">Total Registrado:</p>
+            <span class="text-white text-base font-black">${{ totalPagosGrupo | number:'1.2-2' }}</span>
+          </div>
+        </div>
+        <button type="button"
+          class="bg-indigo-700/50 rounded-full p-2 text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-white transition-colors"
+          (click)="cerrarModalPagos()">
+          <span class="sr-only">Cerrar</span>
+          <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor"
+            aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Body con scroll -->
+      <div class="px-4 py-5 sm:p-6 overflow-y-auto flex-1 bg-slate-50">
+        <div class="flex flex-col space-y-3">
+          @for(pago of pagosGrupoAgrupados; track $index; let i = $index) {
+          <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-col space-y-2">
+            <div class="flex justify-between items-start border-b border-slate-100 pb-2">
+              <div>
+                <p class="font-bold text-slate-800 text-sm">{{ pago.miembroNombre }}</p>
+                <p class="text-[9px] text-slate-500 font-medium">{{ pago.fechaPago | date:'dd/MM/yyyy' }}</p>
+              </div>
+              <div class="text-right">
+                <span class="text-indigo-600 font-black text-sm">
+                  ${{ (pago.montoPagado || 0) | number:'1.2-2' }}
+                </span>
+                <p class="text-[9px] text-slate-500 font-medium">Recibo: {{ pago.numeroRecibo || '-' }}</p>
+              </div>
+            </div>
+            <div class="text-[10px] text-slate-600 space-y-1">
+              <p class="flex justify-between">
+                <span class="text-slate-500">Método:</span>
+                <span class="font-bold">{{ pago.metodoPago || '-' }}</span>
+              </p>
+              @if(pago.pagoSolidario) {
+                <p class="flex justify-between text-amber-600">
+                  <span class="text-slate-500">Pago Solidario:</span>
+                  <span class="font-bold">Sí</span>
+                </p>
+              }
+            </div>
+          </div>
+          } @empty {
+          <div class="bg-white p-6 rounded-xl border border-slate-200 border-dashed text-center">
+            <p class="text-slate-400 text-xs font-bold uppercase tracking-wider">Aún no hay pagos registrados en este grupo.</p>
+          </div>
+          }
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="bg-white px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse border-t border-slate-100 p-2">
+        <button type="button"
+          class="w-full inline-flex justify-center rounded-xl border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-bold text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-xs uppercase tracking-wider transition-colors"
+          (click)="cerrarModalPagos()">
           Cerrar
         </button>
       </div>

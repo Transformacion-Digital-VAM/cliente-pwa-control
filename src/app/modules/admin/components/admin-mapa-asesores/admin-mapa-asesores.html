@@ -134,7 +134,7 @@
                             <span *ngFor="let loc of asesoresFiltradosDeBranch"
                                 class="inline-flex items-center gap-1.5 bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-bold px-3 py-1 rounded-full">
                                 <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                                {{ loc.username }}
+                                {{ loc.nombre || loc.username }}
                             </span>
                             <span *ngIf="asesoresFiltradosDeBranch.length === 0 && asesorBusqueda"
                                 class="text-xs text-slate-400 italic self-center">

@@ -96,7 +96,7 @@
                         [class.bg-blue-600]="selectedAsesorId === asesor._id" [class.text-white]="selectedAsesorId === asesor._id"
                         [class.bg-blue-50]="selectedAsesorId !== asesor._id" [class.text-blue-600]="selectedAsesorId !== asesor._id"
                         class="px-4 py-2 rounded-xl text-[10px] font-bold uppercase tracking-wider border border-blue-100 transition-all hover:border-blue-300 shadow-sm flex items-center gap-1.5">
-                  {{ asesor.username || asesor.nombre }}
+                  {{ asesor.nombre || asesor.username }}
                   <span class="text-[9px] opacity-70">({{ getCountByAsesor(asesor._id) }})</span>
                 </button>
               </div>

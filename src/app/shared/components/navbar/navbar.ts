@@ -39,7 +39,7 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   private checkRoute(url: string) {
-    this.isAsesorPage = (url.includes('asesor') && !url.includes('mapa-asesores')) || url.includes('hoja-control-individual');
+    this.isAsesorPage = ((url.includes('asesor') && !url.includes('mapa-asesores')) || url.includes('hoja-control-individual')) && !this.isMaster;
     this.isLoginPage = url.includes('login') || url === '/';
     this.cdr.detectChanges();
   }
@@ -94,7 +94,7 @@ export class Navbar implements OnInit, OnDestroy {
     if (isPlatformBrowser(this.platformId)) {
       localStorage.removeItem('isLoggedIn');
       localStorage.removeItem('userRole');
-      localStorage.removeItem('user');   // limpiamos también el usuario
+      localStorage.removeItem('user');
     }
 
     try {

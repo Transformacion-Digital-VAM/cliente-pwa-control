@@ -42,7 +42,7 @@ export class AsesorListaClientes implements OnInit {
       if (userStr) {
         try {
           const userObj = JSON.parse(userStr);
-          this.asesorName = userObj.username || 'Asesor';
+          this.asesorName = userObj.nombre || userObj.username || 'Asesor';
         } catch (e) {
           this.asesorName = 'Asesor';
         }
@@ -76,7 +76,22 @@ export class AsesorListaClientes implements OnInit {
       creditosData: this.grupoService.getCreditos()
     }).subscribe({
       next: (res: any) => {
-        const clientesBase = res.clientes || [];
+        let clientesBase = res.clientes || [];
+        if (localStorage.getItem('userRole') === 'master') {
+          const userStr = localStorage.getItem('user');
+          const userObj = userStr ? JSON.parse(userStr) : null;
+          const masterUsername = userObj?.username || '';
+          const masterUserId = userObj?.id || '';
+          clientesBase = clientesBase.filter((c: any) => {
+            if (!c.asesor) return false;
+            if (typeof c.asesor === 'object') {
+              const asesorId = c.asesor._id || c.asesor.id;
+              const asesorUsername = c.asesor.username;
+              return (masterUserId && asesorId === masterUserId) || (masterUsername && asesorUsername === masterUsername);
+            }
+            return masterUserId && c.asesor === masterUserId;
+          });
+        }
         const creditosAll = res.creditosData.creditos || res.creditosData || [];
 
         // Día de HOY para el filtro de pagos
@@ -92,10 +107,11 @@ export class AsesorListaClientes implements OnInit {
         // Enriquecer y filtrar
         this.clientesConCredito = clientesBase.map((c: any) => {
           // Buscar crédito individual
-          const creditoCliente = creditosAll.find((cred: any) =>
+          const creditosCliente = creditosAll.filter((cred: any) =>
             (cred.tipoCredito === 'Individual' || cred.cliente) &&
             (cred.cliente?._id === c._id || cred.cliente === c._id)
           );
+          const creditoCliente = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
 
           let estado = 'Sin Crédito';
           let tienePagoHoy = false;
@@ -116,11 +132,6 @@ export class AsesorListaClientes implements OnInit {
             diaVisitaStr: c.diaPago ? c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ''
           };
         });
-
-        // Opcional: si quisieras ocultarlos de la lista 'Activos' podrías hacerlo aquí, 
-        // pero el usuario solicita que SIEMPRE se vean en "Ver todos mis clientes".
-        // Por lo tanto, conservaremos todos los clientes independientemente de si ya pagaron hoy.
-
         this.cargando = false;
         this.cdr.detectChanges();
       },

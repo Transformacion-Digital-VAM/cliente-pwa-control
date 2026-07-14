@@ -43,7 +43,7 @@ export class AsesorHojaControlInd implements OnInit {
       if (userStr) {
         try {
           const userObj = JSON.parse(userStr);
-          this.asesorName = userObj.username || 'Asesor';
+          this.asesorName = userObj.nombre || userObj.username || 'Asesor';
         } catch (e) {
           this.asesorName = 'Asesor';
         }
@@ -80,10 +80,11 @@ export class AsesorHojaControlInd implements OnInit {
             const arrCreditos = creditosData.creditos || creditosData || [];
 
             // Buscar el crédito del cliente (tipo Individual y que no esté liquidado)
-            this.creditoActivo = arrCreditos.find((cred: any) =>
+            const creditosCliente = arrCreditos.filter((cred: any) =>
               (cred.cliente?._id === this.clienteId || cred.cliente === this.clienteId) &&
               (cred.tipoCredito === 'Individual' || cred.cliente)
             );
+            this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
 
             this.cargando = false;
             this.cdr.detectChanges();

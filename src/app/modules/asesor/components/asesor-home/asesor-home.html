@@ -96,7 +96,8 @@
 
       @for (grupo of gruposHoy; track grupo._id) {
       <div
-        class="bg-white p-3 rounded-3xl shadow-md border border-slate-200 flex flex-col active:scale-[0.98] transition-transform"
+        class="p-3 rounded-3xl shadow-md border flex flex-col active:scale-[0.98] transition-transform"
+        [ngClass]="grupo.nuncaHaPagadoAtrasado ? 'border-rose-400 bg-rose-50 shadow-rose-200' : 'bg-white border-slate-200'"
         (click)="verDetalleGrupo(grupo._id)">
         <!-- Header de la tarjeta -->
         <div class="flex items-center justify-between">
@@ -135,6 +136,18 @@
             <div class="bg-rose-500 w-2 h-2 rounded-full shadow-lg shadow-rose-200"></div>
             <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">
               Pago Incompleto: Faltan ${{ grupo.montoFaltante | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+        }
+
+        <!-- NOTA DE NUNCA HA PAGADO ATRASADO (GRUPO) -->
+        @if (!grupo.pagoIncompleto && grupo.nuncaHaPagadoAtrasado) {
+        <div class="mt-2 px-3 pb-3">
+          <div class="bg-rose-50 border border-rose-100 rounded-2xl p-2 flex items-center gap-2 animate-pulse">
+            <div class="bg-rose-500 w-2 h-2 rounded-full shadow-lg shadow-rose-200"></div>
+            <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">
+              Sin pagos (Atrasado)
             </span>
           </div>
         </div>
@@ -223,7 +236,8 @@
 
       @for (cliente of clientesHoy; track cliente._id) {
       <div
-        class="bg-white p-3 rounded-3xl shadow-md border border-slate-200 flex flex-col active:scale-[0.98] transition-transform"
+        class="p-3 rounded-3xl shadow-md border flex flex-col active:scale-[0.98] transition-transform"
+        [ngClass]="cliente.nuncaHaPagadoAtrasado ? 'border-rose-400 bg-rose-50 shadow-rose-200' : 'bg-white border-slate-200'"
         (click)="verDetalleCliente(cliente._id)">
         <!-- Header de la tarjeta -->
         <div class="flex items-center justify-between">
@@ -255,6 +269,18 @@
             <div class="bg-rose-500 w-2 h-2 rounded-full shadow-lg shadow-rose-200"></div>
             <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">
               Pago Incompleto: Faltan ${{ cliente.montoFaltante | number:'1.2-2' }}
+            </span>
+          </div>
+        </div>
+        }
+
+        <!-- NOTA DE NUNCA HA PAGADO ATRASADO (INDIVIDUAL) -->
+        @if (!cliente.pagoIncompleto && cliente.nuncaHaPagadoAtrasado) {
+        <div class="mt-2 px-3 pb-3">
+          <div class="bg-rose-50 border border-rose-100 rounded-2xl p-2 flex items-center gap-2 animate-pulse">
+            <div class="bg-rose-500 w-2 h-2 rounded-full shadow-lg shadow-rose-200"></div>
+            <span class="text-[9px] font-black text-rose-600 uppercase tracking-widest leading-none">
+              Sin pagos (Atrasado)
             </span>
           </div>
         </div>

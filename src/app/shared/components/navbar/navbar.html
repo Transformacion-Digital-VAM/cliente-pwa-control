@@ -27,9 +27,12 @@
         <a routerLink="/hoja-control-admin-ind" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Individual</a>
       </ng-container>
 
-      <!-- MASTER: solo inicio -->
+      <!-- MASTER: pantallas de Ejecutiva -->
       <ng-container *ngIf="isMaster">
-        <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
+        <a routerLink="/home-admin" routerLinkActive="text-blue-600 font-bold" [routerLinkActiveOptions]="{exact: true}" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Hojas de Control</a>
+        <a routerLink="/home-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Grupos/Clientes del día</a>
+        <a routerLink="/grupos-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Grupos</a>
+        <a routerLink="/clientes-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Clientes</a>
       </ng-container>
 
       <!-- ASESOR / USER -->

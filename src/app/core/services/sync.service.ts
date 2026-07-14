@@ -12,6 +12,7 @@ export class SyncService {
     private apiUrlGrupo = `${environment.apiUrl}/grupos`;
     private apiUrlMiembro = `${environment.apiUrl}/miembros`;
     private apiUrlCredito = `${environment.apiUrl}/creditos`;
+    private isSyncing = false;
 
     constructor(
         private http: HttpClient,
@@ -46,6 +47,8 @@ export class SyncService {
     }
 
     async syncData() {
+        if (this.isSyncing) return;
+        this.isSyncing = true;
         try {
             const items = await this.dexie.syncQueue.toArray();
             if (items.length === 0) return;
@@ -132,6 +135,8 @@ export class SyncService {
             }
         } catch (e) {
             console.error('Error accediendo a la base de datos local', e);
+        } finally {
+            this.isSyncing = false;
         }
     }
 }

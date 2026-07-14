@@ -6,11 +6,12 @@ import Swal from 'sweetalert2';
 import { Router } from '@angular/router';
 import { forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
+import { UppercaseDirective } from '../../uppercase.directive';
 
 @Component({
   selector: 'app-admin-actualizar-tipo-credito',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, UppercaseDirective],
   templateUrl: './admin-actualizar-tipo-credito.html',
   styleUrl: './admin-actualizar-tipo-credito.css',
 })

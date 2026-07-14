@@ -7,6 +7,7 @@ import { environment } from '../../../environments/environment';
 export interface UserLocation {
   userId: string;
   username: string;
+  nombre?: string;
   coordinacion: string;
   lat: number;
   lng: number;
@@ -147,6 +148,7 @@ export class LocationService {
       .map((asesor) => ({
         userId: asesor._id,
         username: asesor.username,
+        nombre: asesor.nombre,
         coordinacion: asesor.coordinacion?.nombre || 'Sin sucursal',
         lat: asesor.lastLocation.lat,
         lng: asesor.lastLocation.lng,

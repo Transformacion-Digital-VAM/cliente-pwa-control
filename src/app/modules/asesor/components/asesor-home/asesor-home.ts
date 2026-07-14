@@ -46,7 +46,7 @@ export class AsesorHome implements OnInit, OnDestroy {
       if (userStr) {
         try {
           const userObj = JSON.parse(userStr);
-          this.asesorName = userObj.username || 'Asesor';
+          this.asesorName = userObj.nombre || userObj.username || 'Asesor';
         } catch (e) {
           this.asesorName = 'Asesor';
         }
@@ -141,7 +141,7 @@ export class AsesorHome implements OnInit, OnDestroy {
           let totalPagado = 0;
           for (const c of creditosAll) {
             const miembroId = c.miembro?._id || c.miembro;
-            if (integrantes.includes(miembroId)) {
+            if (integrantes.includes(miembroId) && c.estado === 'Activo') {
               totalEsperado += (Number(c.pagoPactado) || 0);
               (c.pagos || [])
                 .filter((p: any) => p.fechaPago && p.fechaPago.startsWith(fechaPrefix))
@@ -155,8 +155,98 @@ export class AsesorHome implements OnInit, OnDestroy {
           return { totalEsperado, totalPagado };
         };
 
+        const calcPagosHistoricosGrupo = (g: any) => {
+          const integrantes = g.integrantes ? g.integrantes.map((i: any) => i._id || i) : [];
+          let totalPagado = 0;
+          for (const c of creditosAll) {
+            const miembroId = c.miembro?._id || c.miembro;
+            if (integrantes.includes(miembroId) && c.estado === 'Activo') {
+              (c.pagos || []).forEach((p: any) => {
+                if (!p.recuperacionSolidario) {
+                  totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                }
+              });
+            }
+          }
+          return totalPagado;
+        };
+
+        let gruposFiltrados = grupos;
+        if (localStorage.getItem('userRole') === 'master') {
+          const userStr = localStorage.getItem('user');
+          const userObj = userStr ? JSON.parse(userStr) : null;
+          const masterUsername = userObj?.username || '';
+          const masterUserId = userObj?.id || '';
+          gruposFiltrados = grupos.filter((g: any) => {
+            if (!g.asesor) return false;
+            if (typeof g.asesor === 'object') {
+              const asesorId = g.asesor._id || g.asesor.id;
+              const asesorUsername = g.asesor.username;
+              return (masterUserId && asesorId === masterUserId) || (masterUsername && asesorUsername === masterUsername);
+            }
+            return masterUserId && g.asesor === masterUserId;
+          });
+        }
+
         const diaHoyNorm = normalize(this.hoyStr);
-        const gruposDelDia = grupos.filter((g: any) => normalize(g.diaVisita || '') === diaHoyNorm);
+
+        // const esDiaCobro = (diaVisitaOPago: string): boolean => {
+        //   if (!diaVisitaOPago) return false;
+        //   const normalizado = normalize(diaVisitaOPago);
+
+        //   if (normalizado === '15 de cada mes') {
+        //     const date = hoy.getDate();
+        //     const day = hoy.getDay(); // 0 = Domingo, 6 = Sábado
+
+        //     // Si hoy es 15 y no es domingo
+        //     if (date === 15 && day !== 0) {
+        //       return true;
+        //     }
+
+        //     // Si el 15 cae en domingo, se cobra el día anterior (sábado 14).
+        //     // Por lo tanto, si hoy es 14 y es sábado, entonces el 15 es domingo y toca cobrar hoy.
+        //     if (date === 14 && day === 6) {
+        //       return true;
+        //     }
+
+        //     return false;
+        //   }
+
+        //   return normalizado === diaHoyNorm;
+        // };
+
+        const esDiaCobro = (diaVisitaOPago: string): boolean => {
+          if (!diaVisitaOPago) return false;
+          const normalizado = normalize(diaVisitaOPago);
+          const match = normalizado.match(/^(\d+)(?:\s+de\s+cada\s+mes)?$/);
+
+          if (match) {
+            const diaPactado = parseInt(match[1], 10); // día (1, 2, ..., 30)
+            const date = hoy.getDate();
+            const day = hoy.getDay(); // 0 = Domingo, 6 = Sábado
+
+            // Validar si no es domingo
+            if (date === diaPactado && day !== 0) {
+              return true;
+            }
+
+            // Validar si pago cae sabado
+            if (day === 6) {
+              const manana = new Date(hoy);
+              manana.setDate(hoy.getDate() + 1);
+
+              // Validar si el dia de pago cae domingo 
+              if (manana.getDay() === 0 && manana.getDate() === diaPactado) {
+                return true;
+              }
+            }
+
+            return false;
+          }
+          return normalizado === diaHoyNorm;
+        };
+
+        const gruposDelDia = gruposFiltrados.filter((g: any) => esDiaCobro(g.diaVisita));
 
         this.gruposHoy = gruposDelDia.filter((g: any) => {
           const { totalEsperado, totalPagado } = calcPagosGrupo(g, hoyIsoPrefix);
@@ -167,6 +257,21 @@ export class AsesorHome implements OnInit, OnDestroy {
           g.montoFaltante = Math.max(0, totalEsperado - totalPagado);
           g.enAtraso = false;
 
+          let nuncaHaPagadoAtrasado = false;
+          if (g.fechaPrimerPago) {
+            const fechaPrimerPagoObj = new Date(g.fechaPrimerPago);
+            fechaPrimerPagoObj.setHours(0, 0, 0, 0);
+            const hoyObj = new Date(hoy);
+            hoyObj.setHours(0, 0, 0, 0);
+            if (hoyObj >= fechaPrimerPagoObj) {
+              const historico = calcPagosHistoricosGrupo(g);
+              if (historico === 0) {
+                nuncaHaPagadoAtrasado = true;
+              }
+            }
+          }
+          g.nuncaHaPagadoAtrasado = nuncaHaPagadoAtrasado;
+
           if (totalEsperado === 0) return totalPagado === 0;
           return totalPagado < totalEsperado;
         });
@@ -174,7 +279,7 @@ export class AsesorHome implements OnInit, OnDestroy {
         const idsGruposHoy = new Set(this.gruposHoy.map((g: any) => g._id));
         this.gruposEnAtraso = [];
 
-        // Helper: pagos en una fecha EXACTA (para detectar si el grupo no pagó ese día)
+
         const calcPagosEnFecha = (g: any, fechaPrefix: string) => {
           const integrantes = g.integrantes ? g.integrantes.map((i: any) => i._id || i) : [];
           let totalEsperado = 0;
@@ -202,7 +307,7 @@ export class AsesorHome implements OnInit, OnDestroy {
           let totalPagado = 0;
           for (const c of creditosAll) {
             const miembroId = c.miembro?._id || c.miembro;
-            if (integrantes.includes(miembroId)) {
+            if (integrantes.includes(miembroId) && c.estado === 'Activo') {
               totalEsperado += (Number(c.pagoPactado) || 0);
               // Sumar TODOS los pagos registrados a partir del día de visita (>= fechaDesde)
               (c.pagos || [])
@@ -228,7 +333,7 @@ export class AsesorHome implements OnInit, OnDestroy {
           const diaNomNorm = normalize(diaNom);
           const fechaPrefix = toLocalPrefix(fecha);
 
-          const gruposDiaPasado = grupos.filter(
+          const gruposDiaPasado = gruposFiltrados.filter(
             (g: any) => normalize(g.diaVisita || '') === diaNomNorm
           );
 
@@ -239,7 +344,7 @@ export class AsesorHome implements OnInit, OnDestroy {
             // PASO 1: ¿El grupo no pagó completo en su día de visita?
             const { totalEsperado: espDia, totalPagado: pagDia } = calcPagosEnFecha(g, fechaPrefix);
             const noPagoEnSuDia = espDia === 0 ? pagDia === 0 : pagDia < espDia;
-            if (!noPagoEnSuDia) continue; // Sí pagó ese día → no es atraso
+            if (!noPagoEnSuDia) continue; // Sí pagó ese día no es atraso
 
             // PASO 2: ¿Sigue sin estar cubierto (incluyendo pagos tardíos registrados después)?
             const { totalEsperado, totalPagado } = calcPagosDesde(g, fechaPrefix);
@@ -261,22 +366,36 @@ export class AsesorHome implements OnInit, OnDestroy {
 
         this.clienteService.getClientes().subscribe({
           next: (clientes: any[]) => {
-            const clientesDelDia = (clientes || []).filter((c: any) => {
-              if (!c.diaPago) return false;
-              const diaPago = c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-              const diaActual = this.hoyStr.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
-              return diaPago === diaActual;
-            });
+            let clientesFiltrados = clientes || [];
+            if (localStorage.getItem('userRole') === 'master') {
+              const userStr = localStorage.getItem('user');
+              const userObj = userStr ? JSON.parse(userStr) : null;
+              const masterUsername = userObj?.username || '';
+              const masterUserId = userObj?.id || '';
+              clientesFiltrados = clientesFiltrados.filter((c: any) => {
+                if (!c.asesor) return false;
+                if (typeof c.asesor === 'object') {
+                  const asesorId = c.asesor._id || c.asesor.id;
+                  const asesorUsername = c.asesor.username;
+                  return (masterUserId && asesorId === masterUserId) || (masterUsername && asesorUsername === masterUsername);
+                }
+                return masterUserId && c.asesor === masterUserId;
+              });
+            }
+
+            const clientesDelDia = clientesFiltrados.filter((c: any) => esDiaCobro(c.diaPago));
 
             this.clientesHoy = clientesDelDia.filter((c: any) => {
               let totalPagadoHoy = 0;
               let totalEsperadoHoy = 0;
               let estaLiquidado = false;
+              let totalPagadoHistorico = 0;
 
-              const creditoCliente = creditosAll.find((cred: any) =>
+              const creditosCliente = creditosAll.filter((cred: any) =>
                 (cred.tipoCredito === 'Individual' || cred.cliente) &&
                 (cred.cliente?._id === c._id || cred.cliente === c._id)
               );
+              const creditoCliente = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
 
               if (creditoCliente) {
                 totalEsperadoHoy = Number(creditoCliente.pagoPactado) || 0;
@@ -286,6 +405,11 @@ export class AsesorHome implements OnInit, OnDestroy {
                 pagosHoy.forEach((p: any) => {
                   totalPagadoHoy += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
                 });
+
+                (creditoCliente.pagos || []).forEach((p: any) => {
+                  totalPagadoHistorico += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                });
+
                 if (creditoCliente.estado === 'Liquidado') {
                   estaLiquidado = true;
                 }
@@ -295,6 +419,18 @@ export class AsesorHome implements OnInit, OnDestroy {
               c.totalPagadoHoy = totalPagadoHoy;
               c.pagoIncompleto = totalPagadoHoy > 0 && totalPagadoHoy < totalEsperadoHoy;
               c.montoFaltante = Math.max(0, totalEsperadoHoy - totalPagadoHoy);
+
+              let nuncaHaPagadoAtrasado = false;
+              if (c.fechaPrimerPago) {
+                const fechaPrimerPagoObj = new Date(c.fechaPrimerPago);
+                fechaPrimerPagoObj.setHours(0, 0, 0, 0);
+                const hoyObj = new Date(hoy);
+                hoyObj.setHours(0, 0, 0, 0);
+                if (hoyObj >= fechaPrimerPagoObj && totalPagadoHistorico === 0) {
+                  nuncaHaPagadoAtrasado = true;
+                }
+              }
+              c.nuncaHaPagadoAtrasado = nuncaHaPagadoAtrasado;
 
               if (estaLiquidado) return false;
               if (totalEsperadoHoy === 0) return totalPagadoHoy === 0;

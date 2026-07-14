@@ -17,7 +17,7 @@ export class AsesorListaGrupos implements OnInit {
     asesorName: string = '';
     hoyStr: string = '';
     grupos: any[] = [];
-    gruposResumen: { [grupoId: string]: { pagosTotal: number; saldoPendiente: number; tieneSolidarios: boolean } } = {};
+    gruposResumen: { [grupoId: string]: { pagosTotal: number; saldoPendiente: number; tieneSolidarios: boolean; sinPagosAtrasados: boolean } } = {};
     cargando: boolean = true;
 
     constructor(
@@ -38,7 +38,7 @@ export class AsesorListaGrupos implements OnInit {
             if (userStr) {
                 try {
                     const userObj = JSON.parse(userStr);
-                    this.asesorName = userObj.username || 'Asesor';
+                    this.asesorName = userObj.nombre || userObj.username || 'Asesor';
                 } catch (e) {
                     this.asesorName = 'Asesor';
                 }
@@ -51,11 +51,28 @@ export class AsesorListaGrupos implements OnInit {
         this.cargando = true;
         this.grupoService.getGrupos().subscribe({
             next: (grupos: any[]) => {
-                this.grupos = grupos;
+                let gruposFiltrados = grupos || [];
+                if (localStorage.getItem('userRole') === 'master') {
+                    const userStr = localStorage.getItem('user');
+                    const userObj = userStr ? JSON.parse(userStr) : null;
+                    const masterUsername = userObj?.username || '';
+                    const masterUserId = userObj?.id || '';
+                    gruposFiltrados = gruposFiltrados.filter((g: any) => {
+                        if (!g.asesor) return false;
+                        if (typeof g.asesor === 'object') {
+                            const asesorId = g.asesor._id || g.asesor.id;
+                            const asesorUsername = g.asesor.username;
+                            return (masterUserId && asesorId === masterUserId) || (masterUsername && asesorUsername === masterUsername);
+                        }
+                        return masterUserId && g.asesor === masterUserId;
+                    });
+                }
+                this.grupos = gruposFiltrados;
                 // Verificar si hay grupos nuevos asignados → notificar
                 this.notificationService.verificarNuevosGrupos(this.grupos);
                 this.grupos.forEach(g => {
-                    this.gruposResumen[g._id] = { pagosTotal: 0, saldoPendiente: 0, tieneSolidarios: false };
+                    const sinPagosAtrasados = !(this.verificarPagosAtrasados(g));
+                    this.gruposResumen[g._id] = { pagosTotal: 0, saldoPendiente: 0, tieneSolidarios: false, sinPagosAtrasados };
                 });
 
                 forkJoin({
@@ -70,7 +87,8 @@ export class AsesorListaGrupos implements OnInit {
                             const grupoId = m.grupo?._id || m.grupo;
                             if (grupoId && this.gruposResumen[grupoId]) {
                                 // Find credit for this member
-                                const credito = creditos.find((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
+                                const creditosMiembro = creditos.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
+                                const credito = creditosMiembro.find((c: any) => c.estado === 'Activo') || creditosMiembro[creditosMiembro.length - 1];
 
                                 if (credito) {
                                     const saldoPendiente = credito.saldoPendiente || 0;
@@ -130,6 +148,14 @@ export class AsesorListaGrupos implements OnInit {
 
     irAInicio(): void {
         this.router.navigate(['/home-asesor']);
+    }
+
+    private verificarPagosAtrasados(grupo: any): boolean {
+        const fechaPrimerPago = new Date(grupo.fechaPrimerPago);
+        const hoy = new Date();
+        hoy.setHours(0, 0, 0, 0);
+        fechaPrimerPago.setHours(0, 0, 0, 0);
+        return fechaPrimerPago <= hoy;
     }
 
     logout(): void {

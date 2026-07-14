@@ -508,7 +508,7 @@ export class NotificationService {
     }
 
     // ─── Programación Diaria ───
-    programarNotificacionDiaria(gruposDelDia: number, clientesDelDia: number = 0): void {
+    programarNotificacionDiaria(gruposDelDia: number, clientesDelDia: number = 0, fichasNoCerradas: number = 0): void {
         if (!isPlatformBrowser(this.platformId)) return;
 
         if (this.timerDiarioId) clearTimeout(this.timerDiarioId);
@@ -528,9 +528,16 @@ export class NotificationService {
         this.timerDiarioId = setTimeout(() => {
             if (localStorage.getItem(keyEnviado) === hoy) return;
 
-            let mensaje = (gruposDelDia > 0 || clientesDelDia > 0)
-                ? `Hoy tienes ${gruposDelDia} grupos y ${clientesDelDia} clientes por visitar.`
-                : 'No tienes visitas programadas para hoy.';
+            let mensaje = '';
+            if (gruposDelDia > 0 || clientesDelDia > 0) {
+                mensaje = `Hoy tienes ${gruposDelDia} grupos y ${clientesDelDia} clientes por visitar.`;
+            } else {
+                mensaje = 'No tienes visitas programadas para hoy.';
+            }
+
+            if (fichasNoCerradas > 0) {
+                mensaje += ` ATENCIÓN: Tienes ${fichasNoCerradas} ficha(s) sin cerrar, las cuales se marcan como atrasos.`;
+            }
 
             this.mostrar('Resumen del día', { body: mensaje, tag: 'resumen-diario' });
             localStorage.setItem(keyEnviado, hoy);

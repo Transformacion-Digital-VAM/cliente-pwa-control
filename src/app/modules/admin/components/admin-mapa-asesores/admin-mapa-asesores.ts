@@ -3,13 +3,14 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { LocationService, UserLocation } from '../../../../core/services/location.service';
 import { GrupoService } from '../../../../core/services/grupo.service';
+import { UppercaseDirective } from '../../uppercase.directive';
 
 type MapTab = 'asesores' | 'pagos';
 
 @Component({
   selector: 'app-admin-mapa-asesores',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, UppercaseDirective],
   templateUrl: './admin-mapa-asesores.html',
   styleUrl: './admin-mapa-asesores.css',
   encapsulation: ViewEncapsulation.None
@@ -103,10 +104,28 @@ export class AdminMapaAsesores implements OnInit, AfterViewInit {
   }
 
   private cargarAsesores(): void {
+    const userRole = localStorage.getItem('userRole') || '';
+    const userStr = localStorage.getItem('user');
+    let userCoordinacion = '';
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        userCoordinacion = u.coordinacion || '';
+      } catch (e) {}
+    }
+
     this.cargandoAsesores = true;
     this.grupoService.getAsesores().subscribe({
       next: (response: any) => {
-        const asesores = response || response.asesores || [];
+        const allAsesores = response || response.asesores || [];
+        let asesores = allAsesores;
+        if ((userRole === 'master' || userRole === 'superadmin' || userRole === 'coordinador' || userRole === 'ejecutiva') && userCoordinacion) {
+          asesores = allAsesores.filter((a: any) => {
+            const aCoord = a.coordinacion;
+            const aCoordId = (aCoord && typeof aCoord === 'object') ? (aCoord._id || aCoord.id) : aCoord;
+            return aCoordId && String(aCoordId) === String(userCoordinacion);
+          });
+        }
         this.locationService.getAdvisorsLocations(asesores).subscribe((locations: UserLocation[]) => {
           this.asesoresLocations = locations;
           const grouped: { [key: string]: UserLocation[] } = {};
@@ -155,12 +174,12 @@ export class AdminMapaAsesores implements OnInit, AfterViewInit {
               <img src="assets/marker-icon.avif" style="max-width: 80%; max-height: 80%; object-fit: contain;">
             </div>
             <div class="marker-arrow"></div>
-            <p class="text-center text-blue-600 font-bold">${loc.username}</p>
+            <p class="text-center text-blue-600 font-bold">${loc.nombre || loc.username}</p>
           </div>`,
           iconSize: [54, 65], iconAnchor: [27, 65], popupAnchor: [0, -65]
         });
         this.L.marker([loc.lat, loc.lng], { icon: customIcon })
-          .bindPopup(`<div class="text-center"><strong class="text-blue-600">${loc.username}</strong><br><span class="text-xs text-slate-500">Actualizado: ${loc.timestamp.toLocaleTimeString()}</span></div>`)
+          .bindPopup(`<div class="text-center"><strong class="text-blue-600">${loc.nombre || loc.username}</strong><br><span class="text-xs text-slate-500">Actualizado: ${loc.timestamp.toLocaleTimeString()}</span></div>`)
           .addTo(branch.mapInstance);
         bounds.extend([loc.lat, loc.lng]);
       });
@@ -257,7 +276,7 @@ export class AdminMapaAsesores implements OnInit, AfterViewInit {
     if (!branch) return [];
     if (!this.asesorBusqueda.trim()) return branch.locations;
     const term = this.asesorBusqueda.toLowerCase().trim();
-    return branch.locations.filter(l => (l.username || '').toLowerCase().includes(term));
+    return branch.locations.filter(l => (l.nombre || l.username || '').toLowerCase().includes(term));
   }
 
   private initPagoMap(): void {

@@ -21,12 +21,12 @@ export const routes: Routes = [
     { path: 'hoja-control-admin-ind', component: AdminHojaControlInd, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
     { path: 'hoja-control-actualizar-credito', component: AdminActualizarTipoCredito, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
     { path: 'mapa-asesores', component: AdminMapaAsesores, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
-    { path: 'hoja-control-asesor/:id', component: AsesorHojaControl, canActivate: [roleGuard(['user', 'asesor'])] },
+    { path: 'hoja-control-asesor/:id', component: AsesorHojaControl, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
     { path: 'home-admin', component: AdminHome, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
     { path: 'home-gerencia', component: HomeGerencia, canActivate: [roleGuard(['gerencia'])] },
-    { path: 'home-asesor', component: AsesorHome, canActivate: [roleGuard(['user', 'asesor'])] },
-    { path: 'grupos-asesor', component: AsesorListaGrupos, canActivate: [roleGuard(['user', 'asesor'])] },
-    { path: 'clientes-asesor', component: AsesorListaClientes, canActivate: [roleGuard(['user', 'asesor'])] },
-    { path: 'hoja-control-individual/:id', component: AsesorHojaControlInd, canActivate: [roleGuard(['user', 'asesor'])] },
+    { path: 'home-asesor', component: AsesorHome, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
+    { path: 'grupos-asesor', component: AsesorListaGrupos, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
+    { path: 'clientes-asesor', component: AsesorListaClientes, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
+    { path: 'hoja-control-individual/:id', component: AsesorHojaControlInd, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
     { path: '**', redirectTo: 'login' }
 ];

@@ -3,11 +3,12 @@ import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, FormsModule, Va
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import Swal from 'sweetalert2';
 import { GrupoService } from '../../../../core/services/grupo.service';
+import { UppercaseDirective } from '../../uppercase.directive';
 
 @Component({
   selector: 'app-admin-hoja-control',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule, FormsModule],
+  imports: [CommonModule, ReactiveFormsModule, FormsModule, UppercaseDirective],
   templateUrl: './admin-hoja-control.html',
   styleUrl: './admin-hoja-control.css',
 })
@@ -128,10 +129,28 @@ export class AdminHojaControl implements OnInit {
   }
 
   cargarAsesores(): void {
+    const userRole = localStorage.getItem('userRole') || '';
+    const userStr = localStorage.getItem('user');
+    let userCoordinacion = '';
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        userCoordinacion = u.coordinacion || '';
+      } catch (e) {}
+    }
+
     this.grupoService.getAsesores().subscribe({
       next: (data) => {
         if (data && Array.isArray(data)) {
-          this.asesores = data;
+          if ((userRole === 'master' || userRole === 'superadmin' || userRole === 'coordinador' || userRole === 'ejecutiva') && userCoordinacion) {
+            this.asesores = data.filter((a: any) => {
+              const aCoord = a.coordinacion;
+              const aCoordId = (aCoord && typeof aCoord === 'object') ? (aCoord._id || aCoord.id) : aCoord;
+              return aCoordId && String(aCoordId) === String(userCoordinacion);
+            });
+          } else {
+            this.asesores = data;
+          }
         } else {
           this.asesores = [];
         }

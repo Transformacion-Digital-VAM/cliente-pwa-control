@@ -48,18 +48,23 @@ export class LoginComponent {
 
         // Guardar sesión en Dexie
         await this.dexie.user_session.put({
+          id: response.user.id || response.user._id,
           user: String(this.loginData.username),
           token: String(response.token),
           role: response.user.role,
-          coordinacion: response.user.coordinacion,
-          lastLogin: Date.now()
+          nombre: response.user.nombre,
+          lastLogin: Date.now(),
+          username: response.user.username || this.loginData.username,
+          coordinacion: response.user.coordinacion
         });
 
         localStorage.setItem('userRole', response.user.role);
         localStorage.setItem('isLoggedIn', 'true');
         localStorage.setItem('loginDate', new Date().toISOString().split('T')[0]);
         localStorage.setItem('user', JSON.stringify({ 
+          id: response.user.id || response.user._id,
           username: response.user.username || this.loginData.username,
+          nombre: response.user.nombre,
           coordinacion: response.user.coordinacion
         }));
 
@@ -103,7 +108,9 @@ export class LoginComponent {
       localStorage.setItem('isLoggedIn', 'true');
       localStorage.setItem('loginDate', new Date().toISOString().split('T')[0]);
       localStorage.setItem('user', JSON.stringify({ 
+        id: localUser.id,
         username: localUser.user,
+        nombre: localUser.nombre,
         coordinacion: localUser.coordinacion
       }));
       this.redirectByRole(localUser.role);

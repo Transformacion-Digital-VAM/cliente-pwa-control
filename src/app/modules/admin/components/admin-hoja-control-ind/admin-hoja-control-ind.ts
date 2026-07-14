@@ -6,11 +6,12 @@ import Swal from 'sweetalert2';
 // Servicios
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { ClienteService } from '../../../../core/services/cliente.service';
+import { UppercaseDirective } from '../../uppercase.directive';
 
 @Component({
   selector: 'app-admin-hoja-control-ind',
   standalone: true,
-  imports: [CommonModule, ReactiveFormsModule],
+  imports: [CommonModule, ReactiveFormsModule, UppercaseDirective],
   templateUrl: './admin-hoja-control-ind.html',
   styleUrl: './admin-hoja-control-ind.css',
 })
@@ -49,6 +50,7 @@ export class AdminHojaControlInd implements OnInit {
       noPagos: [16, [Validators.required, Validators.min(1)]],
       diaPago: ['Lunes', Validators.required],
       horaVisita: ['', Validators.required],
+      horarioAtencion: [''],
       pagoPactado: [0, [Validators.required, Validators.min(0)]],
       nombreGrupo: [''],
       semanas: [16]
@@ -64,8 +66,11 @@ export class AdminHojaControlInd implements OnInit {
   }
 
   setupSubscriptions() {
-    this.hojaControlIndForm.valueChanges.subscribe(() => {
-      this.calcularPagoYTotal();
+    const fieldsToWatch = ['montoSolicitado', 'tasaInteres', 'equivalenciaMeses', 'noPagos', 'porcentajeGarantia'];
+    fieldsToWatch.forEach(field => {
+      this.hojaControlIndForm.get(field)?.valueChanges.subscribe(() => {
+        this.calcularPagoYTotal();
+      });
     });
   }
 
@@ -147,9 +152,28 @@ export class AdminHojaControlInd implements OnInit {
   // --- CARGA DE DATOS ---
 
   cargarAsesores(): void {
+    const userRole = localStorage.getItem('userRole') || '';
+    const userStr = localStorage.getItem('user');
+    let userCoordinacion = '';
+    if (userStr) {
+      try {
+        const u = JSON.parse(userStr);
+        userCoordinacion = u.coordinacion || '';
+      } catch (e) {}
+    }
+
     this.grupoService.getAsesores().subscribe({
       next: (data) => {
-        this.asesores = Array.isArray(data) ? data : [];
+        const allAsesores = Array.isArray(data) ? data : [];
+        if ((userRole === 'master' || userRole === 'superadmin' || userRole === 'coordinador' || userRole === 'ejecutiva') && userCoordinacion) {
+          this.asesores = allAsesores.filter((a: any) => {
+            const aCoord = a.coordinacion;
+            const aCoordId = (aCoord && typeof aCoord === 'object') ? (aCoord._id || aCoord.id) : aCoord;
+            return aCoordId && String(aCoordId) === String(userCoordinacion);
+          });
+        } else {
+          this.asesores = allAsesores;
+        }
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Error al cargar asesores:', err)
@@ -187,6 +211,12 @@ export class AdminHojaControlInd implements OnInit {
       });
     } else {
       this.hojaControlIndForm.markAllAsTouched();
+      Swal.fire({
+        icon: 'warning',
+        title: 'Campos incompletos',
+        text: 'Por favor completa todos los campos obligatorios antes de guardar.',
+        confirmButtonColor: '#f59e0b'
+      });
     }
   }
 
@@ -199,6 +229,7 @@ export class AdminHojaControlInd implements OnInit {
       noPagos: 16,
       diaPago: 'Lunes',
       horaVisita: '',
+      horarioAtencion: '',
       porcentajeGarantia: 10
     });
     this.clientesFiltrados = [];

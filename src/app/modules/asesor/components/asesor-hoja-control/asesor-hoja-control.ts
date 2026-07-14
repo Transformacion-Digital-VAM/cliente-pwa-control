@@ -33,8 +33,11 @@ export class AsesorHojaControl implements OnInit {
   pagos: { [miembroId: string]: any } = {};
   expandedMiembroId: string | null = null;
   showAhorroModal: boolean = false;
+  showPagosModal: boolean = false;
   currentTab: TabTipo = 'COMUNAL';
   numeroRecibos = { COMUNAL: '', REFIL: '', MAGICO: '' };
+  todosLosCreditos: any[] = [];
+  miembrosFiltradosList: any[] = [];
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -87,23 +90,63 @@ export class AsesorHojaControl implements OnInit {
   };
 
   get miembrosFiltrados() {
-    if (!this.miembros) return [];
+    return this.miembrosFiltradosList;
+  }
 
-    // Filtramos los miembros cuyo tipoCredito coincida con el tab actual
-    // Usamos toUpperCase o el mapa para asegurar la coincidencia
-    return this.miembros.filter(m => {
-      const tipo = m.tipoCredito?.toUpperCase();
-      if (this.currentTab === 'COMUNAL') return tipo === 'CC';
-      if (this.currentTab === 'REFIL') return tipo === 'R';
-      if (this.currentTab === 'MAGICO') return tipo === 'MAGICO';
-      return true;
-    });
+  filtrarYAsociarMiembros(): void {
+    if (!this.miembros || !this.todosLosCreditos) {
+      this.miembrosFiltradosList = [];
+      return;
+    }
+
+    const targetTipo = this.currentTab === 'COMUNAL' ? 'CC' : (this.currentTab === 'REFIL' ? 'R' : 'MAGICO');
+
+    this.miembrosFiltradosList = this.miembros
+      .map(m => {
+        const creditosMiembro = this.todosLosCreditos.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
+        const credito = creditosMiembro.find((c: any) => c.tipoCredito === targetTipo && c.estado === 'Activo') || 
+                        creditosMiembro.find((c: any) => c.tipoCredito === targetTipo);
+
+        if (credito) {
+          const mCopy = { ...m };
+          this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
+          return mCopy;
+        }
+        return null;
+      })
+      .filter(m => m !== null);
   }
 
   // --- UI CONTROLS ---
   cambiarTab(nuevaTab: TabTipo) {
     this.currentTab = nuevaTab;
     this.expandedMiembroId = null;
+
+    // Reset payments to prevent carrying over to the other tab
+    this.miembros.forEach(m => {
+      this.pagos[m._id] = {
+        monto: 0,
+        efectivoCredito: 0, transferenciaCredito: 0, depositoCredito: 0, tarjetaCredito: 0,
+        ahorro: 0,
+        efectivoAhorro: 0, transferenciaAhorro: 0, depositoAhorro: 0, tarjetaAhorro: 0,
+        solidario: false,
+        montoSolidario: 0,
+        efectivoSolidario: 0, transferenciaSolidario: 0, depositoSolidario: 0, tarjetaSolidario: 0,
+        beneficiariosSolidarios: [],
+        fecha: new Date().toISOString().split('T')[0],
+        metodoPago: '',
+        metodoAhorro: '',
+        metodoSolidario: '',
+        selectedMetodosPago: [],
+        selectedMetodosAhorro: [],
+        selectedMetodosSolidario: []
+      };
+      this.pagos[m._id].monto = 0;
+      this.pagos[m._id].recuperacionSolidario = false;
+      this.pagos[m._id].montoRecuperacion = 0;
+    });
+
+    this.filtrarYAsociarMiembros();
     this.cdr.detectChanges();
   }
 
@@ -204,10 +247,12 @@ export class AsesorHojaControl implements OnInit {
     const miembrosAll = res.miembrosAll || [];
     const creditosAll = res.creditosAll.creditos || res.creditosAll || [];
 
+    this.todosLosMiembros = miembrosAll;
+    this.todosLosCreditos = creditosAll;
+
     this.cicloGrupo = '-';
     this.semanaActualGrupo = '-';
 
-    this.todosLosMiembros = miembrosAll;
     this.miembros = miembrosAll.filter((m: any) => (m.grupo?._id === id) || (m.grupo === id));
     this.miembros.forEach(m => {
       this.pagos[m._id] = {
@@ -228,175 +273,216 @@ export class AsesorHojaControl implements OnInit {
         selectedMetodosSolidario: []
       };
 
-      const credito = creditosAll.find((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
-      if (credito) {
-        if (this.cicloGrupo === '-' && credito.ciclo) {
-          this.cicloGrupo = credito.ciclo.toString();
-        }
-        if (this.semanaActualGrupo === '-' && credito.semanaActual) {
-          this.semanaActualGrupo = credito.semanaActual.toString();
-        }
-
-        m.creditoId = credito._id;
-        m.creditoTotal = credito.saldoTotal || 0;
-        m.creditoPendiente = credito.saldoPendiente || 0;
-        m.tipoCredito = credito.tipoCredito || 'CC';
-
-        m.totalPagado = (credito.pagos || []).reduce((sum: number, p: any) => {
-          if (p.recuperacionSolidario) return sum;
-          let pagado = 0;
-          if (p.pagoSolidario === true || p.pagoSolidario === 'true') {
-            pagado = Number(p.montoSolidario) || 0;
-          } else if (p.detallesSolidario && p.detallesSolidario.length > 0) {
-            pagado = 0; // Dinero prestado a otros, no suma a su pagado
-          } else {
-            pagado = Number(p.montoPagado) || 0; // Pago normal
-          }
-          return sum + pagado;
-        }, 0);
-        m.pagoPactado = credito.pagoPactado || m.pagoPactado || 0;
-        m.ahorroTotal = credito.ahorro?.montoTotal || 0;
-
-        // El historial de ahorros (Garantía) se compone de dos fuentes:
-        // 1. Movimientos independientes en ahorro.pagosAhorro
-        const indep = (credito.ahorro?.pagosAhorro || []).map((p: any) => ({
-          fecha: p.fecha,
-          monto: p.monto
-        }));
-
-        // 2. Ahorros capturados durante los pagos semanales en la Hoja de Control
-        const weekly = (credito.pagos || [])
-          .filter((p: any) => (p.montoAhorro || 0) > 0)
-          .map((p: any) => ({
-            fecha: p.fechaPago,
-            monto: p.montoAhorro
-          }));
-
-        // Combinamos ambas fuentes y ordenamos por fecha descendente
-        // Usamos un Set o validación por fecha/monto si quisiéramos evitar duplicados exactos
-        const totalMovements = [...indep, ...weekly].sort((a, b) =>
-          new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
-        );
-
-        m.pagosAhorro = totalMovements;
-
-        m.historialSolidario = false;
-        if (credito.pagos && credito.pagos.length > 0) {
-          const mIdStr = m._id.toString();
-
-          // Deudores: Pagos solidarios donde el que pagó NO es el mismo miembro
-          const deudas = credito.pagos.filter((p: any) => {
-            const isSolidario = p.pagoSolidario === true || p.pagoSolidario === 'true';
-            if (!isSolidario) return false;
-            const prestadorId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario || '').toString();
-            return prestadorId !== '' && prestadorId !== mIdStr;
-          });
-
-          // Recuperaciones: Pagos marcados con la bandera recuperacionSolidario
-          const recuperaciones = credito.pagos.filter((p: any) => {
-            return p.recuperacionSolidario === true;
-          });
-
-          const prestadoresMap: any = {};
-          deudas.forEach((p: any) => {
-            const pId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario).toString();
-            if (!prestadoresMap[pId]) {
-              const pObj = miembrosAll.find((x: any) => x._id.toString() === pId);
-              prestadoresMap[pId] = { nombre: pObj ? `${pObj.nombre} ${pObj.apellidos}` : 'Desconocido', prestado: 0, devuelto: 0 };
-            }
-            prestadoresMap[pId].prestado += (Number(p.montoSolidario || p.montoPagado) || 0);
-          });
-
-          let recuperacionesLibres = 0;
-          recuperaciones.forEach((p: any) => {
-            if (p.detallesSolidario && Array.isArray(p.detallesSolidario) && p.detallesSolidario.length > 0) {
-              p.detallesSolidario.forEach((d: any) => {
-                const pId = (d.miembro?._id || d.miembro).toString();
-                if (prestadoresMap[pId]) {
-                  prestadoresMap[pId].devuelto += (Number(d.monto) || 0);
-                }
-              });
-            } else {
-              recuperacionesLibres += (Number(p.montoSolidario || p.montoPagado) || 0);
-            }
-          });
-
-          for (const pId in prestadoresMap) {
-            const prest = prestadoresMap[pId];
-            const maxDevolvible = prest.prestado - prest.devuelto;
-            if (maxDevolvible > 0 && recuperacionesLibres > 0) {
-              const descontar = Math.min(maxDevolvible, recuperacionesLibres);
-              prest.devuelto += descontar;
-              recuperacionesLibres -= descontar;
-            }
-          }
-
-          m.prestadores = Object.keys(prestadoresMap).map(id => ({
-            id,
-            nombre: prestadoresMap[id].nombre,
-            pendiente: prestadoresMap[id].prestado - prestadoresMap[id].devuelto
-          })).filter(x => x.pendiente > 0);
-
-          const totalAdeudadoSolidario = deudas.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
-          const totalDevueltoSolidario = recuperaciones.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
-
-          m.adeudadoSolidario = totalAdeudadoSolidario;
-          m.devueltoSolidario = totalDevueltoSolidario;
-          m.pendienteSolidario = totalAdeudadoSolidario - totalDevueltoSolidario;
-
-          m.historialSolidario = m.pendienteSolidario > 0;
-
-          this.pagos[m._id].recuperacionesDetalle = m.prestadores.map((pr: any) => ({ prestadorId: pr.id, monto: null }));
-        }
-
-        m.pagosHistoricos = credito.pagos || [];
-
-        const todayStr = new Date().toISOString().split('T')[0];
-        const pagosHoy = m.pagosHistoricos.filter((p: any) => p.fechaPago && p.fechaPago.startsWith(todayStr));
-        const totalPagadoHoy = pagosHoy.reduce((sum: number, p: any) => {
-          if (p.recuperacionSolidario) return sum;
-          let pagadoParaMi = Number(p.montoPagado) || 0;
-          if (p.pagoSolidario === true || p.pagoSolidario === 'true') {
-            pagadoParaMi += Number(p.montoSolidario) || 0;
-          }
-          return sum + pagadoParaMi;
-        }, 0);
-
-        if (pagosHoy.length > 0) {
-          const ultimoPago = pagosHoy[pagosHoy.length - 1];
-          m.folioHoy = ultimoPago.numeroRecibo || 'Sin Folio';
-
-          const tipo = m.tipoCredito?.toUpperCase();
-          if (tipo === 'CC' && !this.numeroRecibos['COMUNAL']) this.numeroRecibos['COMUNAL'] = ultimoPago.numeroRecibo || '';
-          if (tipo === 'R' && !this.numeroRecibos['REFIL']) this.numeroRecibos['REFIL'] = ultimoPago.numeroRecibo || '';
-          if (tipo === 'MAGICO' && !this.numeroRecibos['MAGICO']) this.numeroRecibos['MAGICO'] = ultimoPago.numeroRecibo || '';
-        }
-
-        const cubrioPactado = m.pagoPactado > 0 ? (totalPagadoHoy >= m.pagoPactado) : (pagosHoy.length > 0);
-
-        if (pagosHoy.length > 0 && cubrioPactado) {
-          m.yaPagoHoy = true;
-        } else {
-          m.yaPagoHoy = false;
-        }
-
-      } else {
-        m.creditoTotal = 0;
-        m.creditoPendiente = 0;
-        m.tipoCredito = '-';
-        m.totalPagado = 0;
-        m.pagoPactado = m.pagoPactado || 0;
-        m.ahorroTotal = 0;
-        m.pagosAhorro = [];
-        m.historialSolidario = false;
-        m.yaPagoHoy = false;
-      }
-
       this.pagos[m._id].monto = 0;
       this.pagos[m._id].recuperacionSolidario = false;
       this.pagos[m._id].montoRecuperacion = 0;
     });
+
+    // Establecer ciclo y semana actual a partir del primer crédito activo que encontremos del grupo
+    const primerCreditoActivo = creditosAll.find((c: any) => {
+      const miembroId = c.miembro?._id || c.miembro;
+      const miembroPertenece = this.miembros.some(m => m._id === miembroId);
+      return miembroPertenece && c.estado === 'Activo';
+    });
+
+    if (primerCreditoActivo) {
+      if (primerCreditoActivo.ciclo) {
+        this.cicloGrupo = primerCreditoActivo.ciclo.toString();
+      }
+      if (primerCreditoActivo.semanaActual) {
+        this.semanaActualGrupo = primerCreditoActivo.semanaActual.toString();
+      }
+    }
+
+    this.filtrarYAsociarMiembros();
     this.cdr.detectChanges();
+  }
+
+  asociarCreditoAMiembro(m: any, credito: any, miembrosAll: any[]): void {
+    if (credito) {
+      m.creditoId = credito._id;
+      m.creditoTotal = credito.saldoTotal || 0;
+      m.creditoPendiente = credito.saldoPendiente || 0;
+      m.tipoCredito = credito.tipoCredito || 'CC';
+
+      m.totalPagado = (credito.pagos || []).reduce((sum: number, p: any) => {
+        if (p.recuperacionSolidario) return sum;
+        let pagado = 0;
+        if (p.pagoSolidario === true || p.pagoSolidario === 'true') {
+          pagado = Number(p.montoSolidario) || 0;
+        } else if (p.detallesSolidario && p.detallesSolidario.length > 0) {
+          pagado = 0; // Dinero prestado a otros, no suma a su pagado
+        } else {
+          pagado = Number(p.montoPagado) || 0; // Pago normal
+        }
+        return sum + pagado;
+      }, 0);
+      m.pagoPactado = credito.pagoPactado || m.pagoPactado || 0;
+      m.ahorroTotal = credito.ahorro?.montoTotal || 0;
+
+      // El historial de ahorros (Garantía) se compone de dos fuentes:
+      // 1. Movimientos independientes en ahorro.pagosAhorro
+      const indep = (credito.ahorro?.pagosAhorro || []).map((p: any) => ({
+        fecha: p.fecha,
+        monto: p.monto
+      }));
+
+      // 2. Ahorros capturados durante los pagos semanales en la Hoja de Control
+      const weekly = (credito.pagos || [])
+        .filter((p: any) => (p.montoAhorro || 0) > 0)
+        .map((p: any) => ({
+          fecha: p.fechaPago,
+          monto: p.montoAhorro
+        }));
+
+      // Combinamos ambas fuentes y ordenamos por fecha descendente
+      const totalMovements = [...indep, ...weekly].sort((a, b) =>
+        new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+      );
+
+      m.pagosAhorro = totalMovements;
+
+      m.historialSolidario = false;
+      if (credito.pagos && credito.pagos.length > 0) {
+        const mIdStr = m._id.toString();
+
+        // Deudores: Pagos solidarios donde el que pagó NO es el mismo miembro
+        const deudas = credito.pagos.filter((p: any) => {
+          const isSolidario = p.pagoSolidario === true || p.pagoSolidario === 'true';
+          if (!isSolidario) return false;
+          const prestadorId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario || '').toString();
+          return prestadorId !== '' && prestadorId !== mIdStr;
+        });
+
+        // Recuperaciones: Pagos marcados con la bandera recuperacionSolidario
+        const recuperaciones = credito.pagos.filter((p: any) => {
+          return p.recuperacionSolidario === true;
+        });
+
+        const prestadoresMap: any = {};
+        deudas.forEach((p: any) => {
+          const pId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario).toString();
+          if (!prestadoresMap[pId]) {
+            const pObj = miembrosAll.find((x: any) => x._id.toString() === pId);
+            prestadoresMap[pId] = { nombre: pObj ? `${pObj.nombre} ${pObj.apellidos}` : 'Desconocido', prestado: 0, devuelto: 0 };
+          }
+          prestadoresMap[pId].prestado += (Number(p.montoSolidario || p.montoPagado) || 0);
+        });
+
+        let recuperacionesLibres = 0;
+        recuperaciones.forEach((p: any) => {
+          if (p.detallesSolidario && Array.isArray(p.detallesSolidario) && p.detallesSolidario.length > 0) {
+            p.detallesSolidario.forEach((d: any) => {
+              const pId = (d.miembro?._id || d.miembro).toString();
+              if (prestadoresMap[pId]) {
+                prestadoresMap[pId].devuelto += (Number(d.monto) || 0);
+              }
+            });
+          } else {
+            recuperacionesLibres += (Number(p.montoSolidario || p.montoPagado) || 0);
+          }
+        });
+
+        for (const pId in prestadoresMap) {
+          const prest = prestadoresMap[pId];
+          const maxDevolvible = prest.prestado - prest.devuelto;
+          if (maxDevolvible > 0 && recuperacionesLibres > 0) {
+            const descontar = Math.min(maxDevolvible, recuperacionesLibres);
+            prest.devuelto += descontar;
+            recuperacionesLibres -= descontar;
+          }
+        }
+
+        m.prestadores = Object.keys(prestadoresMap).map(id => ({
+          id,
+          nombre: prestadoresMap[id].nombre,
+          pendiente: prestadoresMap[id].prestado - prestadoresMap[id].devuelto
+        })).filter(x => x.pendiente > 0);
+
+        const totalAdeudadoSolidario = deudas.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
+        const totalDevueltoSolidario = recuperaciones.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
+
+        m.adeudadoSolidario = totalAdeudadoSolidario;
+        m.devueltoSolidario = totalDevueltoSolidario;
+        m.pendienteSolidario = totalAdeudadoSolidario - totalDevueltoSolidario;
+
+        m.historialSolidario = m.pendienteSolidario > 0;
+
+        if (this.pagos[m._id]) {
+          this.pagos[m._id].recuperacionesDetalle = m.prestadores.map((pr: any) => ({ prestadorId: pr.id, monto: null }));
+        }
+      }
+
+      m.pagosHistoricos = credito.pagos || [];
+
+      const todayStr = new Date().toISOString().split('T')[0];
+      const pagosHoy = m.pagosHistoricos.filter((p: any) => p.fechaPago && p.fechaPago.startsWith(todayStr));
+      const totalPagadoHoy = pagosHoy.reduce((sum: number, p: any) => {
+        if (p.recuperacionSolidario) return sum;
+        let pagadoParaMi = Number(p.montoPagado) || 0;
+        if (p.pagoSolidario === true || p.pagoSolidario === 'true') {
+          pagadoParaMi += Number(p.montoSolidario) || 0;
+        }
+        return sum + pagadoParaMi;
+      }, 0);
+
+      if (pagosHoy.length > 0) {
+        const ultimoPago = pagosHoy[pagosHoy.length - 1];
+        m.folioHoy = ultimoPago.numeroRecibo || 'Sin Folio';
+
+        const tipo = m.tipoCredito?.toUpperCase();
+        if (tipo === 'CC' && !this.numeroRecibos['COMUNAL']) this.numeroRecibos['COMUNAL'] = ultimoPago.numeroRecibo || '';
+        if (tipo === 'R' && !this.numeroRecibos['REFIL']) this.numeroRecibos['REFIL'] = ultimoPago.numeroRecibo || '';
+        if (tipo === 'MAGICO' && !this.numeroRecibos['MAGICO']) this.numeroRecibos['MAGICO'] = ultimoPago.numeroRecibo || '';
+      } else {
+        m.folioHoy = null;
+      }
+
+      const cubrioPactado = m.pagoPactado > 0 ? (totalPagadoHoy >= m.pagoPactado) : (pagosHoy.length > 0);
+      m.yaPagoHoy = pagosHoy.length > 0 && cubrioPactado;
+
+    } else {
+      m.creditoTotal = 0;
+      m.creditoPendiente = 0;
+      m.tipoCredito = '-';
+      m.totalPagado = 0;
+      m.pagoPactado = m.pagoPactado || 0;
+      m.ahorroTotal = 0;
+      m.pagosAhorro = [];
+      m.historialSolidario = false;
+      m.yaPagoHoy = false;
+    }
+  }
+
+  abrirModalPagos(): void {
+    this.showPagosModal = true;
+  }
+
+  cerrarModalPagos(): void {
+    this.showPagosModal = false;
+  }
+
+  get pagosGrupoAgrupados(): any[] {
+    const todosLosPagos: any[] = [];
+    this.miembros.forEach(miembro => {
+      if (miembro.pagosHistoricos && miembro.pagosHistoricos.length > 0) {
+        miembro.pagosHistoricos.forEach((pago: any) => {
+          todosLosPagos.push({
+            miembroNombre: `${miembro.nombre} ${miembro.apellidos}`,
+            fechaPago: pago.fechaPago,
+            montoPagado: pago.montoPagado || pago.montoSolidario || 0,
+            numeroRecibo: pago.numeroRecibo,
+            metodoPago: pago.metodoPago,
+            pagoSolidario: pago.pagoSolidario === true || pago.pagoSolidario === 'true'
+          });
+        });
+      }
+    });
+    return todosLosPagos.sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());
+  }
+
+  get totalPagosGrupo(): number {
+    return this.pagosGrupoAgrupados.reduce((sum, p) => sum + (Number(p.montoPagado) || 0), 0);
   }
 
   // --- FORM HANDLERS ---
