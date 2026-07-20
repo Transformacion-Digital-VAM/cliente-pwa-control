@@ -25,12 +25,11 @@ export class ClienteService {
   crearClienteIndividual(payload: any): Observable<any> {
     const isOnline = navigator.onLine;
 
-    // Si no hay conexión de antemano, directo a Dexie
     if (!isOnline) {
       return this.guardarLocal(payload);
     }
 
-    // 1. Separar datos del cliente de los datos del credito (diferentes colecciones)
+    // 1. Separar datos del cliente de los datos del credito
     const bodyCliente = {
       nombre: payload.nombreCliente,
       diaPago: payload.diaPago,
@@ -40,17 +39,22 @@ export class ClienteService {
       horaVisita: payload.horaVisita
     };
 
-    // 2. Intento de Post del cliente
-    return this.http.post(`${this.apiUrlCliente}`, bodyCliente).pipe(
+    // 2. Determinar si se crea o se actualiza el cliente
+    const idCliente = payload.idCliente;
+    const clienteObs = idCliente
+      ? this.http.put(`${this.apiUrlCliente}/${idCliente}`, bodyCliente)
+      : this.http.post(`${this.apiUrlCliente}`, bodyCliente);
+
+    return clienteObs.pipe(
       switchMap((clienteGuardado: any) => {
-        // 3. Crear el crédito asociado al cliente individual
+        // 3. Crear o actualizar el crédito asociado al cliente individual
         const bodyCredito = {
-          cliente: clienteGuardado._id,
-          tipoCredito: 'Individual', // Forzamos tipo individual 
+          cliente: idCliente || clienteGuardado._id,
+          tipoCredito: 'Individual',
           ciclo: payload.ciclo || 1,
           pagoPactado: payload.pagoPactado,
-          semanas: payload.noPagos, // Usamos 'noPagos' como semanas/quincenas (según el periodo)
-          saldoTotal: payload.saldoInicial, // El admin ingresa el montoSolicitado
+          semanas: payload.noPagos,
+          saldoTotal: payload.saldoInicial,
           saldoPendiente: payload.saldoInicial,
           fechaPrimerPago: payload.fechaPrimerPago,
           garantia: payload.garantia || 0,
@@ -63,7 +67,7 @@ export class ClienteService {
         };
 
         return this.http.post(`${this.apiUrlCredito}/`, bodyCredito).pipe(
-          map(() => clienteGuardado) // Al final se retorna la info del cliente
+          map(() => clienteGuardado)
         );
       }),
       catchError(error => {

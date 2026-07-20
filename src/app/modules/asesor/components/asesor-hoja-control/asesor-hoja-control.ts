@@ -255,6 +255,16 @@ export class AsesorHojaControl implements OnInit {
 
     this.miembros = miembrosAll.filter((m: any) => (m.grupo?._id === id) || (m.grupo === id));
     this.miembros.forEach(m => {
+      // Asociar pagos históricos de todos los créditos del miembro para la vista de historial del grupo
+      const creditosMiembro = creditosAll.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
+      const pagosHistoricos: any[] = [];
+      creditosMiembro.forEach((c: any) => {
+        if (c.pagos) {
+          pagosHistoricos.push(...c.pagos);
+        }
+      });
+      m.pagosHistoricos = pagosHistoricos;
+
       this.pagos[m._id] = {
         monto: 0,
         efectivoCredito: 0, transferenciaCredito: 0, depositoCredito: 0, tarjetaCredito: 0,
@@ -711,7 +721,7 @@ export class AsesorHojaControl implements OnInit {
       const peticiones: any[] = [];
       for (const miembroId of pagosFilterIds) {
         const p = this.pagos[miembroId];
-        const miembroActual = this.miembros.find(m => m._id === miembroId);
+        const miembroActual = this.miembrosFiltradosList.find(m => m._id === miembroId);
 
         if (!miembroActual || !miembroActual.creditoId) continue;
 
