@@ -47,7 +47,7 @@ export class AdminHojaControl implements OnInit {
       diaVisita: ['Lunes', Validators.required],
       fechaPrimerPago: ['', Validators.required],
       horaVisita: ['', Validators.required],
-      porcentajeGarantia: [10, [Validators.min(0)]],
+      porcentajeGarantia: [5, [Validators.min(0)]],
       integrantes: this.fb.array([])
     });
   }
@@ -122,9 +122,10 @@ export class AdminHojaControl implements OnInit {
       // (((Monto * (Tasa/100)) * Meses) + Monto) / Semanas
       const interes = monto * (tasa / 100) * meses;
       const saldoTotal = interes + monto;
-      const pagoPactado = saldoTotal / semanas;
+      const pagoPactado = Math.ceil(saldoTotal / semanas);
 
-      integranteForm.get('pagoPactado')?.setValue(Math.ceil(pagoPactado), { emitEvent: false });
+      integranteForm.get('pagoPactado')?.setValue(pagoPactado, { emitEvent: false });
+      integranteForm.get('st')?.setValue(pagoPactado * semanas, { emitEvent: false });
     }
   }
 
@@ -136,7 +137,7 @@ export class AdminHojaControl implements OnInit {
       try {
         const u = JSON.parse(userStr);
         userCoordinacion = u.coordinacion || '';
-      } catch (e) {}
+      } catch (e) { }
     }
 
     this.grupoService.getAsesores().subscribe({
@@ -216,7 +217,7 @@ export class AdminHojaControl implements OnInit {
       diaVisita: grupo.diaVisita || 'Lunes',
       fechaPrimerPago: grupo.fechaPrimerPago || '',
       horaVisita: grupo.horaVisita || '',
-      porcentajeGarantia: grupo.porcentajeGarantia || 10
+      porcentajeGarantia: grupo.porcentajeGarantia || 5
     });
 
     // plazoMeses se mantiene deshabilitado (es calculado)
@@ -379,9 +380,10 @@ export class AdminHojaControl implements OnInit {
       apellidos: [miembro?.apellidos || '', Validators.required],
       tipoCredito: [creditoActivo?.tipoCredito || 'CC', Validators.required],
       cargo: [this.mapearCargo(miembro?.rol), Validators.required],
-      montoSolicitado: [creditoActivo?.montoSolicitado ?? '', [Validators.required, Validators.min(0)]],
-      pagoPactado: [creditoActivo?.pagoPactado ?? '', [Validators.required, Validators.min(0)]],
-      tasaInteres: [creditoActivo?.tasaInteres ?? tasaGeneralActual, [Validators.required, Validators.min(0)]]
+      montoSolicitado: [creditoActivo?.montoSolicitado ?? 0, [Validators.required, Validators.min(0)]],
+      pagoPactado: [creditoActivo?.pagoPactado ?? 0, [Validators.required, Validators.min(0)]],
+      tasaInteres: [creditoActivo?.tasaInteres ?? tasaGeneralActual, [Validators.required, Validators.min(0)]],
+      st: [0, [Validators.min(0)]]
     });
 
     // Autocomplete listeners
@@ -404,6 +406,18 @@ export class AdminHojaControl implements OnInit {
     });
     integranteForm.get('tasaInteres')?.valueChanges.subscribe(() => {
       this.calcularPagoPactado(integranteForm);
+    });
+    integranteForm.get('pagoPactado')?.valueChanges.subscribe(pago => {
+      const semanas = this.hojaControlForm.get('plazoSemanas')?.value || 16;
+      const stCalculado = (Number(pago) || 0) * semanas;
+      integranteForm.get('st')?.setValue(stCalculado, { emitEvent: false });
+    });
+    integranteForm.get('st')?.valueChanges.subscribe(stVal => {
+      const semanas = this.hojaControlForm.get('plazoSemanas')?.value || 16;
+      if (semanas > 0) {
+        const pagoPactado = Math.ceil((Number(stVal) || 0) / semanas);
+        integranteForm.get('pagoPactado')?.setValue(pagoPactado, { emitEvent: false });
+      }
     });
 
     this.integrantes.push(integranteForm);
@@ -489,7 +503,7 @@ export class AdminHojaControl implements OnInit {
       tasa: 0,
       plazoSemanas: 16,
       plazoMeses: 4,
-      porcentajeGarantia: 10
+      porcentajeGarantia: 5
     });
     // Deshabilitar solo plazoMeses (es calculado)
     this.hojaControlForm.get('plazoMeses')?.disable();
@@ -499,5 +513,33 @@ export class AdminHojaControl implements OnInit {
     this.addIntegrante();
   }
 
+  get totalMontoSolicitado(): number {
+    return this.integrantes.controls.reduce((sum, ctrl) => {
+      return sum + (Number(ctrl.get('montoSolicitado')?.value) || 0);
+    }, 0);
+  }
 
+  get totalPagoPactado(): number {
+    return this.integrantes.controls.reduce((sum, ctrl) => {
+      return sum + (Number(ctrl.get('pagoPactado')?.value) || 0);
+    }, 0);
+  }
+
+  get totalGarantia(): number {
+    const porcentaje = Number(this.hojaControlForm.get('porcentajeGarantia')?.value) || 0;
+    return this.totalMontoSolicitado * (porcentaje / 100);
+  }
+
+  get totalST(): number {
+    return this.integrantes.controls.reduce((sum, ctrl) => {
+      const stVal = ctrl.get('st')?.value;
+      if (stVal !== null && stVal !== undefined && stVal !== '') {
+        return sum + Number(stVal);
+      }
+      const semanas = Number(this.hojaControlForm.get('plazoSemanas')?.value) || 0;
+      const pagoPactado = Number(ctrl.get('pagoPactado')?.value) || 0;
+      return sum + (pagoPactado * semanas);
+    }, 0);
+  }
 }
+

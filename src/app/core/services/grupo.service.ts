@@ -79,7 +79,7 @@ export class GrupoService {
                                     montoSolicitado: integ.montoSolicitado,
                                     tasaInteres: integ.tasaInteres,
                                     semanas: plazoSemanas || 16,
-                                    porcentajeGarantia: porcentajeGarantia !== undefined ? porcentajeGarantia : 10
+                                    porcentajeGarantia: porcentajeGarantia !== undefined ? porcentajeGarantia : 5
                                 };
                                 return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
                             });

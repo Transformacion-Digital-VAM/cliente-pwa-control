@@ -106,8 +106,7 @@
                 class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
 
-            <div class="flex-1"></div> <!-- Spacer to push the next item to the right -->
-
+            <div class="flex-1"></div> 
             <div class="space-y-1 w-24">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">% Garantía <span class="text-red-500">*</span></label>
               <input type="number" formControlName="porcentajeGarantia" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
@@ -190,9 +189,7 @@
                     <td class="px-6 py-4 w-36">
                       <div class="relative">
                         <span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
-                        <span class="block w-full bg-slate-100 border border-slate-200 rounded-lg p-2 pl-6 text-sm text-slate-700 font-bold">
-                          {{ (integrante.value.pagoPactado || 0) * (hojaControlForm.get('plazoSemanas')?.value || 0) | number:'1.2-2' }}
-                        </span>
+                        <input type="number" formControlName="st" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm text-slate-700 font-bold outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00">
                       </div>
                     </td>
                     <td class="px-6 py-4 text-center">
@@ -200,6 +197,35 @@
                     </td>
                   </tr>
                 </tbody>
+                <tfoot class="bg-slate-50 border-t-2 border-slate-300">
+                  <!-- Fila de Totales de la Tabla -->
+                  <tr>
+                    <td colspan="5" class="px-6 py-3 text-right font-bold text-slate-700 uppercase tracking-widest text-xs">
+                      Totales:
+                    </td>
+                    <td class="px-6 py-3 text-center font-bold text-slate-800 text-sm">
+                      $ {{ totalMontoSolicitado | number:'1.2-2' }}
+                    </td>
+                    <td class="px-6 py-3 text-center font-bold text-slate-800 text-sm">
+                      $ {{ totalPagoPactado | number:'1.2-2' }}
+                    </td>
+                    <td class="px-6 py-3"></td>
+                    <td class="px-6 py-3 text-center font-bold text-blue-700 text-sm bg-blue-50/70 border-x border-slate-200">
+                      $ {{ totalST | number:'1.2-2' }}
+                    </td>
+                    <td class="px-6 py-3"></td>
+                  </tr>
+                  <!-- Fila de Total Garantía -->
+                  <tr class="border-t border-slate-200">
+                    <td colspan="8" class="px-6 py-3 text-right font-bold text-slate-700 uppercase tracking-widest text-xs">
+                      Total Garantías ({{ hojaControlForm.get('porcentajeGarantia')?.value || 0 }}%):
+                    </td>
+                    <td class="px-6 py-3 text-center font-bold text-emerald-700 text-base bg-emerald-50 border-x border-emerald-200">
+                      $ {{ totalGarantia | number:'1.2-2' }}
+                    </td>
+                    <td class="px-6 py-3"></td>
+                  </tr>
+                </tfoot>
               </table>
             </div>
           </div>

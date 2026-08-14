@@ -257,7 +257,7 @@
                             <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">{{ getProgresoPagos(getCreditoDeCliente(item._id)) }}</td>
                             <td class="px-4 py-3 font-medium text-emerald-600 text-sm whitespace-nowrap">
                               <ng-container *ngIf="getUltimoPago(getCreditoDeCliente(item._id)) as ultimoI; else noPagosI">
-                                <div>{{ ultimoI.fechaPago | date:'dd/MMM' }}</div>
+                                <div>{{ ultimoI.fechaPago | date:'dd/MMM':'UTC' }}</div>
                                 <div class="text-xs text-emerald-400 font-bold">{{ ultimoI.montoPagado | currency:'MXN' }}</div>
                               </ng-container>
                               <ng-template #noPagosI><span class="text-emerald-400/50 text-xs">-</span></ng-template>

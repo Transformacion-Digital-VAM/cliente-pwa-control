@@ -137,7 +137,7 @@
                                             <tr class="hover:bg-slate-50 transition-colors">
                                                 <td class="px-6 py-4 font-medium text-slate-900">{{ $index + 1 }}</td>
                                                 <td class="px-6 py-4 font-medium text-slate-600">#{{ pago.numeroRecibo || 'N/A' }}</td>
-                                                <td class="px-6 py-4">{{ pago.fechaPago | date:'dd/MM/yyyy HH:mm' }}</td>
+                                                <td class="px-6 py-4">{{ pago.fechaPago | date:'dd/MM/yyyy HH:mm':'UTC' }}</td>
                                                 <td class="px-6 py-4 font-bold text-emerald-600 text-right">${{ pago.montoPagado | number:'1.2-2' }}</td>
                                             </tr>
                                         }
