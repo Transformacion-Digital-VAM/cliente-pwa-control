@@ -6,15 +6,18 @@
     <div class="px-8 py-5 border-b border-blue-700 bg-blue-600 shrink-0 flex justify-between items-center">
       <div class="flex items-center space-x-4">
         <div class="p-2 bg-white/20 rounded-lg shadow-sm">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-white" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
           </svg>
         </div>
         <div>
           <h2 class="text-white text-xl font-bold tracking-tight">Crédito Comunal</h2>
         </div>
       </div>
-      <span class="hidden md:block text-[10px] font-black text-blue-900 uppercase tracking-widest text-right">VAMOS A MEJORAR S.A. DE C.V. SOFOM ENR</span>
+      <span class="hidden md:block text-[10px] font-black text-blue-900 uppercase tracking-widest text-right">VAMOS A
+        MEJORAR S.A. DE C.V. SOFOM ENR</span>
     </div>
     <div class="w-full">
       <form [formGroup]="hojaControlForm" class="p-8 space-y-12">
@@ -28,61 +31,85 @@
           <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8 items-end">
             <!-- Nombre del Grupo -->
             <div class="lg:col-span-4 space-y-4 space-y-2 relative">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo <span class="text-red-500">*</span></label>
-              <input type="text" formControlName="nombreGrupo" (focus)="showGrupoSuggestions = true; filtrarGrupos(hojaControlForm.get('nombreGrupo')?.value)" (blur)="hideGrupoSuggestions()" autocomplete="off"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="Nombre del Grupo">
-              <ul *ngIf="showGrupoSuggestions && filteredGrupos.length > 0" class="absolute z-50 w-full bg-white border border-slate-200 mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Nombre del Grupo
+                <span class="text-red-500">*</span></label>
+              <input type="text" formControlName="nombreGrupo"
+                (focus)="showGrupoSuggestions = true; filtrarGrupos(hojaControlForm.get('nombreGrupo')?.value)"
+                (blur)="hideGrupoSuggestions()" autocomplete="off"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all"
+                placeholder="Nombre del Grupo">
+              <ul *ngIf="showGrupoSuggestions && filteredGrupos.length > 0"
+                class="absolute z-50 w-full bg-white border border-slate-200 mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
                 <li *ngFor="let grupo of filteredGrupos" (mousedown)="seleccionarGrupo(grupo)"
-                    class="px-4 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
+                  class="px-4 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
                   {{ grupo.nombre }}
-                  <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 uppercase">Ciclo {{ getCicloGrupo(grupo) }} • Clave: {{ grupo.clave }}</span>
+                  <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 uppercase">Ciclo {{
+                    getCicloGrupo(grupo) }} • Clave: {{ grupo.clave }}</span>
                 </li>
               </ul>
             </div>
 
             <!-- Clave -->
             <div class="lg:col-span-2 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Clave <span class="text-red-500">*</span></label>
-              <input type="text" formControlName="clave" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center font-mono focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="00000">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Clave
+                <span class="text-red-500">*</span></label>
+              <input type="text" formControlName="clave"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center font-mono focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all"
+                placeholder="00000">
             </div>
 
             <!-- Asesor -->
             <div class="lg:col-span-2 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asesor <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Asesor <span
+                  class="text-red-500">*</span></label>
               <div class="relative">
-                <select formControlName="asesor" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-10 hover:border-blue-400">
+                <select formControlName="asesor"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-10 hover:border-blue-400">
                   <option value="" disabled selected>Seleccione al asesor</option>
-                  <option *ngFor="let asesor of asesores" [value]="asesor._id">{{ asesor.nombre || asesor.username }}</option>
+                  <option *ngFor="let asesor of asesores" [value]="asesor._id">{{ asesor.nombre || asesor.username }}
+                  </option>
                 </select>
                 <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
                 </div>
               </div>
             </div>
 
             <div class="lg:col-span-1 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Ciclo <span class="text-red-500">*</span></label>
-              <input type="number" formControlName="cicloActual" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="1" min="1">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Ciclo
+                <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="cicloActual"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all"
+                placeholder="1" min="1">
             </div>
 
             <div class="lg:col-span-1 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Tasa de Interés General <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Tasa de
+                Interés General <span class="text-red-500">*</span></label>
               <div class="relative">
-                <input type="number" formControlName="tasa" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center pr-7 focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="0.00" step="0.01">
+                <input type="number" formControlName="tasa"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center pr-7 focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all"
+                  placeholder="0.00" step="0.01">
                 <span class="absolute right-3 top-3 text-slate-500 font-bold text-xs">%</span>
               </div>
             </div>
 
             <div class="lg:col-span-1 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Plazo (Sem.) <span class="text-red-500">*</span></label>
-              <input type="number" formControlName="plazoSemanas" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all" placeholder="16" min="1">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Plazo
+                (Sem.) <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="plazoSemanas"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all"
+                placeholder="16" min="1">
             </div>
 
             <div class="lg:col-span-1 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Plazo (Meses) <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Plazo
+                (Meses) <span class="text-red-500">*</span></label>
               <input type="number" formControlName="plazoMeses"
-                class="w-full bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 text-sm text-center text-slate-500 font-bold outline-none cursor-not-allowed transition-all"
-                placeholder="—" readonly tabindex="-1">
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all"
+                placeholder="4" min="1">
             </div>
           </div>
         </section>
@@ -91,25 +118,37 @@
         <section class="space-y-6">
           <div class="flex flex-wrap items-end gap-x-8 gap-y-6">
             <div class="space-y-1 w-48">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span class="text-red-500">*</span></label>
-              <select formControlName="diaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
-                <option>Lunes</option><option>Martes</option><option>Miércoles</option><option>Jueves</option><option>Viernes</option><option>Sábado</option>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span
+                  class="text-red-500">*</span></label>
+              <select formControlName="diaVisita"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
+                <option>Lunes</option>
+                <option>Martes</option>
+                <option>Miércoles</option>
+                <option>Jueves</option>
+                <option>Viernes</option>
+                <option>Sábado</option>
               </select>
             </div>
             <div class="space-y-1 w-32">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de Visita <span class="text-red-500">*</span></label>
-              <input type="time" formControlName="horaVisita" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de
+                Visita <span class="text-red-500">*</span></label>
+              <input type="time" formControlName="horaVisita"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
             <div class="space-y-1 w-48 relative">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago <span class="text-red-500">*</span></label>
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago
+                <span class="text-red-500">*</span></label>
               <input type="date" formControlName="fechaPrimerPago"
                 class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
 
-            <div class="flex-1"></div> 
+            <div class="flex-1"></div>
             <div class="space-y-1 w-24">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">% Garantía <span class="text-red-500">*</span></label>
-              <input type="number" formControlName="porcentajeGarantia" class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">%
+                Garantía <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="porcentajeGarantia"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
           </div>
         </section>
@@ -126,39 +165,59 @@
               <table class="w-full border-collapse">
                 <thead class="bg-slate-100 border-b border-slate-300">
                   <tr>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-16">No.</th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre del Integrante <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo Credito <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest w-48">Cargo <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Monto Solicitado <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Pago Pactado <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tasa de Interés <span class="text-red-500">*</span></th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">S.T<span class="text-red-500"></span></th>
-                    <th class="px-6 py-4 text-center text-xs font-bold text-red-500 uppercase tracking-widest">Acción</th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest w-16">No.
+                    </th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre
+                      del Integrante <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos
+                      <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo
+                      Credito <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest w-48">
+                      Cargo <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Monto
+                      Solicitado <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Pago
+                      Pactado <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Tasa de
+                      Interés <span class="text-red-500">*</span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">
+                      S.T<span class="text-red-500"></span></th>
+                    <th class="px-6 py-4 text-center text-xs font-bold text-red-500 uppercase tracking-widest">Acción
+                    </th>
                   </tr>
                 </thead>
                 <tbody class="divide-y divide-slate-200" formArrayName="integrantes">
-                  <tr *ngFor="let integrante of integrantes.controls; let i = index" [formGroupName]="i" class="hover:bg-slate-100/50 transition-colors">
-                    <td class="px-6 py-4 text-sm font-bold text-slate-400">{{ (i + 1).toString().padStart(2, '0') }}</td>
+                  <tr *ngFor="let integrante of integrantes.controls; let i = index" [formGroupName]="i"
+                    class="hover:bg-slate-100/50 transition-colors">
+                    <td class="px-6 py-4 text-sm font-bold text-slate-400">{{ (i + 1).toString().padStart(2, '0') }}
+                    </td>
                     <td class="px-6 py-4">
                       <div class="relative">
-                        <input type="text" formControlName="nombre" (focus)="showMiembroSuggestions[i] = true; filtrarMiembros(integrantes.at(i).get('nombre')?.value, i)" (blur)="hideMiembroSuggestions(i)" autocomplete="off"
-                          class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all shadow-sm" placeholder="Nombre">
-                        <ul *ngIf="showMiembroSuggestions[i] && filteredMiembros[i].length > 0" class="absolute z-50 w-full min-w-[200px] bg-white border border-slate-200 mt-1 rounded-lg shadow-xl max-h-48 overflow-y-auto">
+                        <input type="text" formControlName="nombre"
+                          (focus)="showMiembroSuggestions[i] = true; filtrarMiembros(integrantes.at(i).get('nombre')?.value, i)"
+                          (blur)="hideMiembroSuggestions(i)" autocomplete="off"
+                          class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all shadow-sm"
+                          placeholder="Nombre">
+                        <ul *ngIf="showMiembroSuggestions[i] && filteredMiembros[i].length > 0"
+                          class="absolute z-50 w-full min-w-[200px] bg-white border border-slate-200 mt-1 rounded-lg shadow-xl max-h-48 overflow-y-auto">
                           <li *ngFor="let m of filteredMiembros[i]" (mousedown)="seleccionarMiembro(m, i)"
-                              class="px-4 py-2 border-b border-slate-50 hover:bg-emerald-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
+                            class="px-4 py-2 border-b border-slate-50 hover:bg-emerald-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
                             {{ m.nombre }} {{ m.apellidos }}
-                            <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 truncate uppercase">Rol: {{ m.rol || 'INTEGRANTE' }}</span>
+                            <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 truncate uppercase">Rol:
+                              {{ m.rol || 'INTEGRANTE' }}</span>
                           </li>
                         </ul>
                       </div>
                     </td>
                     <td class="px-6 py-4">
-                      <input type="text" formControlName="apellidos" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="Apellidos">
+                      <input type="text" formControlName="apellidos"
+                        class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all"
+                        placeholder="Apellidos">
                     </td>
                     <td class="px-6 py-4">
-                      <select formControlName="tipoCredito" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
+                      <select formControlName="tipoCredito"
+                        class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
                         <option value="CC">C.C</option>
                         <option value="R">R</option>
                         <option value="8S">8S</option>
@@ -166,7 +225,8 @@
                       </select>
                     </td>
                     <td class="px-6 py-4">
-                      <select formControlName="cargo" class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
+                      <select formControlName="cargo"
+                        class="w-full bg-white border border-slate-300 rounded-lg p-2 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all">
                         <option value="">Ninguno</option>
                         <option value="presidenta">PRESIDENTA</option>
                         <option value="secretaria">SECRETARIA</option>
@@ -176,31 +236,44 @@
                     </td>
                     <td class="px-6 py-4 w-48">
                       <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
-                        <input type="number" formControlName="montoSolicitado" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00"></div>
+                        <input type="number" formControlName="montoSolicitado"
+                          class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all"
+                          placeholder="0.00">
+                      </div>
                     </td>
                     <td class="px-6 py-4 w-48">
                       <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
-                        <input type="number" formControlName="pagoPactado" class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none text-slate-600 font-bold transition-all" placeholder="0.00"></div>
+                        <input type="number" formControlName="pagoPactado"
+                          class="w-full bg-slate-100 border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none text-slate-600 font-bold transition-all"
+                          placeholder="0.00">
+                      </div>
                     </td>
                     <td class="px-6 py-4 w-36">
                       <div class="relative"><span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">%</span>
-                        <input type="number" formControlName="tasaInteres" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00" step="0.01"></div>
+                        <input type="number" formControlName="tasaInteres"
+                          class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all"
+                          placeholder="0.00" step="0.01">
+                      </div>
                     </td>
                     <td class="px-6 py-4 w-36">
                       <div class="relative">
                         <span class="absolute left-2.5 top-2.5 text-slate-500 text-xs">$</span>
-                        <input type="number" formControlName="st" class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm text-slate-700 font-bold outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all" placeholder="0.00">
+                        <input type="number" formControlName="st"
+                          class="w-full bg-white border border-slate-300 rounded-lg p-2 pl-6 text-sm text-slate-700 font-bold outline-none focus:border-blue-700 focus:ring-1 focus:ring-blue-700 transition-all"
+                          placeholder="0.00">
                       </div>
                     </td>
                     <td class="px-6 py-4 text-center">
-                      <button type="button" (click)="removeIntegrante(i)" class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm">✕</button>
+                      <button type="button" (click)="removeIntegrante(i)"
+                        class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm">✕</button>
                     </td>
                   </tr>
                 </tbody>
                 <tfoot class="bg-slate-50 border-t-2 border-slate-300">
                   <!-- Fila de Totales de la Tabla -->
                   <tr>
-                    <td colspan="5" class="px-6 py-3 text-right font-bold text-slate-700 uppercase tracking-widest text-xs">
+                    <td colspan="5"
+                      class="px-6 py-3 text-right font-bold text-slate-700 uppercase tracking-widest text-xs">
                       Totales:
                     </td>
                     <td class="px-6 py-3 text-center font-bold text-slate-800 text-sm">
@@ -210,17 +283,20 @@
                       $ {{ totalPagoPactado | number:'1.2-2' }}
                     </td>
                     <td class="px-6 py-3"></td>
-                    <td class="px-6 py-3 text-center font-bold text-blue-700 text-sm bg-blue-50/70 border-x border-slate-200">
+                    <td
+                      class="px-6 py-3 text-center font-bold text-blue-700 text-sm bg-blue-50/70 border-x border-slate-200">
                       $ {{ totalST | number:'1.2-2' }}
                     </td>
                     <td class="px-6 py-3"></td>
                   </tr>
                   <!-- Fila de Total Garantía -->
                   <tr class="border-t border-slate-200">
-                    <td colspan="8" class="px-6 py-3 text-right font-bold text-slate-700 uppercase tracking-widest text-xs">
+                    <td colspan="8"
+                      class="px-6 py-3 text-right font-bold text-slate-700 uppercase tracking-widest text-xs">
                       Total Garantías ({{ hojaControlForm.get('porcentajeGarantia')?.value || 0 }}%):
                     </td>
-                    <td class="px-6 py-3 text-center font-bold text-emerald-700 text-base bg-emerald-50 border-x border-emerald-200">
+                    <td
+                      class="px-6 py-3 text-center font-bold text-emerald-700 text-base bg-emerald-50 border-x border-emerald-200">
                       $ {{ totalGarantia | number:'1.2-2' }}
                     </td>
                     <td class="px-6 py-3"></td>
@@ -234,13 +310,18 @@
     </div>
 
     <!-- FOOTER -->
-    <div class="px-8 py-6 border-t border-slate-200 bg-slate-50 shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4 z-10 w-full relative drop-shadow-[0_-5px_5px_rgba(0,0,0,0.02)]">
-      <button type="button" (click)="addIntegrante()" class="w-full sm:w-auto px-6 py-3 border-2 border-emerald-600 text-emerald-700 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-sm font-bold uppercase tracking-widest flex items-center space-x-2 active:scale-95">
+    <div
+      class="px-8 py-6 border-t border-slate-200 bg-slate-50 shrink-0 flex flex-col sm:flex-row justify-between items-center gap-4 z-10 w-full relative drop-shadow-[0_-5px_5px_rgba(0,0,0,0.02)]">
+      <button type="button" (click)="addIntegrante()"
+        class="w-full sm:w-auto px-6 py-3 border-2 border-emerald-600 text-emerald-700 rounded-xl hover:bg-emerald-600 hover:text-white transition-all text-sm font-bold uppercase tracking-widest flex items-center space-x-2 active:scale-95">
         <span class="text-lg">+</span><span>Añadir Integrante</span>
       </button>
       <div class="flex items-center space-x-4 w-full sm:w-auto">
-        <button type="button" (click)="cancelar()" class="flex-1 sm:flex-none px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-100 transition-all text-sm font-bold uppercase tracking-widest active:scale-95 shadow-sm">Cancelar</button>
-        <button type="button" (click)="guardarCambios()" class="flex-1 sm:flex-none px-10 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-300 transition-all text-sm font-bold uppercase tracking-widest active:scale-95">Guardar Cambios</button>
+        <button type="button" (click)="cancelar()"
+          class="flex-1 sm:flex-none px-8 py-3 bg-white border border-slate-200 text-slate-600 rounded-xl hover:bg-slate-100 transition-all text-sm font-bold uppercase tracking-widest active:scale-95 shadow-sm">Cancelar</button>
+        <button type="button" (click)="guardarCambios()"
+          class="flex-1 sm:flex-none px-10 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 shadow-lg shadow-blue-300 transition-all text-sm font-bold uppercase tracking-widest active:scale-95">Guardar
+          Cambios</button>
       </div>
     </div>
   </div>
@@ -251,13 +332,16 @@
     width: 6px;
     height: 6px;
   }
+
   .custom-scrollbar::-webkit-scrollbar-track {
     background: transparent;
   }
+
   .custom-scrollbar::-webkit-scrollbar-thumb {
     background: #e2e8f0;
     border-radius: 10px;
   }
+
   .custom-scrollbar::-webkit-scrollbar-thumb:hover {
     background: #cbd5e1;
   }

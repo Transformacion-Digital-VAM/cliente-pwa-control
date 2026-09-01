@@ -53,10 +53,6 @@ export class AdminHojaControl implements OnInit {
   }
 
   ngOnInit() {
-    // Deshabilitar controles de solo lectura/calculados
-    // this.hojaControlForm.get('fechaPrimerPago')?.disable();
-    this.hojaControlForm.get('plazoMeses')?.disable();
-
     if (isPlatformBrowser(this.platformId)) {
       this.cargarAsesores();
       this.cargarGrupos();
@@ -97,12 +93,30 @@ export class AdminHojaControl implements OnInit {
 
     // Calcular plazoMeses automáticamente cuando cambia plazoSemanas
     this.hojaControlForm.get('plazoSemanas')?.valueChanges.subscribe((semanas) => {
-      const meses = semanas > 0 ? Math.round(semanas / 4) : 0;
+      const numSemanas = Number(semanas) || 0;
+      const meses = numSemanas > 0 ? Math.round(numSemanas / 4) : 0;
       this.hojaControlForm.get('plazoMeses')?.setValue(meses, { emitEvent: false });
       this.recularTodosLosPagos();
+      const fecha = this.hojaControlForm.get('fechaPrimerPago')?.value;
+      if (fecha) {
+        this.generarSemanasOpcionales(fecha, numSemanas || 16);
+      }
     });
+
     this.hojaControlForm.get('plazoMeses')?.valueChanges.subscribe(() => {
       this.recularTodosLosPagos();
+      const fecha = this.hojaControlForm.get('fechaPrimerPago')?.value;
+      const semanas = Number(this.hojaControlForm.get('plazoSemanas')?.value) || 16;
+      if (fecha) {
+        this.generarSemanasOpcionales(fecha, semanas);
+      }
+    });
+
+    this.hojaControlForm.get('fechaPrimerPago')?.valueChanges.subscribe((fecha) => {
+      const semanas = Number(this.hojaControlForm.get('plazoSemanas')?.value) || 16;
+      if (fecha) {
+        this.generarSemanasOpcionales(fecha, semanas);
+      }
     });
   }
 
@@ -113,10 +127,10 @@ export class AdminHojaControl implements OnInit {
   }
 
   calcularPagoPactado(integranteForm: FormGroup) {
-    const monto = integranteForm.get('montoSolicitado')?.value || 0;
-    const tasa = integranteForm.get('tasaInteres')?.value || 0;
-    const semanas = this.hojaControlForm.get('plazoSemanas')?.value || 16;
-    const meses = this.hojaControlForm.get('plazoMeses')?.value || 4;
+    const monto = Number(integranteForm.get('montoSolicitado')?.value) || 0;
+    const tasa = Number(integranteForm.get('tasaInteres')?.value) || 0;
+    const semanas = Number(this.hojaControlForm.get('plazoSemanas')?.value) || 16;
+    const meses = Number(this.hojaControlForm.get('plazoMeses')?.value) || 0;
 
     if (semanas > 0) {
       // (((Monto * (Tasa/100)) * Meses) + Monto) / Semanas
@@ -260,9 +274,6 @@ export class AdminHojaControl implements OnInit {
       porcentajeGarantia: grupo.porcentajeGarantia || 5
     });
 
-    // plazoMeses se mantiene deshabilitado (es calculado)
-    this.hojaControlForm.get('plazoMeses')?.disable();
-
     // Resolver la fechaPrimerPago: primero del grupo, luego del crédito de algún miembro
     let fechaFuenteISO: string | null = null;
     const miembrosParaFecha: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
@@ -324,9 +335,13 @@ export class AdminHojaControl implements OnInit {
     let baseDate = new Date(fechaInicio);
     baseDate.setMinutes(baseDate.getMinutes() + baseDate.getTimezoneOffset());
 
+    const semanas = Number(this.hojaControlForm.get('plazoSemanas')?.value) || cantidad || 16;
+    const meses = Number(this.hojaControlForm.get('plazoMeses')?.value) || 4;
+    const pasoDias = (semanas === 8 && meses === 4) || (meses > 0 && (semanas / meses) <= 2.5 && semanas < 16) ? 14 : 7;
+
     for (let i = 0; i < cantidad; i++) {
       let d = new Date(baseDate);
-      d.setDate(baseDate.getDate() + (i * 7));
+      d.setDate(baseDate.getDate() + (i * pasoDias));
 
       this.semanasDisponibles.push({
         numero: i + 1,
@@ -551,8 +566,6 @@ export class AdminHojaControl implements OnInit {
       plazoMeses: 4,
       porcentajeGarantia: 5
     });
-    // Deshabilitar solo plazoMeses (es calculado)
-    this.hojaControlForm.get('plazoMeses')?.disable();
     this.semanasDisponibles = [];
     this.semanaSeleccionada = '';
     this.integrantes.clear();

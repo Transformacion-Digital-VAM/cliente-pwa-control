@@ -70,6 +70,12 @@ export class GrupoService {
                         switchMap((miembrosGuardados: any[]) => {
                             const peticionesCreditos = miembrosGuardados.map((miembroGuardado, index) => {
                                 const integ = integrantes[index];
+                                const numSemanas = Number(plazoSemanas) || 16;
+                                const numMeses = Number(plazoMeses) || 4;
+                                const frecCalculada = (numSemanas === 8 && numMeses === 4) || (numMeses > 0 && (numSemanas / numMeses) <= 2.5 && numSemanas < 16)
+                                    ? 'Bisemanal'
+                                    : 'Semanal';
+
                                 const bodyCredito = {
                                     miembro: miembroGuardado._id,
                                     ciclo: cicloActual || 1,
@@ -78,7 +84,9 @@ export class GrupoService {
                                     fechaPrimerPago: fechaPrimerPago,
                                     montoSolicitado: integ.montoSolicitado,
                                     tasaInteres: integ.tasaInteres,
-                                    semanas: plazoSemanas || 16,
+                                    semanas: numSemanas,
+                                    equivalenciaMeses: numMeses,
+                                    frecuenciaPago: frecCalculada,
                                     porcentajeGarantia: porcentajeGarantia !== undefined ? porcentajeGarantia : 5
                                 };
                                 return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
