@@ -54,7 +54,7 @@
                     class="px-5 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer text-sm text-slate-700 transition-colors last:border-0">
                     <div class="font-bold">{{ m.nombre }} {{ m.apellidos }}</div>
                     <span class="text-[10px] text-slate-400 font-semibold uppercase">
-                      Asesor: {{ m.asesor?.nombre || m.asesor?.username || 'Sin asignar' }}
+                      Ciclo {{ getCicloCliente(m) }} • Asesor: {{ m.asesor?.nombre || m.asesor?.username || 'Sin asignar' }}
                     </span>
                   </li>
                 </ul>

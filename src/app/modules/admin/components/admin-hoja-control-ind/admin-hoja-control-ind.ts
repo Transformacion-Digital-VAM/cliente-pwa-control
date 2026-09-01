@@ -22,6 +22,7 @@ export class AdminHojaControlInd implements OnInit {
   asesores: any[] = [];
   clientesTotales: any[] = [];
   clientesFiltrados: any[] = [];
+  creditosTotales: any[] = [];
 
   // Control de UI
   showClienteSuggestions: boolean = false;
@@ -61,6 +62,7 @@ export class AdminHojaControlInd implements OnInit {
     if (isPlatformBrowser(this.platformId)) {
       this.cargarAsesores();
       this.cargarClientes();
+      this.cargarCreditos();
     }
     this.setupSubscriptions();
   }
@@ -72,6 +74,26 @@ export class AdminHojaControlInd implements OnInit {
         this.calcularPagoYTotal();
       });
     });
+  }
+
+  // --- HELPERS PARA OBTENER ÚLTIMO CRÉDITO Y CICLO ---
+  getUltimoCreditoCliente(cliente: any): any {
+    if (!cliente || !cliente._id || !this.creditosTotales.length) return null;
+    const creditosCliente = this.creditosTotales.filter((c: any) => {
+      const cClienteId = typeof c.cliente === 'object' ? c.cliente?._id : c.cliente;
+      return cClienteId === cliente._id;
+    });
+    if (creditosCliente.length > 0) {
+      // Ordenar por ciclo desc y luego createdAt desc
+      const ordenados = [...creditosCliente].sort((a: any, b: any) => (b.ciclo || 0) - (a.ciclo || 0));
+      return ordenados[0];
+    }
+    return null;
+  }
+
+  getCicloCliente(cliente: any): number {
+    const ultimo = this.getUltimoCreditoCliente(cliente);
+    return ultimo?.ciclo || 1;
   }
 
   // --- LÓGICA DE FILTRADO Y SELECCIÓN ---
@@ -91,27 +113,51 @@ export class AdminHojaControlInd implements OnInit {
   }
 
   seleccionarCliente(cliente: any) {
-    // 1. EXTRAER Y FORMATEAR FECHA: de "2026-03-27T23:04..." a "2026-03-27"
+    const ultimoCredito = this.getUltimoCreditoCliente(cliente);
+
+    // 1. EXTRAER Y FORMATEAR FECHA
     let fechaLimpia = '';
-    const fechaOriginal = cliente.fechaPrimerPago || cliente.createdAt; // Intenta usar la fecha de pago o la de creación
+    const fechaOriginal = ultimoCredito?.fechaPrimerPago || cliente.fechaPrimerPago || cliente.createdAt;
 
     if (fechaOriginal) {
-      // Split por la 'T' para quedarnos solo con la parte YYYY-MM-DD
-      fechaLimpia = fechaOriginal.split('T')[0];
+      const d = new Date(fechaOriginal);
+      d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+      fechaLimpia = d.toISOString().split('T')[0];
     }
+
+    const ciclo = ultimoCredito?.ciclo || 1;
+    const tasaInteres = (ultimoCredito?.tasaInteres !== undefined && ultimoCredito?.tasaInteres !== null)
+      ? ultimoCredito.tasaInteres
+      : 7;
+    const montoSolicitado = ultimoCredito?.montoSolicitado !== undefined ? ultimoCredito.montoSolicitado : '';
+    const equivalenciaMeses = ultimoCredito?.equivalenciaMeses || 4;
+    const noPagos = ultimoCredito?.semanas || 16;
+    const porcentajeGarantia = (ultimoCredito?.porcentajeGarantia !== undefined && ultimoCredito?.porcentajeGarantia !== null)
+      ? ultimoCredito.porcentajeGarantia
+      : 10;
+    const garantiaPredial = ultimoCredito?.garantiaPredial || '';
+    const tipoPago = ultimoCredito?.frecuenciaPago || cliente.tipoPago || 'Semanal';
 
     // 2. PARCHEAR VALORES
     this.hojaControlIndForm.patchValue({
       idCliente: cliente._id,
       nombreCliente: `${cliente.nombre} ${cliente.apellidos || ''}`.trim(),
       asesor: cliente.asesor?._id || cliente.asesor || '',
-      fechaPrimerPago: fechaLimpia, // Ahora sí se mostrará en el input date
+      ciclo: ciclo,
+      tasaInteres: tasaInteres,
+      montoSolicitado: montoSolicitado,
+      equivalenciaMeses: equivalenciaMeses,
+      noPagos: noPagos,
+      porcentajeGarantia: porcentajeGarantia,
+      garantiaPredial: garantiaPredial,
+      fechaPrimerPago: fechaLimpia,
       diaPago: cliente.diaPago || 'Lunes',
-      tipoPago: cliente.tipoPago || 'Semanal',
+      tipoPago: tipoPago,
       horaVisita: cliente.horaVisita || '',
-      nombreGrupo: cliente.grupo || ''
+      nombreGrupo: cliente.grupo || ultimoCredito?.grupoOpcional || ''
     });
 
+    this.calcularPagoYTotal();
     this.showClienteSuggestions = false;
     this.cdr.detectChanges();
   }
@@ -185,7 +231,16 @@ export class AdminHojaControlInd implements OnInit {
       next: (data) => {
         this.clientesTotales = data || [];
       },
-      error: (err) => console.error('Error al cargar miembros:', err)
+      error: (err) => console.error('Error al cargar clientes:', err)
+    });
+  }
+
+  cargarCreditos(): void {
+    this.clienteService.getCreditos().subscribe({
+      next: (res) => {
+        this.creditosTotales = res?.creditos || res || [];
+      },
+      error: (err) => console.error('Error al cargar créditos:', err)
     });
   }
 

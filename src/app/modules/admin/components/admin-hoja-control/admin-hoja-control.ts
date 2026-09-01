@@ -203,15 +203,55 @@ export class AdminHojaControl implements OnInit {
       .slice(0, 10);
   }
 
+  // --- HELPERS PARA OBTENER ÚLTIMO CICLO Y TASA ---
+  getCicloGrupo(grupo: any): number {
+    if (!grupo) return 1;
+    const miembros: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+    const miembrosIds = miembros.map(m => (typeof m === 'object' ? m._id : m));
+
+    const creditosGrupo = this.creditosLocales.filter(c => {
+      const cId = typeof c.miembro === 'object' ? c.miembro?._id : c.miembro;
+      return miembrosIds.includes(cId);
+    });
+
+    if (creditosGrupo.length > 0) {
+      const maxCiclo = Math.max(...creditosGrupo.map(c => c.ciclo || 1));
+      return maxCiclo > 0 ? maxCiclo : 1;
+    }
+    return grupo.cicloActual || 1;
+  }
+
+  getTasaGrupo(grupo: any): number {
+    if (!grupo) return 7;
+    const miembros: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+    const miembrosIds = miembros.map(m => (typeof m === 'object' ? m._id : m));
+
+    const creditosGrupo = this.creditosLocales.filter(c => {
+      const cId = typeof c.miembro === 'object' ? c.miembro?._id : c.miembro;
+      return miembrosIds.includes(cId);
+    });
+
+    if (creditosGrupo.length > 0) {
+      const creditosOrdenados = [...creditosGrupo].sort((a, b) => (b.ciclo || 0) - (a.ciclo || 0));
+      if (creditosOrdenados[0].tasaInteres !== undefined && creditosOrdenados[0].tasaInteres !== null) {
+        return creditosOrdenados[0].tasaInteres;
+      }
+    }
+    return grupo.tasa || 7;
+  }
+
   seleccionarGrupo(grupo: any) {
+    const ultimoCiclo = this.getCicloGrupo(grupo);
+    const ultimaTasa = this.getTasaGrupo(grupo);
+
     // Patch de campos del grupo
     this.hojaControlForm.patchValue({
       grupoId: grupo._id,
       nombreGrupo: grupo.nombre,
       clave: grupo.clave,
       asesor: typeof grupo.asesor === 'object' ? grupo.asesor?._id : grupo.asesor,
-      cicloActual: grupo.cicloActual || 1,
-      tasa: grupo.tasa || 7,
+      cicloActual: ultimoCiclo,
+      tasa: ultimaTasa,
       plazoSemanas: grupo.plazoSemanas || 16,
       plazoMeses: grupo.plazoMeses || 4,
       diaVisita: grupo.diaVisita || 'Lunes',
@@ -264,7 +304,7 @@ export class AdminHojaControl implements OnInit {
     const miembros: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
 
     if (miembros.length > 0) {
-      miembros.forEach(m => this.addIntegrante(m));
+      miembros.forEach(m => this.addIntegrante(m, ultimoCiclo));
     } else {
       // Si el grupo no tiene integrantes registrados, añadir una fila vacía
       this.addIntegrante();
@@ -325,15 +365,17 @@ export class AdminHojaControl implements OnInit {
   }
 
   seleccionarMiembro(miembro: any, index: number) {
+    const cicloReferencia = this.hojaControlForm.get('cicloActual')?.value || 1;
     let creditoActivo: any = null;
     if (miembro?._id && this.creditosLocales.length > 0) {
       const creditosMiembro = this.creditosLocales.filter(c => {
         const cMiembroId = typeof c.miembro === 'object' ? c.miembro?._id : c.miembro;
         return cMiembroId === miembro._id;
       });
-      creditoActivo = creditosMiembro.length > 0
-        ? creditosMiembro[creditosMiembro.length - 1]
-        : null;
+      if (creditosMiembro.length > 0) {
+        creditosMiembro.sort((a, b) => (b.ciclo || 0) - (a.ciclo || 0));
+        creditoActivo = creditosMiembro.find(c => c.ciclo === cicloReferencia) || creditosMiembro[0];
+      }
     }
 
     const ctrl = this.integrantes.at(index);
@@ -342,9 +384,12 @@ export class AdminHojaControl implements OnInit {
       creditoId: creditoActivo?._id || null,
       nombre: miembro.nombre,
       apellidos: miembro.apellidos,
-      cargo: miembro.rol ? miembro.rol.toLowerCase() : 'vocal',
-      tipoCredito: creditoActivo?.tipoCredito || 'CC'
+      cargo: this.mapearCargo(miembro.rol),
+      tipoCredito: creditoActivo?.tipoCredito || 'CC',
+      montoSolicitado: creditoActivo?.montoSolicitado ?? 0,
+      tasaInteres: creditoActivo?.tasaInteres ?? this.hojaControlForm.get('tasa')?.value ?? 0
     });
+    this.calcularPagoPactado(ctrl as FormGroup);
     this.showMiembroSuggestions[index] = false;
   }
 
@@ -356,21 +401,22 @@ export class AdminHojaControl implements OnInit {
     return this.hojaControlForm.get('integrantes') as FormArray;
   }
 
-  addIntegrante(miembro?: any) {
+  addIntegrante(miembro?: any, cicloObjetivo?: number) {
     // Obtener la tasa general actual para asignarla por defecto
     const tasaGeneralActual = this.hojaControlForm.get('tasa')?.value || 0;
+    const cicloReferencia = cicloObjetivo || this.hojaControlForm.get('cicloActual')?.value || 1;
 
-    // Buscar el crédito activo más reciente del miembro (si existe)
+    // Buscar el crédito del miembro para ese ciclo o el más reciente
     let creditoActivo: any = null;
     if (miembro?._id && this.creditosLocales.length > 0) {
       const creditosMiembro = this.creditosLocales.filter(c => {
         const cMiembroId = typeof c.miembro === 'object' ? c.miembro?._id : c.miembro;
         return cMiembroId === miembro._id;
       });
-      // Tomar el más reciente (el último creado)
-      creditoActivo = creditosMiembro.length > 0
-        ? creditosMiembro[creditosMiembro.length - 1]
-        : null;
+      if (creditosMiembro.length > 0) {
+        creditosMiembro.sort((a, b) => (b.ciclo || 0) - (a.ciclo || 0));
+        creditoActivo = creditosMiembro.find(c => c.ciclo === cicloReferencia) || creditosMiembro[0];
+      }
     }
 
     const integranteForm = this.fb.group({
