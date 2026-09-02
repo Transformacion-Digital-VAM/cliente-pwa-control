@@ -1,5 +1,6 @@
-import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { NotificationService } from '../../../../core/services/notification.service';
@@ -9,9 +10,10 @@ import { AuthService } from '../../../../core/services/auth.service';
 @Component({
     selector: 'app-asesor-lista-grupos',
     standalone: true,
-    imports: [CommonModule],
+    imports: [CommonModule, FormsModule],
     templateUrl: './asesor-lista-grupos.html',
     styleUrl: './asesor-lista-grupos.css',
+    changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AsesorListaGrupos implements OnInit {
     asesorName: string = '';
@@ -19,6 +21,7 @@ export class AsesorListaGrupos implements OnInit {
     grupos: any[] = [];
     gruposResumen: { [grupoId: string]: { pagosTotal: number; saldoPendiente: number; tieneSolidarios: boolean; sinPagosAtrasados: boolean } } = {};
     cargando: boolean = true;
+    searchTerm: string = '';
 
     constructor(
         @Inject(PLATFORM_ID) private platformId: Object,
@@ -47,93 +50,157 @@ export class AsesorListaGrupos implements OnInit {
         }
     }
 
+    paginaActual: number = 1;
+    itemsPorPagina: number = 6;
+
+    get totalPaginas(): number {
+        return Math.ceil(this.gruposFiltrados.length / this.itemsPorPagina) || 1;
+    }
+
+    get gruposPaginados(): any[] {
+        const inicio = (this.paginaActual - 1) * this.itemsPorPagina;
+        return this.gruposFiltrados.slice(inicio, inicio + this.itemsPorPagina);
+    }
+
+    setPagina(pag: number): void {
+        if (pag >= 1 && pag <= this.totalPaginas) {
+            this.paginaActual = pag;
+            this.cdr.markForCheck();
+        }
+    }
+
+    onSearchChange(): void {
+        this.paginaActual = 1;
+        this.cdr.markForCheck();
+    }
+
+    getArrayPaginas(total: number): number[] {
+        return Array.from({ length: total }, (_, i) => i + 1);
+    }
+
+    get gruposFiltrados(): any[] {
+        if (!this.searchTerm || !this.searchTerm.trim()) {
+            return this.grupos;
+        }
+        const term = this.searchTerm.toLowerCase().trim();
+        return this.grupos.filter(g =>
+            (g.nombre && g.nombre.toLowerCase().includes(term)) ||
+            (g.clave && g.clave.toLowerCase().includes(term)) ||
+            (g.diaVisita && g.diaVisita.toLowerCase().includes(term))
+        );
+    }
+
     cargarTodosLosGrupos(): void {
         this.cargando = true;
-        this.grupoService.getGrupos().subscribe({
-            next: (grupos: any[]) => {
-                let gruposFiltrados = grupos || [];
-                if (localStorage.getItem('userRole') === 'master') {
-                    const userStr = localStorage.getItem('user');
-                    const userObj = userStr ? JSON.parse(userStr) : null;
-                    const masterUsername = userObj?.username || '';
-                    const masterUserId = userObj?.id || '';
-                    gruposFiltrados = gruposFiltrados.filter((g: any) => {
-                        if (!g.asesor) return false;
-                        if (typeof g.asesor === 'object') {
-                            const asesorId = g.asesor._id || g.asesor.id;
-                            const asesorUsername = g.asesor.username;
-                            return (masterUserId && asesorId === masterUserId) || (masterUsername && asesorUsername === masterUsername);
-                        }
-                        return masterUserId && g.asesor === masterUserId;
-                    });
+        this.cdr.markForCheck();
+
+        forkJoin({
+            grupos: this.grupoService.getGrupos(),
+            miembrosAll: this.grupoService.getMiembros(),
+            creditosAll: this.grupoService.getCreditos()
+        }).subscribe({
+            next: (res: any) => {
+                let gruposFiltrados = res.grupos || [];
+                const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
+                const userStr = localStorage.getItem('user');
+                let currentUserId = '';
+                let currentUsername = '';
+                if (userStr) {
+                    try {
+                        const userObj = JSON.parse(userStr);
+                        currentUserId = String(userObj?.id || userObj?._id || '').trim();
+                        currentUsername = String(userObj?.username || '').trim().toLowerCase();
+                    } catch (e) {}
+                }
+
+                const matchAsesor = (item: any) => {
+                    if (!item.asesor) return false;
+                    if (typeof item.asesor === 'object') {
+                        const aId = String(item.asesor._id || item.asesor.id || '').trim();
+                        const aUser = String(item.asesor.username || '').trim().toLowerCase();
+                        if (currentUserId && aId && aId === currentUserId) return true;
+                        if (currentUsername && aUser && aUser === currentUsername) return true;
+                        return false;
+                    }
+                    const aIdStr = String(item.asesor).trim();
+                    if (currentUserId && aIdStr === currentUserId) return true;
+                    if (currentUsername && aIdStr.toLowerCase() === currentUsername) return true;
+                    return false;
+                };
+
+                if (userRole === 'master') {
+                    gruposFiltrados = gruposFiltrados.filter(matchAsesor);
                 }
                 this.grupos = gruposFiltrados;
-                // Verificar si hay grupos nuevos asignados → notificar
                 this.notificationService.verificarNuevosGrupos(this.grupos);
+
+                const resumenMap: { [grupoId: string]: { pagosTotal: number; saldoPendiente: number; tieneSolidarios: boolean; sinPagosAtrasados: boolean } } = {};
                 this.grupos.forEach(g => {
                     const sinPagosAtrasados = !(this.verificarPagosAtrasados(g));
-                    this.gruposResumen[g._id] = { pagosTotal: 0, saldoPendiente: 0, tieneSolidarios: false, sinPagosAtrasados };
+                    resumenMap[g._id] = { pagosTotal: 0, saldoPendiente: 0, tieneSolidarios: false, sinPagosAtrasados };
                 });
 
-                forkJoin({
-                    miembrosAll: this.grupoService.getMiembros(),
-                    creditosAll: this.grupoService.getCreditos()
-                }).subscribe({
-                    next: (res: any) => {
-                        const miembros = res.miembrosAll || [];
-                        const creditos = res.creditosAll.creditos || res.creditosAll || [];
+                const miembros = res.miembrosAll || [];
+                const creditos = res.creditosAll?.creditos || res.creditosAll || [];
 
-                        miembros.forEach((m: any) => {
-                            const grupoId = m.grupo?._id || m.grupo;
-                            if (grupoId && this.gruposResumen[grupoId]) {
-                                // Find credit for this member
-                                const creditosMiembro = creditos.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
-                                const credito = creditosMiembro.find((c: any) => c.estado === 'Activo') || creditosMiembro[creditosMiembro.length - 1];
+                const creditosPorMiembro = new Map<string, any[]>();
+                for (const c of creditos) {
+                    const mId = c.miembro?._id || c.miembro;
+                    if (mId) {
+                        const key = String(mId);
+                        if (!creditosPorMiembro.has(key)) creditosPorMiembro.set(key, []);
+                        creditosPorMiembro.get(key)!.push(c);
+                    }
+                }
 
-                                if (credito) {
-                                    const saldoPendiente = credito.saldoPendiente || 0;
-                                    const saldoTotal = credito.saldoTotal || 0;
-                                    const totalPagado = saldoTotal - saldoPendiente;
+                for (const m of miembros) {
+                    const grupoId = m.grupo?._id || m.grupo;
+                    if (grupoId && resumenMap[grupoId]) {
+                        const creditosMiembro = creditosPorMiembro.get(String(m._id)) || [];
+                        const credito = creditosMiembro.find((c: any) => c.estado === 'Activo') || creditosMiembro[creditosMiembro.length - 1];
 
-                                    this.gruposResumen[grupoId].saldoPendiente += saldoPendiente;
-                                    this.gruposResumen[grupoId].pagosTotal += totalPagado;
+                        if (credito) {
+                            const saldoPendiente = credito.saldoPendiente || 0;
+                            const saldoTotal = credito.saldoTotal || 0;
+                            const totalPagado = saldoTotal - saldoPendiente;
 
-                                    // Check solidario
-                                    let activeSolidario = false;
-                                    if (credito.pagos && credito.pagos.length > 0) {
-                                        const mIdStr = m._id.toString();
-                                        const deudas = credito.pagos.filter((p: any) => {
-                                            const isSolidario = p.pagoSolidario === true || p.pagoSolidario === 'true';
-                                            if (!isSolidario) return false;
-                                            const prestadorId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario || '').toString();
-                                            return prestadorId !== '' && prestadorId !== mIdStr;
-                                        });
-                                        const recuperaciones = credito.pagos.filter((p: any) => p.recuperacionSolidario === true);
-                                        const totalAdeudadoSolidario = deudas.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
-                                        const totalDevueltoSolidario = recuperaciones.reduce((sum: number, p: any) => sum + (Number(p.montoSolidario || p.montoPagado) || 0), 0);
-                                        activeSolidario = (totalAdeudadoSolidario - totalDevueltoSolidario) > 0;
+                            resumenMap[grupoId].saldoPendiente += saldoPendiente;
+                            resumenMap[grupoId].pagosTotal += totalPagado;
+
+                            // Check solidario
+                            if (credito.pagos && credito.pagos.length > 0) {
+                                const mIdStr = String(m._id);
+                                let totalAdeudadoSolidario = 0;
+                                let totalDevueltoSolidario = 0;
+
+                                for (const p of credito.pagos) {
+                                    if (p.pagoSolidario === true || p.pagoSolidario === 'true') {
+                                        const prestadorId = (p.quienPrestoSolidario?._id || p.quienPrestoSolidario || '').toString();
+                                        if (prestadorId !== '' && prestadorId !== mIdStr) {
+                                            totalAdeudadoSolidario += (Number(p.montoSolidario || p.montoPagado) || 0);
+                                        }
                                     }
-
-                                    if (activeSolidario) {
-                                        this.gruposResumen[grupoId].tieneSolidarios = true;
+                                    if (p.recuperacionSolidario === true) {
+                                        totalDevueltoSolidario += (Number(p.montoSolidario || p.montoPagado) || 0);
                                     }
                                 }
+
+                                if ((totalAdeudadoSolidario - totalDevueltoSolidario) > 0) {
+                                    resumenMap[grupoId].tieneSolidarios = true;
+                                }
                             }
-                        });
-                        this.cargando = false;
-                        this.cdr.detectChanges();
-                    },
-                    error: (err) => {
-                        console.error('Error al obtener miembros y creditos:', err);
-                        this.cargando = false;
-                        this.cdr.detectChanges();
+                        }
                     }
-                });
+                }
+
+                this.gruposResumen = resumenMap;
+                this.cargando = false;
+                this.cdr.markForCheck();
             },
             error: (err) => {
-                console.error('Error al obtener grupos:', err);
+                console.error('Error al cargar grupos:', err);
                 this.cargando = false;
-                this.cdr.detectChanges();
+                this.cdr.markForCheck();
             }
         });
     }

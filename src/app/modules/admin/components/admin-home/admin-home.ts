@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectionStrategy, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
@@ -16,15 +16,30 @@ import { UppercaseDirective } from '../../uppercase.directive';
   imports: [CommonModule, RouterModule, FormsModule, UppercaseDirective],
   templateUrl: './admin-home.html',
   styleUrl: './admin-home.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class AdminHome implements OnInit {
   elementosPrincipales: any[] = [];
+  elementosFiltrados: any[] = [];
+  asesoresDeCoordinacion: any[] = [];
+  asesoresFiltrados: any[] = [];
+
   grupos: any[] = [];
   creditos: any[] = [];
   asesoresList: any[] = [];
   coordinacionesList: any[] = [];
   expandedGroups: { [key: string]: boolean } = {};
   isLoading: boolean = true;
+
+  // Hash Maps para acceso O(1)
+  creditoMiembroMap: Map<string, any> = new Map();
+  creditoClienteMap: Map<string, any> = new Map();
+  asesoresMap: Map<string, any> = new Map();
+  coordinacionesMap: Map<string, any> = new Map();
+
+  // Contadores precalculados para tabs
+  coordinacionCounts: { [key: string]: number } = {};
+  asesorCounts: { [key: string]: number } = {};
 
   // Filtros
   searchTerm: string = '';
@@ -40,8 +55,25 @@ export class AdminHome implements OnInit {
     @Inject(PLATFORM_ID) private platformId: Object,
     private grupoService: GrupoService,
     private clienteService: ClienteService,
-    private notificationService: NotificationService
+    private notificationService: NotificationService,
+    private cdr: ChangeDetectorRef
   ) { }
+
+  get isGlobalRole(): boolean {
+    return ['admin', 'master', 'superadmin'].includes(this.userRole);
+  }
+
+  get filteredAsesoresList(): any[] {
+    return this.asesoresDeCoordinacion;
+  }
+
+  get filteredAsesoresListBySearch(): any[] {
+    return this.asesoresFiltrados;
+  }
+
+  get filteredElementos(): any[] {
+    return this.elementosFiltrados;
+  }
 
   ngOnInit() {
     if (isPlatformBrowser(this.platformId)) {
@@ -56,14 +88,15 @@ export class AdminHome implements OnInit {
           } else {
             this.userCoordinacion = rawCoord || '';
           }
-        } catch(e) {}
+        } catch (e) { }
       }
 
-      if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+      if (!this.isGlobalRole && this.userCoordinacion) {
         this.selectedCoordinacionId = this.userCoordinacion;
-      } else if ((this.userRole === 'master' || this.userRole === 'superadmin') && !this.userCoordinacion) {
-        Swal.fire('Atención', `Este usuario es ${this.userRole} pero no se detectó una coordinación asignada en su cuenta. Revisa en la base de datos si se guardó el ID correctamente al crearlo.`, 'warning');
+      } else {
+        this.selectedCoordinacionId = 'todas';
       }
+
       this.cargarDatos();
     }
   }
@@ -72,14 +105,39 @@ export class AdminHome implements OnInit {
     this.cargarDatos();
   }
 
+  cambiarTab(tab: 'grupos' | 'individuales') {
+    this.activeTab = tab;
+    this.selectedAsesorId = 'todos';
+    this.aplicarFiltros();
+  }
+
   selectCoordinacion(coordId: string) {
     this.selectedCoordinacionId = coordId;
     this.selectedAsesorId = 'todos';
+    this.actualizarAsesoresDeCoordinacion();
+    this.aplicarFiltros();
+  }
+
+  selectAsesor(asesorId: string) {
+    this.selectedAsesorId = asesorId;
+    this.aplicarFiltros();
+  }
+
+  onSearchChange() {
+    this.aplicarFiltros();
+  }
+
+  onAsesorSearchChange() {
+    this.filtrarAsesores();
+    this.cdr.markForCheck();
   }
 
   cargarDatos() {
     this.isLoading = true;
+    this.cdr.markForCheck();
+
     forkJoin({
+      grupos: this.grupoService.getGrupos(),
       miembros: this.grupoService.getMiembros(),
       creditos: this.grupoService.getCreditos(),
       asesores: this.grupoService.getAsesores(),
@@ -87,217 +145,338 @@ export class AdminHome implements OnInit {
       coordinaciones: this.grupoService.getCoordinaciones()
     }).subscribe({
       next: (res: any) => {
-        // Guardar asesores (filtrando por la coordinación de la ejecutiva si aplica)
         const allAsesores = res.asesores || [];
-        if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
+        const allCoordinaciones = res.coordinaciones || [];
+        const allGruposRaw = res.grupos || [];
+        const allMiembrosRaw = res.miembros || [];
+        const allClientesRaw = res.clientes || [];
+
+        // 1. Filtrado por rol si es restringido
+        const isRestricted = !this.isGlobalRole && !!this.userCoordinacion;
+
+        if (isRestricted) {
           this.asesoresList = allAsesores.filter((a: any) => {
-            const aCoord = a.coordinacion;
-            const aCoordId = (aCoord && typeof aCoord === 'object') ? (aCoord._id || aCoord.id) : aCoord;
+            const aCoordId = (a.coordinacion && typeof a.coordinacion === 'object') ? (a.coordinacion._id || a.coordinacion.id) : a.coordinacion;
             return aCoordId && String(aCoordId) === String(this.userCoordinacion);
           });
+          this.coordinacionesList = allCoordinaciones.filter((c: any) => String(c._id) === String(this.userCoordinacion));
         } else {
           this.asesoresList = allAsesores;
-        }
-        
-        let allCoordinaciones = res.coordinaciones || [];
-        if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
-          this.coordinacionesList = allCoordinaciones.filter((c: any) => c._id === this.userCoordinacion);
-        } else {
           this.coordinacionesList = allCoordinaciones;
         }
 
-        // Extraer coordinaciones únicas
-        const coordMap = new Map();
-        this.asesoresList.forEach(a => {
-          let coordId = null;
-          if (a.coordinacion && typeof a.coordinacion === 'object' && a.coordinacion._id) {
-            coordId = a.coordinacion._id; // Por si acaso sí viene poblado en algún momento
-          } else if (a.coordinacion) {
-            coordId = a.coordinacion; // Es un string directamente del backend
-          }
+        // 2. Poblar mapas de asesores y coordinaciones O(1)
+        this.asesoresMap.clear();
+        for (const a of allAsesores) {
+          this.asesoresMap.set(String(a._id), a);
+        }
 
-          if (coordId) {
-            coordMap.set(coordId, {
-              _id: coordId,
-              nombre: `Coordinación ${coordId.toString().substring(coordId.toString().length - 4)}` // Nombre genérico porque no tenemos el real
-            });
-          }
-        });
-         // Coordinaciones cargadas desde el servicio
+        this.coordinacionesMap.clear();
+        for (const c of allCoordinaciones) {
+          this.coordinacionesMap.set(String(c._id), c);
+        }
 
-        // Mapear grupos desde miembros
-        const tempGrupos: { [key: string]: any } = {};
-        if (res.miembros) {
-          res.miembros.forEach((m: any) => {
-            if (m.grupo && m.grupo._id) {
-              const gId = m.grupo._id;
-              if (!tempGrupos[gId]) {
-                tempGrupos[gId] = { ...m.grupo, integrantes: [], tipo: 'GRUPO' };
+        // 3. Procesar y Mapear Créditos O(1) con métricas precalculadas
+        const rawCreditos = res.creditos?.creditos || res.creditos || [];
+        this.creditos = Array.isArray(rawCreditos) ? rawCreditos : [];
+
+        this.creditoMiembroMap.clear();
+        this.creditoClienteMap.clear();
+
+        for (const c of this.creditos) {
+          const totalSemanas = c.semanas || 16;
+          let maxPago = 0;
+          let ultimoPago = null;
+
+          if (c.pagos && Array.isArray(c.pagos) && c.pagos.length > 0) {
+            const numerosPagos = c.pagos.map((p: any) => p.numeroPago || 0);
+            maxPago = Math.max(...numerosPagos);
+            const rawUltimo = c.pagos[c.pagos.length - 1];
+            if (rawUltimo) {
+              let fPago = rawUltimo.fechaPago;
+              if (fPago) {
+                const fecha = new Date(fPago);
+                fecha.setHours(fecha.getHours() + 6);
+                fPago = fecha;
               }
-              tempGrupos[gId].integrantes.push(m);
+              ultimoPago = {
+                ...rawUltimo,
+                fechaPago: fPago
+              };
             }
-          });
-        }
-        let mappedGrupos = Object.values(tempGrupos);
+          }
 
-        // Procesar clientes individuales
-        let clientesInd = res.clientes ? res.clientes.map((c: any) => ({
-          ...c,
-          tipo: 'INDIVIDUAL'
-        })) : [];
+          c._progreso = `${maxPago}/${totalSemanas}`;
+          c._ultimoPago = ultimoPago;
 
-        // SI es rol ejecutivo con sucursal/coordinación asignada, filtramos estrictamente
-        if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
-          // Filtrar grupos
-          mappedGrupos = mappedGrupos.filter((g: any) => {
-            let gCoordId = g.coordinacion?._id || g.coordinacion;
-            if (!gCoordId && g.asesor) {
-              const asId = g.asesor._id || g.asesor;
-              const asInfo = allAsesores.find((a: any) => a._id === asId);
-              if (asInfo) gCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
-            }
-            return gCoordId && String(gCoordId) === String(this.userCoordinacion);
-          });
+          const mId = c.miembro?._id || c.miembro;
+          if (mId) {
+            this.creditoMiembroMap.set(String(mId), c);
+          }
 
-          // Filtrar clientes individuales
-          clientesInd = clientesInd.filter((c: any) => {
-            let cCoordId = c.coordinacion?._id || c.coordinacion;
-            if (!cCoordId && c.asesor) {
-              const asId = c.asesor._id || c.asesor;
-              const asInfo = allAsesores.find((a: any) => a._id === asId);
-              if (asInfo) cCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
-            }
-            return cCoordId && String(cCoordId) === String(this.userCoordinacion);
-          });
+          const clId = c.cliente?._id || c.cliente;
+          if (clId) {
+            this.creditoClienteMap.set(String(clId), c);
+          }
         }
 
-        this.grupos = mappedGrupos;
-        this.elementosPrincipales = [...this.grupos, ...clientesInd];
+        // 4. Procesar Grupos: Asociar integrantes y vincular créditos directamente
+        const miembrosPorGrupo = new Map<string, any[]>();
+        for (const m of allMiembrosRaw) {
+          const gId = m.grupo?._id || m.grupo;
+          if (gId) {
+            const gKey = String(gId);
+            if (!miembrosPorGrupo.has(gKey)) {
+              miembrosPorGrupo.set(gKey, []);
+            }
+            m.credito = this.creditoMiembroMap.get(String(m._id)) || null;
+            miembrosPorGrupo.get(gKey)!.push(m);
+          }
+        }
 
-        // Guardar créditos
-        this.creditos = res.creditos.creditos || res.creditos;
+        const gruposProcesados: any[] = [];
+        const gruposVistos = new Set<string>();
 
-        // Verificar si alguna hoja de control se completó → notificar
+        for (const g of allGruposRaw) {
+          const gId = String(g._id);
+          gruposVistos.add(gId);
+          const integrantesDirectos = (g.integrantes && g.integrantes.length > 0) ? g.integrantes : (miembrosPorGrupo.get(gId) || []);
+
+          for (const m of integrantesDirectos) {
+            m.credito = this.creditoMiembroMap.get(String(m._id)) || null;
+          }
+
+          const grupoObj = {
+            ...g,
+            integrantes: integrantesDirectos,
+            tipo: 'GRUPO',
+            coordinacionNombre: this.resolverNombreCoordinacion(g)
+          };
+
+          if (!isRestricted || this.perteneceACoordinacion(grupoObj, this.userCoordinacion)) {
+            gruposProcesados.push(grupoObj);
+          }
+        }
+
+        for (const [gId, integrantes] of miembrosPorGrupo.entries()) {
+          if (!gruposVistos.has(gId) && integrantes.length > 0) {
+            const baseGrupo = integrantes[0].grupo;
+            if (baseGrupo && typeof baseGrupo === 'object') {
+              for (const m of integrantes) {
+                m.credito = this.creditoMiembroMap.get(String(m._id)) || null;
+              }
+              const grupoObj = {
+                ...baseGrupo,
+                integrantes,
+                tipo: 'GRUPO',
+                coordinacionNombre: this.resolverNombreCoordinacion(baseGrupo)
+              };
+              if (!isRestricted || this.perteneceACoordinacion(grupoObj, this.userCoordinacion)) {
+                gruposProcesados.push(grupoObj);
+              }
+            }
+          }
+        }
+
+        // 5. Procesar Clientes Individuales
+        const clientesProcesados: any[] = [];
+        for (const c of allClientesRaw) {
+          const clienteObj = {
+            ...c,
+            tipo: 'INDIVIDUAL',
+            coordinacionNombre: this.resolverNombreCoordinacion(c),
+            credito: this.creditoClienteMap.get(String(c._id)) || null
+          };
+          if (!isRestricted || this.perteneceACoordinacion(clienteObj, this.userCoordinacion)) {
+            clientesProcesados.push(clienteObj);
+          }
+        }
+
+        this.grupos = gruposProcesados;
+        this.elementosPrincipales = [...this.grupos, ...clientesProcesados];
+
+        // 6. Actualizar Asesores de la coordinación activa y aplicar filtros
+        this.actualizarAsesoresDeCoordinacion();
+        this.aplicarFiltros();
+
+        // 7. Notificaciones
         this.notificationService.verificarHojasCompletadas(
           this.grupos,
           this.creditos,
-          res.miembros || []
+          allMiembrosRaw
         );
 
         this.isLoading = false;
+        this.cdr.markForCheck();
       },
       error: (err) => {
         console.error('Error cargando datos', err);
         this.isLoading = false;
+        this.cdr.markForCheck();
       }
     });
   }
 
-  get filteredAsesoresList() {
-    if (this.selectedCoordinacionId === 'todas') {
-      return this.asesoresList;
+  private perteneceACoordinacion(item: any, coordId: string): boolean {
+    if (!coordId) return true;
+    let itemCoordId = item.coordinacion?._id || item.coordinacion;
+    if (!itemCoordId && item.asesor) {
+      const asId = item.asesor?._id || item.asesor;
+      const asInfo = this.asesoresMap.get(String(asId));
+      if (asInfo) itemCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
     }
-    return this.asesoresList.filter(a => {
-      const aCoordId = (a.coordinacion && typeof a.coordinacion === 'object') ? a.coordinacion._id : a.coordinacion;
-      return aCoordId === this.selectedCoordinacionId;
-    });
+    return itemCoordId && String(itemCoordId) === String(coordId);
   }
 
-  /** Asesores de la coordinación activa filtrados por el buscador de texto */
-  get filteredAsesoresListBySearch() {
-    const base = this.filteredAsesoresList;
-    if (!this.asesorSearchTerm || !this.asesorSearchTerm.trim()) return base;
+  private resolverNombreCoordinacion(item: any): string {
+    if (!item) return 'Sin Coor.';
+    let idStr = item.coordinacion?._id || item.coordinacion;
+    if (!idStr && item.asesor) {
+      const asId = item.asesor?._id || item.asesor;
+      const asInfo = this.asesoresMap.get(String(asId));
+      if (asInfo) idStr = asInfo.coordinacion?._id || asInfo.coordinacion;
+    }
+    if (!idStr) return 'Sin Coor.';
+
+    const coordObj = this.coordinacionesMap.get(String(idStr));
+    if (coordObj && coordObj.nombre) {
+      return coordObj.nombre;
+    }
+    return `Coordinación ${idStr.toString().substring(idStr.toString().length - 4)}`;
+  }
+
+  actualizarAsesoresDeCoordinacion() {
+    if (this.selectedCoordinacionId === 'todas') {
+      this.asesoresDeCoordinacion = this.asesoresList;
+    } else {
+      this.asesoresDeCoordinacion = this.asesoresList.filter(a => {
+        const aCoordId = (a.coordinacion && typeof a.coordinacion === 'object') ? (a.coordinacion._id || a.coordinacion.id) : a.coordinacion;
+        return String(aCoordId) === String(this.selectedCoordinacionId);
+      });
+    }
+    this.filtrarAsesores();
+  }
+
+  filtrarAsesores() {
+    if (!this.asesorSearchTerm || !this.asesorSearchTerm.trim()) {
+      this.asesoresFiltrados = this.asesoresDeCoordinacion;
+      return;
+    }
     const term = this.asesorSearchTerm.toLowerCase().trim();
-    return base.filter(a => (a.nombre || a.username || '').toLowerCase().includes(term));
+    this.asesoresFiltrados = this.asesoresDeCoordinacion.filter(a => (a.nombre || a.username || '').toLowerCase().includes(term));
   }
 
-  /** Número de elementos (grupos/individuales según tab) que pertenecen a una coordinación */
-  getCountByCoordinacion(coordId: string): number {
-    return this.elementosPrincipales.filter(item => {
-      if (this.activeTab === 'grupos' && item.tipo !== 'GRUPO') return false;
-      if (this.activeTab === 'individuales' && item.tipo !== 'INDIVIDUAL') return false;
-      const itemAsesorId = item.asesor?._id || item.asesor;
-      const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
-      const asesorDelElemento = this.asesoresList.find(a => a._id === idAComparar);
-      if (!asesorDelElemento) return false;
-      const aCoordId = (asesorDelElemento.coordinacion && typeof asesorDelElemento.coordinacion === 'object') ? asesorDelElemento.coordinacion._id : asesorDelElemento.coordinacion;
-      return aCoordId === coordId;
-    }).length;
-  }
+  aplicarFiltros() {
+    const targetTipo = this.activeTab === 'grupos' ? 'GRUPO' : 'INDIVIDUAL';
+    const filterCoord = this.selectedCoordinacionId !== 'todas';
+    const filterAsesor = this.selectedAsesorId !== 'todos';
+    const hasSearch = !!(this.searchTerm && this.searchTerm.trim() !== '');
+    const term = hasSearch ? this.searchTerm.toLowerCase().trim() : '';
 
-  /** Número de elementos del tab actual que pertenecen a un asesor específico */
-  getCountByAsesor(asesorId: string): number {
-    return this.elementosPrincipales.filter(item => {
-      if (this.activeTab === 'grupos' && item.tipo !== 'GRUPO') return false;
-      if (this.activeTab === 'individuales' && item.tipo !== 'INDIVIDUAL') return false;
-      const itemAsesorId = item.asesor?._id || item.asesor;
-      const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
-      return idAComparar === asesorId;
-    }).length;
-  }
+    const cCounts: { [key: string]: number } = {};
+    const aCounts: { [key: string]: number } = {};
+    const filtrados: any[] = [];
 
-  get filteredGrupos() {
-    return this.filteredElementos; // Hacemos alias para evitar modificar demasiado si hay usos externos, aunque preferiremos filteredElementos
-  }
+    for (const item of this.elementosPrincipales) {
+      if (item.tipo !== targetTipo) continue;
 
-  get filteredElementos() {
-    return this.elementosPrincipales.filter(item => {
-      // Filtrar por Pestaña Activa (Grupos vs Individuales)
-      if (this.activeTab === 'grupos' && item.tipo !== 'GRUPO') return false;
-      if (this.activeTab === 'individuales' && item.tipo !== 'INDIVIDUAL') return false;
-
-      // Filtrar por Coordinación
-      if (this.selectedCoordinacionId !== 'todas') {
-        const itemAsesorId = item.asesor?._id || item.asesor;
-        const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
-        const asesorDelElemento = this.asesoresList.find(a => a._id === idAComparar);
-
-        if (!asesorDelElemento || !asesorDelElemento.coordinacion) return false;
-
-        const aCoordId = (asesorDelElemento.coordinacion && typeof asesorDelElemento.coordinacion === 'object') ? asesorDelElemento.coordinacion._id : asesorDelElemento.coordinacion;
-        if (aCoordId !== this.selectedCoordinacionId) {
-          return false;
-        }
+      // Calcular contadores
+      let coordId = item.coordinacion?._id || item.coordinacion;
+      if (!coordId && item.asesor) {
+        const asId = item.asesor?._id || item.asesor;
+        const asInfo = this.asesoresMap.get(String(asId));
+        if (asInfo) coordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+      }
+      if (coordId) {
+        const cKey = String(coordId);
+        cCounts[cKey] = (cCounts[cKey] || 0) + 1;
       }
 
-      // Filtrar por Asesor (Tab)
-      if (this.selectedAsesorId !== 'todos') {
-        const itemAsesorId = item.asesor?._id || item.asesor;
-        // convert objects if they exist
-        const idAComparar = typeof itemAsesorId === 'object' ? itemAsesorId?._id : itemAsesorId;
-        if (idAComparar !== this.selectedAsesorId) {
-          return false;
-        }
+      const itemAsesorId = item.asesor?._id || item.asesor;
+      let asesorKey = '';
+      if (itemAsesorId) {
+        asesorKey = String(typeof itemAsesorId === 'object' ? itemAsesorId._id : itemAsesorId);
+        aCounts[asesorKey] = (aCounts[asesorKey] || 0) + 1;
       }
 
-      // Filtrar por Búsqueda (Texto)
-      if (this.searchTerm && this.searchTerm.trim() !== '') {
-        const term = this.searchTerm.toLowerCase();
+      // Evaluar si pasa los filtros activos
+      if (filterCoord && String(coordId) !== String(this.selectedCoordinacionId)) {
+        continue;
+      }
+      if (filterAsesor && String(asesorKey) !== String(this.selectedAsesorId)) {
+        continue;
+      }
+      if (hasSearch) {
         const matchClave = item.clave && item.clave.toString().toLowerCase().includes(term);
         const matchNombre = item.nombre && item.nombre.toLowerCase().includes(term);
-        if (!matchClave && !matchNombre) return false;
+        if (!matchClave && !matchNombre) continue;
       }
 
-      return true;
-    });
+      filtrados.push(item);
+    }
+
+    this.coordinacionCounts = cCounts;
+    this.asesorCounts = aCounts;
+    this.elementosFiltrados = filtrados;
+    this.cdr.markForCheck();
+  }
+
+  trackById(index: number, item: any): string {
+    return item?._id || item?.id || String(index);
+  }
+
+  getCountByCoordinacion(coordId: string): number {
+    return this.coordinacionCounts[coordId] || 0;
+  }
+
+  getCountByAsesor(asesorId: string): number {
+    return this.asesorCounts[asesorId] || 0;
   }
 
   getCreditoDeMiembro(miembroId: string) {
-    return this.creditos.find(c =>
-      c.miembro && (c.miembro._id === miembroId || c.miembro === miembroId)
-    );
+    if (!miembroId) return null;
+    return this.creditoMiembroMap.get(String(miembroId)) || null;
   }
 
   getCreditoDeCliente(clienteId: string) {
-    return this.creditos.find(c =>
-      c.cliente && (c.cliente._id === clienteId || c.cliente === clienteId)
-    );
+    if (!clienteId) return null;
+    return this.creditoClienteMap.get(String(clienteId)) || null;
+  }
+
+  getNombreCoordinacion(item: any): string {
+    return item?.coordinacionNombre || 'Sin Coor.';
+  }
+
+  getProgresoPagos(credito: any): string {
+    return credito?._progreso || '0/16';
+  }
+
+  getUltimoPago(credito: any): any {
+    return credito?._ultimoPago || null;
+  }
+
+  toggleGroup(groupId: string) {
+    this.expandedGroups[groupId] = !this.expandedGroups[groupId];
+    this.cdr.markForCheck();
+  }
+
+  limpiarFiltros() {
+    this.searchTerm = '';
+    this.asesorSearchTerm = '';
+    if (!this.isGlobalRole && this.userCoordinacion) {
+      this.selectedCoordinacionId = this.userCoordinacion;
+    } else {
+      this.selectedCoordinacionId = 'todas';
+    }
+    this.selectedAsesorId = 'todos';
+    this.activeTab = 'grupos';
+    this.actualizarAsesoresDeCoordinacion();
+    this.aplicarFiltros();
   }
 
   async descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
-    
-    // Buscar el ciclo del grupo a partir de sus créditos
+
     let ciclo = 1;
     if (grupo.integrantes && grupo.integrantes.length > 0) {
       const primerMiembro = grupo.integrantes[0];
@@ -322,7 +501,7 @@ export class AdminHome implements OnInit {
       cancelButtonText: 'Cancelar',
       inputValidator: (value) => {
         if (!value) {
-           return 'Debes seleccionar una opción';
+          return 'Debes seleccionar una opción';
         }
         return null;
       }
@@ -339,8 +518,7 @@ export class AdminHome implements OnInit {
 
   async descargarInfoGrupoLlena(grupo: any, event: Event) {
     event.stopPropagation();
-    
-    // Buscar el ciclo del grupo a partir de sus créditos
+
     let ciclo = 1;
     if (grupo.integrantes && grupo.integrantes.length > 0) {
       const primerMiembro = grupo.integrantes[0];
@@ -365,7 +543,7 @@ export class AdminHome implements OnInit {
       cancelButtonText: 'Cancelar',
       inputValidator: (value) => {
         if (!value) {
-           return 'Debes seleccionar una opción';
+          return 'Debes seleccionar una opción';
         }
         return null;
       }
@@ -380,96 +558,9 @@ export class AdminHome implements OnInit {
     }
   }
 
-  async descargarInfoGrupoRefil(grupo: any, event: Event) {
-    event.stopPropagation();
-
-    // 1. Obtener los créditos activos del grupo para calcular la última semana pagada
-    let ciclo = 1;
-    let maxPagoGlobal = 0;
-    let semanasTotales = 16;
-    const creditosDelGrupo: any[] = [];
-
-    if (grupo.integrantes && grupo.integrantes.length > 0) {
-      grupo.integrantes.forEach((m: any) => {
-        const c = this.getCreditoDeMiembro(m._id);
-        if (c) creditosDelGrupo.push(c);
-      });
-
-      if (creditosDelGrupo.length > 0) {
-        ciclo = creditosDelGrupo[0].ciclo || 1;
-        
-        creditosDelGrupo.forEach(c => {
-          if (c.semanas && c.semanas > semanasTotales) {
-            semanasTotales = c.semanas;
-          }
-          if (c.pagos && c.pagos.length > 0) {
-            const numerosPagos = c.pagos.map((p: any) => p.numeroPago);
-            const maxC = Math.max(...numerosPagos);
-            if (maxC > maxPagoGlobal) {
-              maxPagoGlobal = maxC;
-            }
-          }
-        });
-      }
-    }
-
-    if (creditosDelGrupo.length === 0) {
-      Swal.fire('Atención', 'Este grupo no tiene créditos activos para generar hoja de control.', 'warning');
-      return;
-    }
-
-    // 2. Determinar cuáles semanas siguen disponibles (no pagadas aún)
-    const semanasDisponibles: number[] = [];
-    let inicio = maxPagoGlobal >= semanasTotales ? semanasTotales : maxPagoGlobal + 1;
-    
-    // Por si quieren generar la misma semana actual
-    if (maxPagoGlobal > 0 && maxPagoGlobal < semanasTotales) {
-        // Añadimos opcionalmente la última pagada tambien
-        semanasDisponibles.push(maxPagoGlobal);
-    } else if (maxPagoGlobal === 0) {
-        inicio = 1;
-    }
-
-    for (let i = inicio; i <= semanasTotales; i++) {
-      if (!semanasDisponibles.includes(i)) {
-          semanasDisponibles.push(i);
-      }
-    }
-
-    const inputOptions: { [key: string]: string } = {};
-    semanasDisponibles.forEach(sem => {
-      inputOptions[sem.toString()] = `Semana ${sem}`;
-    });
-
-    // 3. Abrir SweetAlert para pedir selección de semana a imprimir
-    const { value: semanaSeleccionada, isConfirmed } = await Swal.fire({
-      title: 'H.C. Refiles',
-      text: 'Selecciona la semana en la que inicia el Refil:',
-      input: 'select',
-      inputOptions,
-      inputPlaceholder: 'Selecciona una semana',
-      showCancelButton: true,
-      confirmButtonText: 'Generar',
-      cancelButtonText: 'Cancelar',
-      inputValidator: (value) => {
-        if (!value) {
-           // En Swal.fire devuelves string con el error directamente
-           return 'Debes seleccionar una semana';
-        }
-        return null;
-      }
-    });
-
-    if (isConfirmed && semanaSeleccionada) {
-      const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?soloRefiles=true&semanaInicioRefil=${semanaSeleccionada}`;
-      window.open(url, '_blank');
-    }
-  }
-
   descargarInfoIndividual(cliente: any, event: Event) {
     event.stopPropagation();
-    
-    // Buscar el ciclo del cliente a partir de sus créditos
+
     let ciclo = 1;
     const credito = this.getCreditoDeCliente(cliente._id);
     if (credito && credito.ciclo) {
@@ -482,8 +573,7 @@ export class AdminHome implements OnInit {
 
   descargarInfoIndividualLlena(cliente: any, event: Event) {
     event.stopPropagation();
-    
-    // Buscar el ciclo del cliente a partir de sus créditos
+
     let ciclo = 1;
     const credito = this.getCreditoDeCliente(cliente._id);
     if (credito && credito.ciclo) {
@@ -494,71 +584,102 @@ export class AdminHome implements OnInit {
     window.open(url, '_blank');
   }
 
-  limpiarFiltros() {
-    this.searchTerm = '';
-    this.asesorSearchTerm = '';
-    if ((this.userRole === 'master' || this.userRole === 'superadmin' || this.userRole === 'coordinador' || this.userRole === 'ejecutiva') && this.userCoordinacion) {
-      this.selectedCoordinacionId = this.userCoordinacion;
-    } else {
-      this.selectedCoordinacionId = 'todas';
-    }
-    this.selectedAsesorId = 'todos';
-    this.activeTab = 'grupos';
-  }
+  async vistaPreviaGrupo(grupo: any, event: Event) {
+    event.stopPropagation();
 
-  getNombreCoordinacion(item: any): string {
-    if (!item) return 'Sin Coor.';
-    
-    let idStr = null;
-    if (item.coordinacion) {
-      idStr = typeof item.coordinacion === 'object' ? item.coordinacion._id : item.coordinacion;
-    } else if (item.asesor) {
-      // Fallback para registros antiguos que no tengan el campo coordinacion guardado
-      const asesorId = typeof item.asesor === 'object' ? item.asesor._id : item.asesor;
-      const asesorInfo = this.asesoresList.find(a => a._id === asesorId);
-      if (asesorInfo && asesorInfo.coordinacion) {
-        idStr = typeof asesorInfo.coordinacion === 'object' ? asesorInfo.coordinacion._id : asesorInfo.coordinacion;
+    let ciclo = 1;
+    if (grupo.integrantes && grupo.integrantes.length > 0) {
+      const primerMiembro = grupo.integrantes[0];
+      const credito = this.getCreditoDeMiembro(primerMiembro._id);
+      if (credito && credito.ciclo) {
+        ciclo = credito.ciclo;
       }
     }
 
-    if (!idStr) return 'Sin Coor.';
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa del PDF',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas</label>
+            <select id="swal-rango-semanas" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="completa">Completa (Todas las semanas)</option>
+              <option value="1">Semana 1 a 8</option>
+              <option value="9">Semana 9 a 16</option>
+            </select>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Ver Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#9333ea',
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
+      }
+    });
 
-    const coord = this.coordinacionesList.find(c => c._id === idStr);
-    return coord ? coord.nombre : `ID: ${idStr.toString().substring(idStr.toString().length - 4)}`;
+    if (isConfirmed && formValues) {
+      let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?preview=true`;
+      if (formValues.tipo === 'llena') {
+        url += `&llena=true`;
+      }
+      if (formValues.rango !== 'completa') {
+        url += `&semanaInicio=${formValues.rango}`;
+      }
+      window.open(url, '_blank');
+    }
   }
 
-  toggleGroup(groupId: string) {
-    this.expandedGroups[groupId] = !this.expandedGroups[groupId];
-  }
+  async vistaPreviaIndividual(cliente: any, event: Event) {
+    event.stopPropagation();
 
-  getProgresoPagos(credito: any): string {
-    if (!credito) return '0/0';
-    const totalSemanas = credito.semanas || 16;
-    if (!credito.pagos || credito.pagos.length === 0) return `0/${totalSemanas}`;
-    
-    // Contamos el mayor numeroPago registrado
-    const numerosPagos = credito.pagos.map((p: any) => p.numeroPago);
-    const maxPago = numerosPagos.length > 0 ? Math.max(...numerosPagos) : 0;
-    
-    return `${maxPago}/${totalSemanas}`;
-  }
+    let ciclo = 1;
+    const credito = this.getCreditoDeCliente(cliente._id);
+    if (credito && credito.ciclo) {
+      ciclo = credito.ciclo;
+    }
 
-  // getUltimoPago(credito: any): any {
-  //   if (!credito || !credito.pagos || credito.pagos.length === 0) return null;
-  //   return credito.pagos[credito.pagos.length - 1];
-  // }
-  getUltimoPago(credito: any): any {
-  if (!credito || !credito.pagos || credito.pagos.length === 0) return null;
-  
-  const pago = { ...credito.pagos[credito.pagos.length - 1] };
-  
-  if (pago.fechaPago) {
-    const fecha = new Date(pago.fechaPago);
-    fecha.setHours(fecha.getHours() + 6);
-    pago.fechaPago = fecha;
+    const { value: tipo, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa Individual',
+      text: 'Selecciona el formato a previsualizar:',
+      input: 'select',
+      inputOptions: {
+        'llena': 'Hoja Llena (con datos)',
+        'vacia': 'Hoja Vacía (en blanco)'
+      },
+      inputPlaceholder: 'Selecciona una opción',
+      showCancelButton: true,
+      confirmButtonText: 'Ver Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#9333ea',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes seleccionar una opción';
+        }
+        return null;
+      }
+    });
+
+    if (isConfirmed && tipo) {
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?preview=true`;
+      if (tipo === 'llena') {
+        url += `&llena=true`;
+      }
+      window.open(url, '_blank');
+    }
   }
-  
-  return pago;
-}
-  
 }
