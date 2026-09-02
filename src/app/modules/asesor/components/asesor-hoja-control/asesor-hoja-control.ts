@@ -99,13 +99,13 @@ export class AsesorHojaControl implements OnInit {
       return;
     }
 
-    const targetTipo = this.currentTab === 'COMUNAL' ? 'CC' : (this.currentTab === 'REFIL' ? 'R' : 'MAGICO');
+    const targetTipos = this.currentTab === 'COMUNAL' ? ['CC', '8S'] : (this.currentTab === 'REFIL' ? ['R'] : ['MAGICO']);
 
     this.miembrosFiltradosList = this.miembros
       .map(m => {
         const creditosMiembro = this.todosLosCreditos.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
-        const credito = creditosMiembro.find((c: any) => c.tipoCredito === targetTipo && c.estado === 'Activo') || 
-                        creditosMiembro.find((c: any) => c.tipoCredito === targetTipo);
+        const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') || 
+                        creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito));
 
         if (credito) {
           const mCopy = { ...m };
@@ -659,7 +659,7 @@ export class AsesorHojaControl implements OnInit {
           if (pago.numeroRecibo === numRecibo) {
             const esMismoDia = pago.fechaPago && pago.fechaPago.startsWith(todayStr);
             let esMismoTipo = false;
-            if (this.currentTab === 'COMUNAL' && m.tipoCredito === 'CC') esMismoTipo = true;
+            if (this.currentTab === 'COMUNAL' && (m.tipoCredito === 'CC' || m.tipoCredito === '8S')) esMismoTipo = true;
             if (this.currentTab === 'REFIL' && m.tipoCredito === 'R') esMismoTipo = true;
             if (this.currentTab === 'MAGICO' && m.tipoCredito === 'MAGICO') esMismoTipo = true;
 
