@@ -28,7 +28,7 @@ export class GrupoService {
         }
 
         // Adaptación de payload de Grupo para esquivar error de 'integrantes' en Backend
-        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, grupoId, porcentajeGarantia, ...resto } = payload;
+        const { integrantes, nombreGrupo, cicloActual, fechaPrimerPago, plazoSemanas, plazoMeses, grupoId, porcentajeGarantia, estadoGrupo, ...resto } = payload;
         const bodyGrupo = { ...resto, cicloActual, nombre: nombreGrupo, plazoSemanas, plazoMeses, porcentajeGarantia };
 
         console.log('[GrupoService] Enviando grupo:', bodyGrupo);
@@ -80,6 +80,7 @@ export class GrupoService {
                                     miembro: miembroGuardado._id,
                                     ciclo: cicloActual || 1,
                                     tipoCredito: integ.tipoCredito || 'CC',
+                                    estadoGrupo: estadoGrupo || null,
                                     pagoPactado: integ.pagoPactado,
                                     fechaPrimerPago: fechaPrimerPago,
                                     montoSolicitado: integ.montoSolicitado,
@@ -128,21 +129,74 @@ export class GrupoService {
         );
     }
 
-    getGrupos(): Observable<any> {
-        return this.http.get(`${this.apiUrlGrupo}/get`);
+    private cacheCreditos = new Map<string, { data: any; timestamp: number }>();
+    private cacheGrupos: { data: any; timestamp: number } | null = null;
+    private cacheAsesores: { data: any; timestamp: number } | null = null;
+    private cacheMiembros: { data: any; timestamp: number } | null = null;
+    private cacheCoordinaciones: { data: any; timestamp: number } | null = null;
+    private readonly CACHE_TTL = 45000; // 45 segundos de caché en memoria
+
+    limpiarCache(): void {
+        this.cacheCreditos.clear();
+        this.cacheGrupos = null;
+        this.cacheAsesores = null;
+        this.cacheMiembros = null;
+        this.cacheCoordinaciones = null;
     }
 
-    getAsesores(): Observable<any> {
-        return this.http.get(`${this.apiUrlGrupo}/asesores`);
+    getGrupos(forceRefresh = false): Observable<any> {
+        if (!forceRefresh && this.cacheGrupos && (Date.now() - this.cacheGrupos.timestamp < this.CACHE_TTL)) {
+            return of(this.cacheGrupos.data);
+        }
+        return this.http.get(`${this.apiUrlGrupo}/get`).pipe(
+            map((data: any) => {
+                this.cacheGrupos = { data, timestamp: Date.now() };
+                return data;
+            })
+        );
     }
 
-    getMiembros(): Observable<any> {
-        return this.http.get(`${this.apiUrlMiembro}/get`);
+    getAsesores(forceRefresh = false): Observable<any> {
+        if (!forceRefresh && this.cacheAsesores && (Date.now() - this.cacheAsesores.timestamp < this.CACHE_TTL)) {
+            return of(this.cacheAsesores.data);
+        }
+        return this.http.get(`${this.apiUrlGrupo}/asesores`).pipe(
+            map((data: any) => {
+                this.cacheAsesores = { data, timestamp: Date.now() };
+                return data;
+            })
+        );
     }
 
-    getCreditos(): Observable<any> {
-        return this.http.get(`${this.apiUrlCredito}/`).pipe(
+    getMiembros(forceRefresh = false): Observable<any> {
+        if (!forceRefresh && this.cacheMiembros && (Date.now() - this.cacheMiembros.timestamp < this.CACHE_TTL)) {
+            return of(this.cacheMiembros.data);
+        }
+        return this.http.get(`${this.apiUrlMiembro}/get`).pipe(
+            map((data: any) => {
+                this.cacheMiembros = { data, timestamp: Date.now() };
+                return data;
+            })
+        );
+    }
+
+    getCreditos(params?: { coordinacion?: string; asesor?: string }, forceRefresh = false): Observable<any> {
+        let queryStr = '';
+        if (params?.coordinacion && params.coordinacion !== 'todas') {
+            queryStr += `?coordinacion=${params.coordinacion}`;
+        } else if (params?.asesor && params.asesor !== 'todos') {
+            queryStr += `?asesor=${params.asesor}`;
+        }
+
+        const cacheKey = queryStr || 'all';
+        const cached = this.cacheCreditos.get(cacheKey);
+        if (!forceRefresh && cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+            return of(cached.data);
+        }
+
+        return this.http.get(`${this.apiUrlCredito}/${queryStr}`).pipe(
             map((res: any) => {
+                this.cacheCreditos.set(cacheKey, { data: res, timestamp: Date.now() });
                 const creditos = res.creditos || res || [];
                 if (Array.isArray(creditos)) {
                     this.dexie.table('creditos').clear().then(() => {
@@ -162,9 +216,16 @@ export class GrupoService {
         );
     }
 
-
-    getCoordinaciones(): Observable<any> {
-        return this.http.get(`${this.apiUrlGrupo}/coordinacion`);
+    getCoordinaciones(forceRefresh = false): Observable<any> {
+        if (!forceRefresh && this.cacheCoordinaciones && (Date.now() - this.cacheCoordinaciones.timestamp < this.CACHE_TTL)) {
+            return of(this.cacheCoordinaciones.data);
+        }
+        return this.http.get(`${this.apiUrlGrupo}/coordinacion`).pipe(
+            map((data: any) => {
+                this.cacheCoordinaciones = { data, timestamp: Date.now() };
+                return data;
+            })
+        );
     }
 
     getPagosConUbicacion(): Observable<any> {

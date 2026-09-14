@@ -15,6 +15,7 @@ export interface GrupoPayload {
     nombreGrupo: string;
     clave: string;
     tipoCredito: string;
+    estadoGrupo?: string; // Estado del crédito a nivel grupo: CC, R, 8S
     cicloActual: number;
     tasa: number;
     diaVisita: string;

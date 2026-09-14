@@ -42,6 +42,7 @@ export class AuthService {
                 
                 localStorage.setItem('isLoggedIn', 'true');
                 localStorage.setItem('userRole', response.user.role);
+                localStorage.setItem('loginDate', Date.now().toString());
                 localStorage.setItem('user', JSON.stringify({ 
                     id: response.user.id || response.user._id,
                     username: response.user.username || credentials.user,

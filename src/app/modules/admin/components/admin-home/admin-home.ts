@@ -60,7 +60,7 @@ export class AdminHome implements OnInit {
   ) { }
 
   get isGlobalRole(): boolean {
-    return ['admin', 'master', 'superadmin'].includes(this.userRole);
+    return ['admin', 'master', 'superadmin', 'lector'].includes(this.userRole);
   }
 
   get filteredAsesoresList(): any[] {
@@ -102,7 +102,8 @@ export class AdminHome implements OnInit {
   }
 
   refrescarDatos() {
-    this.cargarDatos();
+    this.grupoService.limpiarCache();
+    this.cargarDatos(true);
   }
 
   cambiarTab(tab: 'grupos' | 'individuales') {
@@ -132,23 +133,21 @@ export class AdminHome implements OnInit {
     this.cdr.markForCheck();
   }
 
-  cargarDatos() {
+  cargarDatos(forceRefresh = false) {
     this.isLoading = true;
     this.cdr.markForCheck();
 
+    // 1. CARGA: Coordinaciones, Asesores, Grupos y Clientes
     forkJoin({
-      grupos: this.grupoService.getGrupos(),
-      miembros: this.grupoService.getMiembros(),
-      creditos: this.grupoService.getCreditos(),
-      asesores: this.grupoService.getAsesores(),
+      grupos: this.grupoService.getGrupos(forceRefresh),
+      asesores: this.grupoService.getAsesores(forceRefresh),
       clientes: this.clienteService.getClientes(),
-      coordinaciones: this.grupoService.getCoordinaciones()
+      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh)
     }).subscribe({
       next: (res: any) => {
         const allAsesores = res.asesores || [];
         const allCoordinaciones = res.coordinaciones || [];
         const allGruposRaw = res.grupos || [];
-        const allMiembrosRaw = res.miembros || [];
         const allClientesRaw = res.clientes || [];
 
         // 1. Filtrado por rol si es restringido
@@ -165,7 +164,7 @@ export class AdminHome implements OnInit {
           this.coordinacionesList = allCoordinaciones;
         }
 
-        // 2. Poblar mapas de asesores y coordinaciones O(1)
+        // 2. asesores y coordinaciones
         this.asesoresMap.clear();
         for (const a of allAsesores) {
           this.asesoresMap.set(String(a._id), a);
@@ -176,9 +175,68 @@ export class AdminHome implements OnInit {
           this.coordinacionesMap.set(String(c._id), c);
         }
 
-        // 3. Procesar y Mapear Créditos O(1) con métricas precalculadas
+        // 3. Procesar Grupos
+        const gruposProcesados: any[] = [];
+        for (const g of allGruposRaw) {
+          const integrantesDirectos = g.integrantes || [];
+          const grupoObj = {
+            ...g,
+            integrantes: integrantesDirectos,
+            tipo: 'GRUPO',
+            estadoGrupo: g.estadoGrupo || null,
+            coordinacionNombre: this.resolverNombreCoordinacion(g)
+          };
+
+          if (!isRestricted || this.perteneceACoordinacion(grupoObj, this.userCoordinacion)) {
+            gruposProcesados.push(grupoObj);
+          }
+        }
+
+        // 4. Clientes Individuales
+        const clientesProcesados: any[] = [];
+        for (const c of allClientesRaw) {
+          const clienteObj = {
+            ...c,
+            tipo: 'INDIVIDUAL',
+            coordinacionNombre: this.resolverNombreCoordinacion(c),
+            credito: this.creditoClienteMap.get(String(c._id)) || null
+          };
+          if (!isRestricted || this.perteneceACoordinacion(clienteObj, this.userCoordinacion)) {
+            clientesProcesados.push(clienteObj);
+          }
+        }
+
+        this.grupos = gruposProcesados;
+        this.elementosPrincipales = [...this.grupos, ...clientesProcesados];
+
+        // Actualizar Asesores de la coordinación activa y renderizar interfaz
+        this.actualizarAsesoresDeCoordinacion();
+        this.aplicarFiltros();
+
+
+        this.isLoading = false;
+        this.cdr.markForCheck();
+
+
+        this.cargarCreditosEnSegundoPlano(forceRefresh);
+      },
+      error: (err) => {
+        console.error('Error cargando datos principales', err);
+        this.isLoading = false;
+        this.cdr.markForCheck();
+      }
+    });
+  }
+
+  private cargarCreditosEnSegundoPlano(forceRefresh = false) {
+    forkJoin({
+      creditos: this.grupoService.getCreditos({}, forceRefresh),
+      miembros: this.grupoService.getMiembros(forceRefresh)
+    }).subscribe({
+      next: (res: any) => {
         const rawCreditos = res.creditos?.creditos || res.creditos || [];
         this.creditos = Array.isArray(rawCreditos) ? rawCreditos : [];
+        const allMiembrosRaw = res.miembros || [];
 
         this.creditoMiembroMap.clear();
         this.creditoClienteMap.clear();
@@ -211,109 +269,72 @@ export class AdminHome implements OnInit {
 
           const mId = c.miembro?._id || c.miembro;
           if (mId) {
-            this.creditoMiembroMap.set(String(mId), c);
+            const key = String(mId);
+            const actual = this.creditoMiembroMap.get(key);
+            if (!actual) {
+              this.creditoMiembroMap.set(key, c);
+            } else {
+              const esActivo = c.estado === 'Activo';
+              const actualEsActivo = actual.estado === 'Activo';
+              const cicloC = Number(c.ciclo) || 0;
+              const cicloActual = Number(actual.ciclo) || 0;
+              if ((esActivo && !actualEsActivo) || (esActivo === actualEsActivo && cicloC > cicloActual)) {
+                this.creditoMiembroMap.set(key, c);
+              }
+            }
           }
 
           const clId = c.cliente?._id || c.cliente;
           if (clId) {
-            this.creditoClienteMap.set(String(clId), c);
-          }
-        }
-
-        // 4. Procesar Grupos: Asociar integrantes y vincular créditos directamente
-        const miembrosPorGrupo = new Map<string, any[]>();
-        for (const m of allMiembrosRaw) {
-          const gId = m.grupo?._id || m.grupo;
-          if (gId) {
-            const gKey = String(gId);
-            if (!miembrosPorGrupo.has(gKey)) {
-              miembrosPorGrupo.set(gKey, []);
-            }
-            m.credito = this.creditoMiembroMap.get(String(m._id)) || null;
-            miembrosPorGrupo.get(gKey)!.push(m);
-          }
-        }
-
-        const gruposProcesados: any[] = [];
-        const gruposVistos = new Set<string>();
-
-        for (const g of allGruposRaw) {
-          const gId = String(g._id);
-          gruposVistos.add(gId);
-          const integrantesDirectos = (g.integrantes && g.integrantes.length > 0) ? g.integrantes : (miembrosPorGrupo.get(gId) || []);
-
-          for (const m of integrantesDirectos) {
-            m.credito = this.creditoMiembroMap.get(String(m._id)) || null;
-          }
-
-          const grupoObj = {
-            ...g,
-            integrantes: integrantesDirectos,
-            tipo: 'GRUPO',
-            coordinacionNombre: this.resolverNombreCoordinacion(g)
-          };
-
-          if (!isRestricted || this.perteneceACoordinacion(grupoObj, this.userCoordinacion)) {
-            gruposProcesados.push(grupoObj);
-          }
-        }
-
-        for (const [gId, integrantes] of miembrosPorGrupo.entries()) {
-          if (!gruposVistos.has(gId) && integrantes.length > 0) {
-            const baseGrupo = integrantes[0].grupo;
-            if (baseGrupo && typeof baseGrupo === 'object') {
-              for (const m of integrantes) {
-                m.credito = this.creditoMiembroMap.get(String(m._id)) || null;
-              }
-              const grupoObj = {
-                ...baseGrupo,
-                integrantes,
-                tipo: 'GRUPO',
-                coordinacionNombre: this.resolverNombreCoordinacion(baseGrupo)
-              };
-              if (!isRestricted || this.perteneceACoordinacion(grupoObj, this.userCoordinacion)) {
-                gruposProcesados.push(grupoObj);
+            const key = String(clId);
+            const actual = this.creditoClienteMap.get(key);
+            if (!actual) {
+              this.creditoClienteMap.set(key, c);
+            } else {
+              const esActivo = c.estado === 'Activo';
+              const actualEsActivo = actual.estado === 'Activo';
+              const cicloC = Number(c.ciclo) || 0;
+              const cicloActual = Number(actual.ciclo) || 0;
+              if ((esActivo && !actualEsActivo) || (esActivo === actualEsActivo && cicloC > cicloActual)) {
+                this.creditoClienteMap.set(key, c);
               }
             }
           }
         }
 
-        // 5. Procesar Clientes Individuales
-        const clientesProcesados: any[] = [];
-        for (const c of allClientesRaw) {
-          const clienteObj = {
-            ...c,
-            tipo: 'INDIVIDUAL',
-            coordinacionNombre: this.resolverNombreCoordinacion(c),
-            credito: this.creditoClienteMap.get(String(c._id)) || null
-          };
-          if (!isRestricted || this.perteneceACoordinacion(clienteObj, this.userCoordinacion)) {
-            clientesProcesados.push(clienteObj);
+        // Enlazar créditos a integrantes de grupos y clientes
+        for (const g of this.grupos) {
+          if (g.integrantes && g.integrantes.length > 0) {
+            for (const m of g.integrantes) {
+              m.credito = this.creditoMiembroMap.get(String(m._id || m)) || null;
+            }
+            if (!g.estadoGrupo) {
+              for (const m of g.integrantes) {
+                const cred = this.creditoMiembroMap.get(String(m._id || m));
+                if (cred?.estadoGrupo) {
+                  g.estadoGrupo = cred.estadoGrupo;
+                  break;
+                }
+              }
+            }
           }
         }
 
-        this.grupos = gruposProcesados;
-        this.elementosPrincipales = [...this.grupos, ...clientesProcesados];
+        for (const item of this.elementosPrincipales) {
+          if (item.tipo === 'INDIVIDUAL') {
+            item.credito = this.creditoClienteMap.get(String(item._id)) || null;
+          }
+        }
 
-        // 6. Actualizar Asesores de la coordinación activa y aplicar filtros
-        this.actualizarAsesoresDeCoordinacion();
-        this.aplicarFiltros();
-
-        // 7. Notificaciones
         this.notificationService.verificarHojasCompletadas(
           this.grupos,
           this.creditos,
           allMiembrosRaw
         );
 
-        this.isLoading = false;
         this.cdr.markForCheck();
       },
-      error: (err) => {
-        console.error('Error cargando datos', err);
-        this.isLoading = false;
-        this.cdr.markForCheck();
-      }
+      error: (err) => console.error('Error enriqueciendo créditos en segundo plano', err)
     });
   }
 
@@ -474,17 +495,42 @@ export class AdminHome implements OnInit {
     this.aplicarFiltros();
   }
 
+  getCicloActualGrupo(grupo: any): number {
+    if (!grupo) return 1;
+    let maxCiclo = Number(grupo.cicloActual) || 0;
+
+    if (grupo.integrantes && Array.isArray(grupo.integrantes)) {
+      for (const m of grupo.integrantes) {
+        const mId = m._id || m;
+        const cred = this.getCreditoDeMiembro(mId);
+        if (cred) {
+          const cCiclo = Number(cred.ciclo) || 0;
+          if (cred.estado === 'Activo' && cCiclo > 0) {
+            return cCiclo;
+          }
+          if (cCiclo > maxCiclo) {
+            maxCiclo = cCiclo;
+          }
+        }
+      }
+    }
+
+    return maxCiclo > 0 ? maxCiclo : 1;
+  }
+
+  getCicloActualCliente(cliente: any): number {
+    if (!cliente) return 1;
+    const cred = this.getCreditoDeCliente(cliente._id);
+    if (cred && cred.ciclo) {
+      return Number(cred.ciclo) || 1;
+    }
+    return 1;
+  }
+
   async descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
 
-    let ciclo = 1;
-    if (grupo.integrantes && grupo.integrantes.length > 0) {
-      const primerMiembro = grupo.integrantes[0];
-      const credito = this.getCreditoDeMiembro(primerMiembro._id);
-      if (credito && credito.ciclo) {
-        ciclo = credito.ciclo;
-      }
-    }
+    const ciclo = this.getCicloActualGrupo(grupo);
 
     const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control',
@@ -508,9 +554,12 @@ export class AdminHome implements OnInit {
     });
 
     if (isConfirmed && opcionSeleccionada) {
+      const estadoGrupo = grupo.estadoGrupo ? `&estadoGrupo=${grupo.estadoGrupo}` : '';
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}`;
       if (opcionSeleccionada !== 'completa') {
-        url += `?semanaInicio=${opcionSeleccionada}`;
+        url += `?semanaInicio=${opcionSeleccionada}${estadoGrupo}`;
+      } else if (estadoGrupo) {
+        url += `?${estadoGrupo.slice(1)}`;
       }
       window.open(url, '_blank');
     }
@@ -519,14 +568,7 @@ export class AdminHome implements OnInit {
   async descargarInfoGrupoLlena(grupo: any, event: Event) {
     event.stopPropagation();
 
-    let ciclo = 1;
-    if (grupo.integrantes && grupo.integrantes.length > 0) {
-      const primerMiembro = grupo.integrantes[0];
-      const credito = this.getCreditoDeMiembro(primerMiembro._id);
-      if (credito && credito.ciclo) {
-        ciclo = credito.ciclo;
-      }
-    }
+    const ciclo = this.getCicloActualGrupo(grupo);
 
     const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control (Llena)',
@@ -550,7 +592,9 @@ export class AdminHome implements OnInit {
     });
 
     if (isConfirmed && opcionSeleccionada) {
+      const estadoGrupo = grupo.estadoGrupo ? `&estadoGrupo=${grupo.estadoGrupo}` : '';
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
+      url += estadoGrupo;
       if (opcionSeleccionada !== 'completa') {
         url += `&semanaInicio=${opcionSeleccionada}`;
       }
@@ -561,11 +605,7 @@ export class AdminHome implements OnInit {
   descargarInfoIndividual(cliente: any, event: Event) {
     event.stopPropagation();
 
-    let ciclo = 1;
-    const credito = this.getCreditoDeCliente(cliente._id);
-    if (credito && credito.ciclo) {
-      ciclo = credito.ciclo;
-    }
+    const ciclo = this.getCicloActualCliente(cliente);
 
     const url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
     window.open(url, '_blank');
@@ -574,11 +614,7 @@ export class AdminHome implements OnInit {
   descargarInfoIndividualLlena(cliente: any, event: Event) {
     event.stopPropagation();
 
-    let ciclo = 1;
-    const credito = this.getCreditoDeCliente(cliente._id);
-    if (credito && credito.ciclo) {
-      ciclo = credito.ciclo;
-    }
+    const ciclo = this.getCicloActualCliente(cliente);
 
     const url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
     window.open(url, '_blank');
@@ -587,14 +623,7 @@ export class AdminHome implements OnInit {
   async vistaPreviaGrupo(grupo: any, event: Event) {
     event.stopPropagation();
 
-    let ciclo = 1;
-    if (grupo.integrantes && grupo.integrantes.length > 0) {
-      const primerMiembro = grupo.integrantes[0];
-      const credito = this.getCreditoDeMiembro(primerMiembro._id);
-      if (credito && credito.ciclo) {
-        ciclo = credito.ciclo;
-      }
-    }
+    const ciclo = this.getCicloActualGrupo(grupo);
 
     const { value: formValues, isConfirmed } = await Swal.fire({
       title: 'Vista Previa del PDF',
@@ -647,11 +676,7 @@ export class AdminHome implements OnInit {
   async vistaPreviaIndividual(cliente: any, event: Event) {
     event.stopPropagation();
 
-    let ciclo = 1;
-    const credito = this.getCreditoDeCliente(cliente._id);
-    if (credito && credito.ciclo) {
-      ciclo = credito.ciclo;
-    }
+    const ciclo = this.getCicloActualCliente(cliente);
 
     const { value: tipo, isConfirmed } = await Swal.fire({
       title: 'Vista Previa Individual',

@@ -73,6 +73,13 @@ export class Navbar implements OnInit, OnDestroy {
     return false;
   }
 
+  get isLector(): boolean {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('userRole') === 'lector';
+    }
+    return false;
+  }
+
   get isUser(): boolean {
     if (isPlatformBrowser(this.platformId)) {
       const role = localStorage.getItem('userRole');

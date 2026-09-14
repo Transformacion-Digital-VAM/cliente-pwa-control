@@ -44,6 +44,7 @@ export class AdminHojaControl implements OnInit {
       tasa: [0, [Validators.required, Validators.min(0)]],
       plazoSemanas: [16, [Validators.required, Validators.min(1)]],
       plazoMeses: [4, [Validators.required, Validators.min(1)]],
+      estadoGrupo: ['CC', Validators.required],
       diaVisita: ['Lunes', Validators.required],
       fechaPrimerPago: ['', Validators.required],
       horaVisita: ['', Validators.required],
@@ -258,7 +259,7 @@ export class AdminHojaControl implements OnInit {
     const ultimoCiclo = this.getCicloGrupo(grupo);
     const ultimaTasa = this.getTasaGrupo(grupo);
 
-    // Patch de campos del grupo
+    // Patch de campos del grupo (sin emitir eventos para evitar cascada de suscripciones)
     this.hojaControlForm.patchValue({
       grupoId: grupo._id,
       nombreGrupo: grupo.nombre,
@@ -272,11 +273,26 @@ export class AdminHojaControl implements OnInit {
       fechaPrimerPago: grupo.fechaPrimerPago || '',
       horaVisita: grupo.horaVisita || '',
       porcentajeGarantia: grupo.porcentajeGarantia || 5
-    });
+    }, { emitEvent: false });
 
     // Resolver la fechaPrimerPago: primero del grupo, luego del crédito de algún miembro
     let fechaFuenteISO: string | null = null;
     const miembrosParaFecha: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+
+    // Detectar el tipoCredito del último ciclo del grupo para pre-llenar estadoGrupo
+    const miembrosIds = miembrosParaFecha.map(m => (typeof m === 'object' ? m._id : m));
+    const creditosGrupo = this.creditosLocales.filter(c => {
+      const cId = typeof c.miembro === 'object' ? c.miembro?._id : c.miembro;
+      return miembrosIds.includes(cId);
+    });
+    if (creditosGrupo.length > 0) {
+      const maxCiclo = Math.max(...creditosGrupo.map(c => c.ciclo || 0));
+      const creditosCicloMax = creditosGrupo.filter(c => c.ciclo === maxCiclo);
+      const tipoMasReciente = creditosCicloMax[0]?.estadoGrupo || creditosCicloMax[0]?.tipoCredito || 'CC';
+      this.hojaControlForm.get('estadoGrupo')?.setValue(tipoMasReciente, { emitEvent: false });
+    } else {
+      this.hojaControlForm.get('estadoGrupo')?.setValue('CC', { emitEvent: false });
+    }
 
     if (grupo.fechaPrimerPago) {
       // Fuente 1: El grupo tiene fecha guardada
@@ -300,7 +316,7 @@ export class AdminHojaControl implements OnInit {
     }
 
     if (fechaFuenteISO) {
-      this.hojaControlForm.get('fechaPrimerPago')?.setValue(fechaFuenteISO);
+      this.hojaControlForm.get('fechaPrimerPago')?.setValue(fechaFuenteISO, { emitEvent: false });
     }
 
     // Generar las semanas (para uso interno si se necesitan)
@@ -564,6 +580,7 @@ export class AdminHojaControl implements OnInit {
       tasa: 0,
       plazoSemanas: 16,
       plazoMeses: 4,
+      estadoGrupo: 'CC',
       porcentajeGarantia: 5
     });
     this.semanasDisponibles = [];

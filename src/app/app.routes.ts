@@ -22,7 +22,7 @@ export const routes: Routes = [
     { path: 'hoja-control-actualizar-credito', component: AdminActualizarTipoCredito, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
     { path: 'mapa-asesores', component: AdminMapaAsesores, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
     { path: 'hoja-control-asesor/:id', component: AsesorHojaControl, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
-    { path: 'home-admin', component: AdminHome, canActivate: [roleGuard(['admin', 'master', 'superadmin'])] },
+    { path: 'home-admin', component: AdminHome, canActivate: [roleGuard(['admin', 'master', 'superadmin', 'lector'])] },
     { path: 'home-gerencia', component: HomeGerencia, canActivate: [roleGuard(['gerencia'])] },
     { path: 'home-asesor', component: AsesorHome, canActivate: [roleGuard(['user', 'asesor', 'master'])] },
     { path: 'grupos-asesor', component: AsesorListaGrupos, canActivate: [roleGuard(['user', 'asesor', 'master'])] },

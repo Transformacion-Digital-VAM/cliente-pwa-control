@@ -120,7 +120,7 @@ export class LoginComponent {
   }
 
   private redirectByRole(role: string) {
-    if (role === 'admin' || role === 'master') {
+    if (role === 'admin' || role === 'master' || role === 'superadmin' || role === 'lector') {
       this.router.navigate(['/home-admin']);
     } else {
       this.router.navigate(['/home-asesor']);
