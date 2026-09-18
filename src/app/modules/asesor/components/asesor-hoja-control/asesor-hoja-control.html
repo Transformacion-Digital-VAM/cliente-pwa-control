@@ -599,9 +599,18 @@
           <h3 class="text-lg leading-6 font-black text-white italic tracking-tight uppercase" id="modal-title">
             Pagos del Grupo
           </h3>
-          <div class="flex items-center space-x-2 mt-1">
-            <p class="text-indigo-200 text-xs font-medium uppercase tracking-wider">Total Registrado:</p>
-            <span class="text-white text-base font-black">${{ totalPagosGrupo | number:'1.2-2' }}</span>
+          <div class="flex items-center space-x-3 mt-1">
+            <div class="flex items-center space-x-1">
+              <p class="text-indigo-200 text-xs font-medium uppercase tracking-wider">Total Crédito:</p>
+              <span class="text-white text-base font-black">${{ totalPagosGrupo | number:'1.2-2' }}</span>
+            </div>
+            @if(totalAhorroPagosGrupo > 0) {
+            <span class="text-indigo-300 text-xs">•</span>
+            <div class="flex items-center space-x-1">
+              <p class="text-emerald-200 text-xs font-medium uppercase tracking-wider">Ahorro:</p>
+              <span class="text-emerald-300 text-base font-black">${{ totalAhorroPagosGrupo | number:'1.2-2' }}</span>
+            </div>
+            }
           </div>
         </div>
         <button type="button"
@@ -629,7 +638,7 @@
                 <span class="text-indigo-600 font-black text-sm">
                   ${{ (pago.montoPagado || 0) | number:'1.2-2' }}
                 </span>
-                <p class="text-[9px] text-slate-500 font-medium">Recibo: {{ pago.numeroRecibo || '-' }}</p>
+                <p class="text-[9px] text-slate-600 font-semibold">Folio: {{ pago.numeroRecibo || '-' }}</p>
               </div>
             </div>
             <div class="text-[10px] text-slate-600 space-y-1">
@@ -637,6 +646,12 @@
                 <span class="text-slate-500">Método:</span>
                 <span class="font-bold">{{ pago.metodoPago || '-' }}</span>
               </p>
+              @if(pago.montoAhorro > 0) {
+                <p class="flex justify-between text-emerald-600">
+                  <span class="text-slate-500">Ahorro Aportado:</span>
+                  <span class="font-black">+${{ pago.montoAhorro | number:'1.2-2' }}</span>
+                </p>
+              }
               @if(pago.pagoSolidario) {
                 <p class="flex justify-between text-amber-600">
                   <span class="text-slate-500">Pago Solidario:</span>

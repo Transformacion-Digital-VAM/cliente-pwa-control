@@ -481,6 +481,7 @@ export class AsesorHojaControl implements OnInit {
             miembroNombre: `${miembro.nombre} ${miembro.apellidos}`,
             fechaPago: pago.fechaPago,
             montoPagado: pago.montoPagado || pago.montoSolidario || 0,
+            montoAhorro: Number(pago.montoAhorro) || 0,
             numeroRecibo: pago.numeroRecibo,
             metodoPago: pago.metodoPago,
             pagoSolidario: pago.pagoSolidario === true || pago.pagoSolidario === 'true'
@@ -493,6 +494,10 @@ export class AsesorHojaControl implements OnInit {
 
   get totalPagosGrupo(): number {
     return this.pagosGrupoAgrupados.reduce((sum, p) => sum + (Number(p.montoPagado) || 0), 0);
+  }
+
+  get totalAhorroPagosGrupo(): number {
+    return this.pagosGrupoAgrupados.reduce((sum, p) => sum + (Number(p.montoAhorro) || 0), 0);
   }
 
   // --- FORM HANDLERS ---
