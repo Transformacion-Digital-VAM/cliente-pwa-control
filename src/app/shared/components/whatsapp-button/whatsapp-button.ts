@@ -12,8 +12,8 @@ import { FormsModule } from '@angular/forms';
 export class WhatsappButton {
   isOpen = false;
   message = '';
-  readonly phoneNumber = '524181481083';
-  readonly displayPhone = '418 148 1083';
+  readonly phoneNumber = '524181760210';
+  readonly displayPhone = '418 176 0210';
 
   @ViewChild('msgInput') msgInputElement?: ElementRef<HTMLTextAreaElement>;
 
