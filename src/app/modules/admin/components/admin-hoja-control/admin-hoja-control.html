@@ -285,8 +285,20 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 text-center">
-                      <button type="button" (click)="removeIntegrante(i)"
-                        class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm">✕</button>
+                      <div class="flex items-center justify-center gap-2">
+                        <button *ngIf="isAdmin && getCreditoPrevioMiembro(integrantes.at(i).get('miembroId')?.value)"
+                          type="button"
+                          (click)="abrirModalCancelarCreditoDesdeHoja(integrantes.at(i).get('miembroId')?.value, integrantes.at(i).get('nombre')?.value + ' ' + integrantes.at(i).get('apellidos')?.value)"
+                          title="Cancelar crédito anterior con justificación (Refill / Cambio de Ciclo)"
+                          class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-xs font-bold transition-all shadow-xs whitespace-nowrap">
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span>Liquidar por R/CC</span>
+                        </button>
+                        <button type="button" (click)="removeIntegrante(i)"
+                          class="text-slate-400 hover:text-red-600 transition-colors font-bold text-sm p-1">✕</button>
+                      </div>
                     </td>
                   </tr>
                 </tbody>
@@ -305,7 +317,7 @@
                     </td>
                     <td class="px-6 py-3"></td>
                     <td
-                      class="px-6 py-3 text-center font-bold text-blue-700 text-sm bg-blue-50/70 border-x border-slate-200">
+                      class="px-6 py-3 text-center font-bold text-blue-700 text-xs bg-blue-50/70 border-x border-slate-200">
                       $ {{ totalST | number:'1.2-2' }}
                     </td>
                     <td class="px-6 py-3"></td>
@@ -317,7 +329,7 @@
                       Total Garantías ({{ hojaControlForm.get('porcentajeGarantia')?.value || 0 }}%):
                     </td>
                     <td
-                      class="px-6 py-3 text-center font-bold text-emerald-700 text-base bg-emerald-50 border-x border-emerald-200">
+                      class="px-6 py-3 text-center font-bold text-emerald-700 text-xs bg-emerald-50 border-x border-emerald-200">
                       $ {{ totalGarantia | number:'1.2-2' }}
                     </td>
                     <td class="px-6 py-3"></td>

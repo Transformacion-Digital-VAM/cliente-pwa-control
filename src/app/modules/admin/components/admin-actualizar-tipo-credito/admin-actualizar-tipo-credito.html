@@ -59,6 +59,7 @@
                   <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Monto Sol.</th>
                   <th class="px-6 py-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Pago Pactado</th>
                   <th class="px-6 py-4 text-xs font-bold text-blue-600 uppercase tracking-wider bg-blue-50/50">Tipo Crédito</th>
+                  <th class="px-6 py-4 text-xs font-bold text-amber-700 uppercase tracking-wider text-center">Acción</th>
                 </tr>
               </thead>
               <tbody class="divide-y divide-slate-100 text-sm" formArrayName="integrantes">
@@ -72,6 +73,21 @@
                             class="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 text-sm font-bold text-blue-700 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all cursor-pointer">
                       <option *ngFor="let t of tiposCreditoOpciones" [value]="t">{{ t }}</option>
                     </select>
+                  </td>
+                  <td class="px-6 py-3 text-center">
+                    <button *ngIf="isAdmin && puedeCancelar(ctrl)"
+                            type="button"
+                            (click)="abrirModalCancelar(ctrl)"
+                            title="Cancelar crédito actual con justificación antes de actualizar a Refill"
+                            class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-xl text-xs font-bold transition-all shadow-xs">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                      </svg>
+                      <span>Cancelar por Refill</span>
+                    </button>
+                    <span *ngIf="!puedeCancelar(ctrl)" class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Liquidado
+                    </span>
                   </td>
                 </tr>
               </tbody>

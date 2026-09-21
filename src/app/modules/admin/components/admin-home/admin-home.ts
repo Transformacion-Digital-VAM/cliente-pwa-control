@@ -63,6 +63,10 @@ export class AdminHome implements OnInit {
     return ['admin', 'master', 'superadmin', 'lector'].includes(this.userRole);
   }
 
+  get isAdmin(): boolean {
+    return ['admin', 'master', 'superadmin'].includes((this.userRole || '').toLowerCase());
+  }
+
   get filteredAsesoresList(): any[] {
     return this.asesoresDeCoordinacion;
   }
@@ -332,7 +336,8 @@ export class AdminHome implements OnInit {
           allMiembrosRaw
         );
 
-        this.cdr.markForCheck();
+        this.aplicarFiltros();
+        this.cdr.detectChanges();
       },
       error: (err) => console.error('Error enriqueciendo créditos en segundo plano', err)
     });
@@ -706,5 +711,149 @@ export class AdminHome implements OnInit {
       }
       window.open(url, '_blank');
     }
+  }
+
+  calcularSaldoPendiente(credito: any): number {
+    if (!credito) return 0;
+    const saldoTotal = Number(credito.saldoTotal) || 0;
+    const pagos = Array.isArray(credito.pagos) ? credito.pagos : [];
+    const totalPagado = pagos.reduce((acc: number, p: any) => {
+      return acc + (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+    }, 0);
+    const saldoCalculado = Math.max(0, saldoTotal - totalPagado);
+
+    const saldoDoc = Number(credito.saldoPendiente);
+    if (!isNaN(saldoDoc) && saldoDoc > 0) {
+      return saldoDoc;
+    }
+    if (saldoCalculado > 0) {
+      return saldoCalculado;
+    }
+    if (pagos.length === 0 && saldoTotal > 0) {
+      return saldoTotal;
+    }
+    return 0;
+  }
+
+  abrirModalCancelarCredito(credito: any, titularNombre: string, event?: Event): void {
+    if (event) {
+      event.stopPropagation();
+    }
+    if (!credito?._id) return;
+
+    const saldo = this.calcularSaldoPendiente(credito);
+
+    Swal.fire({
+      title: 'Cancelar Crédito por Justificación',
+      html: `
+        <div class="text-left text-sm space-y-3">
+          <p class="text-slate-700">Vas a saldar a <strong class="text-emerald-700">$0.00</strong> el crédito de:<br><strong class="text-blue-700 text-base">${titularNombre}</strong></p>
+          <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+            <p class="text-xs text-amber-800 font-bold uppercase tracking-wide">Saldo pendiente a liquidar:</p>
+            <p class="text-lg font-black text-red-600 font-mono">$${Number(saldo).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          
+          <div class="mt-3">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Motivo de Justificación *</label>
+            <select id="swal-motivo" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100">
+              <option value="CANCELACION_REFILL">Cancelación por Refill</option>
+              <option value="CAMBIO_CICLO">Cancelación por Cambio de Ciclo</option>
+              <option value="OTRO">Otro ajuste justificado</option>
+            </select>
+          </div>
+
+          <div class="mt-2">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nota adicional (opcional)</label>
+            <input id="swal-notas" type="text" placeholder="Ej. El saldo remanente se incluyó en nuevo crédito..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100">
+          </div>
+          
+          <p class="text-[11px] text-slate-500 mt-2 italic">
+            * El crédito pasará a estado Liquidado con saldo $0. El historial de pagos previos se mantendrá para auditoría.
+          </p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, saldar y justificar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d97706',
+      cancelButtonColor: '#64748b',
+      preConfirm: () => {
+        const selectEl = document.getElementById('swal-motivo') as HTMLSelectElement;
+        const inputEl = document.getElementById('swal-notas') as HTMLInputElement;
+        const motivo = selectEl ? selectEl.value : 'CANCELACION_REFILL';
+        const notas = inputEl ? inputEl.value.trim() : '';
+        return { motivo, notas };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const { motivo, notas } = result.value;
+        const justificacion = motivo === 'CAMBIO_CICLO' 
+          ? 'Cancelación por Cambio de Ciclo' 
+          : (motivo === 'CANCELACION_REFILL' ? 'Cancelación por Refill' : 'Ajuste Justificado');
+
+        Swal.fire({
+          title: 'Procesando...',
+          text: 'Saldando crédito con justificación...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        this.grupoService.cancelarCreditoJustificado(credito._id, { motivo, justificacion, notas }).subscribe({
+          next: () => {
+            // Actualizar localmente el objeto de crédito
+            credito.saldoPendiente = 0;
+            credito.estado = 'Liquidado';
+            credito.motivoCancelacion = motivo;
+            credito.justificacionCancelacion = notas ? `${justificacion}: ${notas}` : justificacion;
+
+            this.cdr.markForCheck();
+
+            Swal.fire({
+              icon: 'success',
+              title: 'Crédito Saldado a $0',
+              text: 'El crédito anterior ha sido justificado y cerrado en $0 exitosamente. Ya puedes registrar el nuevo crédito.',
+              confirmButtonColor: '#2563eb'
+            });
+          },
+          error: (err: any) => {
+            console.error('Error al cancelar crédito justificado', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: err?.error?.msg || 'No se pudo procesar la cancelación justificada.',
+              confirmButtonColor: '#dc2626'
+            });
+          }
+        });
+      }
+    });
+  }
+
+  abrirModalSaldarGrupo(item: any, event: Event): void {
+    event.stopPropagation();
+    this.expandedGroups[item._id] = true;
+    this.cdr.detectChanges();
+
+    const integrantes = item.integrantes || [];
+    const conCredito = integrantes.filter((m: any) => m.credito && m.credito.estado !== 'Liquidado');
+
+    if (!conCredito.length) {
+      Swal.fire({
+        icon: 'info',
+        title: item.nombre,
+        text: 'Todos los créditos de este grupo ya están liquidados o en $0, o no tienen créditos activos registrados.',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
+
+    Swal.fire({
+      icon: 'info',
+      title: item.nombre,
+      text: `Se han desplegado ${conCredito.length} integrante(s) con crédito activo. En la columna "Acción" de cada integrante puedes presionar "Cancelar por Refill" para justificar y liquidar su adeudo.`,
+      confirmButtonText: 'Ver integrantes',
+      confirmButtonColor: '#d97706'
+    });
   }
 }

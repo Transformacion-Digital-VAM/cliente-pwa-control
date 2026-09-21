@@ -235,6 +235,10 @@ export class GrupoService {
         return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload);
     }
 
+    cancelarCreditoJustificado(creditoId: string, data: { motivo: string; justificacion?: string; notas?: string }): Observable<any> {
+        return this.http.put(`${this.apiUrlCredito}/${creditoId}/cancelar-justificado`, data);
+    }
+
     // Registrar pago por integrante de grupo
     registrarPago(creditoId: string, pagoParams: any): Observable<any> {
         const isOnline = navigator.onLine;

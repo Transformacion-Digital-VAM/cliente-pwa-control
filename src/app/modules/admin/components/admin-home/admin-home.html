@@ -172,6 +172,15 @@
                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                         </svg>
                       </button>
+                      <!-- Botón de acción directo para Admin: Refill / Saldar en ceros -->
+                      <!-- <button *ngIf="isAdmin"
+                              class="bg-amber-50 text-amber-700 p-2 rounded-lg hover:bg-amber-600 hover:text-white transition-colors border border-amber-200 shadow-sm" 
+                              title="Cancelar Créditos por Refill / Cambio de Ciclo" 
+                              (click)="abrirModalSaldarGrupo(item, $event)">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </button> -->
                     </ng-container>
 
                     <!-- Botones solo para Individuales -->
@@ -226,6 +235,7 @@
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Avance</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Último Pago</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Método</th>
+                            <!-- <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs text-center">Acción</th> -->
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-indigo-50">
@@ -248,6 +258,23 @@
                             <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">
                               {{ m.credito?._ultimoPago?.metodoPago || '-' }}
                             </td>
+                            <!-- <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap text-center">
+                              <button *ngIf="isAdmin && m.credito && m.credito.estado !== 'Liquidado'"
+                                      (click)="abrirModalCancelarCredito(m.credito, m.nombre + ' ' + (m.apellidos || ''), $event)"
+                                      title="Cancelar crédito por Refill o Cambio de Ciclo"
+                                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 border border-amber-200 transition-all shadow-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Cancelar por Refill</span>
+                              </button>
+                              <span *ngIf="m.credito && m.credito.estado === 'Liquidado'" 
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    [title]="m.credito.justificacionCancelacion || 'Crédito liquidado'">
+                                {{ m.credito.motivoCancelacion ? (m.credito.motivoCancelacion === 'CANCELACION_REFILL' ? 'Refill ($0)' : 'Ciclo ($0)') : 'Liquidado' }}
+                              </span>
+                              <span *ngIf="!m.credito" class="text-slate-300 text-xs">-</span>
+                            </td> -->
                           </tr>
                         </tbody>
                       </table>
@@ -269,6 +296,7 @@
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Avance</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Último Pago</th>
                             <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs">Método</th>
+                            <th class="px-4 py-2 font-bold text-white uppercase tracking-wider text-xs text-center">Acción</th>
                           </tr>
                         </thead>
                         <tbody class="divide-y divide-emerald-50">
@@ -288,6 +316,23 @@
                             <td class="px-4 py-3 font-medium text-emerald-600/70 text-sm whitespace-nowrap">
                               {{ item.credito?._ultimoPago?.metodoPago || '-' }}
                             </td>
+                            <!-- <td class="px-4 py-3 font-medium text-emerald-600 text-sm whitespace-nowrap text-center">
+                              <button *ngIf="isAdmin && item.credito && item.credito.estado !== 'Liquidado'"
+                                      (click)="abrirModalCancelarCredito(item.credito, item.nombre + ' ' + (item.apellidos || ''), $event)"
+                                      title="Cancelar crédito por Refill o Cambio de Ciclo"
+                                      class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-amber-50 text-amber-700 hover:bg-amber-100 hover:text-amber-800 border border-amber-200 transition-all shadow-xs">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span>Cancelar por Refill</span>
+                              </button>
+                              <span *ngIf="item.credito && item.credito.estado === 'Liquidado'" 
+                                    class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                    [title]="item.credito.justificacionCancelacion || 'Crédito liquidado'">
+                                {{ item.credito.motivoCancelacion ? (item.credito.motivoCancelacion === 'CANCELACION_REFILL' ? 'Refill ($0)' : 'Ciclo ($0)') : 'Liquidado' }}
+                              </span>
+                              <span *ngIf="!item.credito" class="text-slate-300 text-xs">-</span>
+                            </td> -->
                           </tr>
                         </tbody>
                       </table>
