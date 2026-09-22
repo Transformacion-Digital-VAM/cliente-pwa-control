@@ -60,7 +60,7 @@ export class AdminHome implements OnInit {
   ) { }
 
   get isGlobalRole(): boolean {
-    return ['admin', 'master', 'superadmin', 'lector'].includes(this.userRole);
+    return ['admin', 'superadmin', 'lector'].includes(this.userRole);
   }
 
   get isAdmin(): boolean {
@@ -788,8 +788,8 @@ export class AdminHome implements OnInit {
     }).then((result) => {
       if (result.isConfirmed && result.value) {
         const { motivo, notas } = result.value;
-        const justificacion = motivo === 'CAMBIO_CICLO' 
-          ? 'Cancelación por Cambio de Ciclo' 
+        const justificacion = motivo === 'CAMBIO_CICLO'
+          ? 'Cancelación por Cambio de Ciclo'
           : (motivo === 'CANCELACION_REFILL' ? 'Cancelación por Refill' : 'Ajuste Justificado');
 
         Swal.fire({

@@ -145,7 +145,7 @@ export class AdminHojaControl implements OnInit {
   }
 
   cargarAsesores(): void {
-    const userRole = localStorage.getItem('userRole') || '';
+    const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
     const userStr = localStorage.getItem('user');
     let userCoordinacion = '';
     if (userStr) {
@@ -549,7 +549,7 @@ export class AdminHojaControl implements OnInit {
     });
     if (creditosMiembro.length === 0) return null;
     creditosMiembro.sort((a, b) => (b.ciclo || 0) - (a.ciclo || 0));
-    
+
     // Buscar crédito que no esté liquidado
     const noLiquidado = creditosMiembro.find(c => c.estado !== 'Liquidado' && c.estado !== 'Cancelado');
     if (noLiquidado) return noLiquidado;
@@ -616,8 +616,8 @@ export class AdminHojaControl implements OnInit {
     }).then((result) => {
       if (result.isConfirmed && result.value) {
         const { motivo, notas } = result.value;
-        const justificacion = motivo === 'CAMBIO_CICLO' 
-          ? 'Cancelación por Cambio de Ciclo' 
+        const justificacion = motivo === 'CAMBIO_CICLO'
+          ? 'Cancelación por Cambio de Ciclo'
           : (motivo === 'CANCELACION_REFILL' ? 'Cancelación por Refill' : 'Ajuste Justificado');
 
         Swal.fire({
