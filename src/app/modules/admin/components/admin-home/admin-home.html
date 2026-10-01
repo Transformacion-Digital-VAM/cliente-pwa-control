@@ -154,7 +154,7 @@
             </thead>
             <tbody class="divide-y divide-slate-50 text-sm">
               <ng-container *ngIf="!isLoading">
-                <ng-container *ngFor="let item of elementosFiltrados; trackBy: trackById">
+                <ng-container *ngFor="let item of elementosPaginados; trackBy: trackById">
                   <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer" (click)="toggleGroup(item._id)">
                     <td class="px-6 py-3 font-mono font-bold text-sm"
                       [ngClass]="item.tipo === 'GRUPO' ? 'text-blue-600' : 'text-emerald-600'">
@@ -424,6 +424,32 @@
               </ng-container>
             </tbody>
           </table>
+        </div>
+        
+        <!-- Paginación -->
+        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-b-2xl" *ngIf="totalPages > 1">
+          <div class="text-sm text-slate-500 font-medium">
+            Mostrando pág. <span class="font-bold text-slate-800">{{ currentPage }}</span> de <span class="font-bold text-slate-800">{{ totalPages }}</span>
+            <span class="ml-2">({{ elementosFiltrados.length }} registros en total)</span>
+          </div>
+          <div class="flex items-center space-x-2">
+            <button (click)="cambiarPagina(currentPage - 1)" [disabled]="currentPage === 1"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              Anterior
+            </button>
+            <div class="flex items-center space-x-1">
+              <button *ngFor="let p of [].constructor(totalPages); let i = index" 
+                (click)="cambiarPagina(i + 1)"
+                [ngClass]="currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+                class="w-8 h-8 rounded-lg border text-sm font-bold transition-colors flex items-center justify-center">
+                {{ i + 1 }}
+              </button>
+            </div>
+            <button (click)="cambiarPagina(currentPage + 1)" [disabled]="currentPage === totalPages"
+              class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
+              Siguiente
+            </button>
+          </div>
         </div>
       </div>
     </section>

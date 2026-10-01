@@ -23,6 +23,8 @@ export class AdminHojaControlInd implements OnInit {
   clientesTotales: any[] = [];
   clientesFiltrados: any[] = [];
   creditosTotales: any[] = [];
+  gruposActivos: any[] = [];
+  gruposFiltradosPorAsesor: any[] = [];
 
   // Control de UI
   showClienteSuggestions: boolean = false;
@@ -68,6 +70,7 @@ export class AdminHojaControlInd implements OnInit {
       this.cargarAsesores();
       this.cargarClientes();
       this.cargarCreditos();
+      this.cargarGrupos();
     }
     this.setupSubscriptions();
   }
@@ -79,6 +82,27 @@ export class AdminHojaControlInd implements OnInit {
         this.calcularPagoYTotal();
       });
     });
+
+    this.hojaControlIndForm.get('asesor')?.valueChanges.subscribe(asesorId => {
+      this.filtrarGruposPorAsesor(asesorId);
+    });
+  }
+
+  filtrarGruposPorAsesor(asesorId: string) {
+    if (!asesorId) {
+      this.gruposFiltradosPorAsesor = [];
+    } else {
+      this.gruposFiltradosPorAsesor = this.gruposActivos.filter(g => {
+        const gAsesorId = typeof g.asesor === 'object' ? g.asesor?._id : g.asesor;
+        return gAsesorId === asesorId;
+      });
+    }
+
+    // Reset nombreGrupo si el grupo seleccionado ya no está en la lista filtrada
+    const currentGrupoId = this.hojaControlIndForm.get('nombreGrupo')?.value;
+    if (currentGrupoId && !this.gruposFiltradosPorAsesor.find(g => g._id === currentGrupoId)) {
+      this.hojaControlIndForm.get('nombreGrupo')?.setValue('');
+    }
   }
 
   // --- HELPERS PARA OBTENER ÚLTIMO CRÉDITO Y CICLO ---
@@ -368,6 +392,18 @@ export class AdminHojaControlInd implements OnInit {
         this.creditosTotales = res?.creditos || res || [];
       },
       error: (err) => console.error('Error al cargar créditos:', err)
+    });
+  }
+
+  cargarGrupos(): void {
+    this.grupoService.getGrupos().subscribe({
+      next: (data: any) => {
+        this.gruposActivos = Array.isArray(data?.grupos || data) ? (data.grupos || data) : [];
+        const currentAsesor = this.hojaControlIndForm.get('asesor')?.value;
+        this.filtrarGruposPorAsesor(currentAsesor);
+        this.cdr.detectChanges();
+      },
+      error: (err) => console.error('Error al cargar grupos:', err)
     });
   }
 

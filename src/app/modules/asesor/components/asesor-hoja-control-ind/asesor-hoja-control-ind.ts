@@ -391,6 +391,14 @@ export class AsesorHojaControlInd implements OnInit {
               <input type="number" id="montoTarjeta" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="0" min="0">
             </div>
           </div>
+          ${semanaActual >= ((this.creditoActivo.semanas || 16) - 1) ? `
+          <div class="flex items-center space-x-3 bg-purple-50 p-2 rounded-lg border border-purple-100 mt-2">
+            <label class="flex items-center cursor-pointer w-full justify-center py-1">
+              <input type="checkbox" id="aplicaGarantia" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
+              <span class="ml-2 text-xs font-bold text-purple-700 uppercase tracking-widest">Aplicar Garantía para Liquidar</span>
+            </label>
+          </div>
+          ` : ''}
         </div>
       `,
       showCancelButton: true,
@@ -417,6 +425,8 @@ export class AsesorHojaControlInd implements OnInit {
         const valTr = parseFloat((document.getElementById('montoTransferencia') as HTMLInputElement).value) || 0;
         const valDe = parseFloat((document.getElementById('montoDeposito') as HTMLInputElement).value) || 0;
         const valTa = parseFloat((document.getElementById('montoTarjeta') as HTMLInputElement).value) || 0;
+        const chkGarantia = document.getElementById('aplicaGarantia') as HTMLInputElement;
+        const aplicaGarantia = chkGarantia ? chkGarantia.checked : false;
 
         if (valRecibo <= 0) {
           Swal.showValidationMessage('Ingresa un número de recibo válido');
@@ -424,8 +434,8 @@ export class AsesorHojaControlInd implements OnInit {
         }
 
         const monto = valEf + valTr + valDe + valTa;
-        if (monto <= 0) {
-          Swal.showValidationMessage('Ingresa un monto válido mayor a 0 en algún método');
+        if (monto <= 0 && !aplicaGarantia) {
+          Swal.showValidationMessage('Ingresa un monto válido mayor a 0 o aplica garantía');
           return false;
         }
 
@@ -447,7 +457,8 @@ export class AsesorHojaControlInd implements OnInit {
           depositoCredito: valDe,
           tarjetaCredito: valTa,
           numeroRecibo: valRecibo,
-          numeroPago: semanaActual
+          numeroPago: semanaActual,
+          aplicaGarantia: aplicaGarantia
         };
       }
     }).then((result) => {

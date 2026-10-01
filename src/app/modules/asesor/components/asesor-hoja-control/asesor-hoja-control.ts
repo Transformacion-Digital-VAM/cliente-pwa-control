@@ -280,7 +280,8 @@ export class AsesorHojaControl implements OnInit {
         metodoSolidario: '',
         selectedMetodosPago: [],
         selectedMetodosAhorro: [],
-        selectedMetodosSolidario: []
+        selectedMetodosSolidario: [],
+        aplicaGarantia: false
       };
 
       this.pagos[m._id].monto = 0;
@@ -314,6 +315,10 @@ export class AsesorHojaControl implements OnInit {
       m.creditoTotal = credito.saldoTotal || 0;
       m.creditoPendiente = credito.saldoPendiente || 0;
       m.tipoCredito = credito.tipoCredito || 'CC';
+      m.semanaActual = credito.semanaActual || 1;
+      m.semanas = credito.semanas || 16;
+      m.estadoCredito = credito.estado;
+      m.liquidadoConGarantia = credito.liquidadoConGarantia;
 
       m.totalPagado = (credito.pagos || []).reduce((sum: number, p: any) => {
         if (p.recuperacionSolidario) return sum;

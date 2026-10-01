@@ -48,6 +48,10 @@ export class AdminHome implements OnInit {
   selectedAsesorId: string = 'todos';
   activeTab: 'grupos' | 'individuales' = 'grupos';
 
+  // Paginación
+  currentPage: number = 1;
+  itemsPerPage: number = 30;
+
   userRole: string = '';
   userCoordinacion: string = '';
 
@@ -396,6 +400,7 @@ export class AdminHome implements OnInit {
   }
 
   aplicarFiltros() {
+    this.currentPage = 1;
     const targetTipo = this.activeTab === 'grupos' ? 'GRUPO' : 'INDIVIDUAL';
     const filterCoord = this.selectedCoordinacionId !== 'todas';
     const filterAsesor = this.selectedAsesorId !== 'todos';
@@ -487,6 +492,22 @@ export class AdminHome implements OnInit {
   toggleGroup(groupId: string) {
     this.expandedGroups[groupId] = !this.expandedGroups[groupId];
     this.cdr.markForCheck();
+  }
+
+  get totalPages(): number {
+    return Math.ceil(this.elementosFiltrados.length / this.itemsPerPage) || 1;
+  }
+
+  get elementosPaginados(): any[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.elementosFiltrados.slice(start, start + this.itemsPerPage);
+  }
+
+  cambiarPagina(page: number) {
+    if (page >= 1 && page <= this.totalPages) {
+      this.currentPage = page;
+      this.cdr.markForCheck();
+    }
   }
 
   limpiarFiltros() {
