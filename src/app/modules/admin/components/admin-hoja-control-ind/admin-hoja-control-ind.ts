@@ -26,6 +26,7 @@ export class AdminHojaControlInd implements OnInit {
 
   // Control de UI
   showClienteSuggestions: boolean = false;
+  isAdmin: boolean = false;
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -54,12 +55,16 @@ export class AdminHojaControlInd implements OnInit {
       horarioAtencion: [''],
       pagoPactado: [0, [Validators.required, Validators.min(0)]],
       nombreGrupo: [''],
-      semanas: [16]
+      semanas: [16],
+      estadoGrupo: ['CC', Validators.required]
     });
   }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
+      const role = localStorage.getItem('userRole') || '';
+      this.isAdmin = role === 'admin' || role === 'superadmin' || role === 'master';
+      
       this.cargarAsesores();
       this.cargarClientes();
       this.cargarCreditos();
@@ -94,6 +99,128 @@ export class AdminHojaControlInd implements OnInit {
   getCicloCliente(cliente: any): number {
     const ultimo = this.getUltimoCreditoCliente(cliente);
     return ultimo?.ciclo || 1;
+  }
+
+  getUltimoCreditoActivoCliente(clienteId: string): any {
+    const cliente = this.clientesTotales.find(c => c._id === clienteId);
+    if (!cliente) return null;
+    const creditosCliente = this.creditosTotales.filter((c: any) => {
+      const cClienteId = typeof c.cliente === 'object' ? c.cliente?._id : c.cliente;
+      return cClienteId === cliente._id;
+    });
+    if (creditosCliente.length > 0) {
+      const ordenados = [...creditosCliente].sort((a: any, b: any) => (b.ciclo || 0) - (a.ciclo || 0));
+      const noLiquidado = ordenados.find(c => c.estado !== 'Liquidado' && c.estado !== 'Cancelado');
+      if (noLiquidado) return noLiquidado;
+      
+      const masReciente = ordenados[0];
+      if (masReciente && this.calcularSaldoPendienteCredito(masReciente) > 0) {
+        return masReciente;
+      }
+    }
+    return null;
+  }
+
+  calcularSaldoPendienteCredito(credito: any): number {
+    if (!credito) return 0;
+    const st = credito.saldoTotal || 0;
+    const tp = (credito.pagos || []).reduce((acc: number, p: any) => acc + (p.montoPagado || 0) + (p.montoSolidario || 0), 0);
+    return Math.max(0, st - tp);
+  }
+
+  abrirModalCancelarCreditoDesdeHoja(clienteId: string, nombreCompleto: string): void {
+    const credito = this.getUltimoCreditoActivoCliente(clienteId);
+    if (!credito?._id) {
+      Swal.fire('Sin adeudo', 'Este cliente no tiene créditos activos con saldo pendiente por saldar.', 'info');
+      return;
+    }
+
+    const saldo = this.calcularSaldoPendienteCredito(credito);
+
+    Swal.fire({
+      title: 'Cancelar Crédito por Justificación',
+      html: `
+        <div class="text-left text-sm space-y-3">
+          <p class="text-slate-700">Vas a saldar a <strong class="text-emerald-700">$0.00</strong> el crédito previo de:<br><strong class="text-blue-700 text-base">${nombreCompleto}</strong></p>
+          <div class="bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+            <p class="text-xs text-amber-800 font-bold uppercase tracking-wide">Saldo pendiente anterior a liquidar:</p>
+            <p class="text-lg font-black text-red-600 font-mono">$${Number(saldo).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+          </div>
+          
+          <div class="mt-3">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Motivo de Justificación *</label>
+            <select id="swal-motivo-hoja" class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm font-semibold text-slate-800 outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100">
+              <option value="CANCELACION_REFILL">Cancelación por Refill</option>
+              <option value="CAMBIO_CICLO">Cancelación por Cambio de Ciclo</option>
+              <option value="OTRO">Otro ajuste justificado</option>
+            </select>
+          </div>
+
+          <div class="mt-2">
+            <label class="block text-xs font-bold text-slate-700 uppercase mb-1">Nota adicional (opcional)</label>
+            <input id="swal-notas-hoja" type="text" placeholder="Ej. El saldo remanente se incluyó en nuevo crédito..." class="w-full bg-slate-50 border border-slate-300 rounded-xl p-2.5 text-sm outline-none focus:border-blue-600 focus:bg-white focus:ring-2 focus:ring-blue-100">
+          </div>
+          
+          <p class="text-[11px] text-slate-500 mt-2 italic">
+            * El crédito anterior pasará a estado Liquidado con saldo $0. El historial de pagos previos se mantendrá para auditoría.
+          </p>
+        </div>
+      `,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Sí, saldar y justificar',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#d97706',
+      cancelButtonColor: '#64748b',
+      preConfirm: () => {
+        const selectEl = document.getElementById('swal-motivo-hoja') as HTMLSelectElement;
+        const inputEl = document.getElementById('swal-notas-hoja') as HTMLInputElement;
+        const motivo = selectEl ? selectEl.value : 'CANCELACION_REFILL';
+        const notas = inputEl ? inputEl.value.trim() : '';
+        return { motivo, notas };
+      }
+    }).then((result) => {
+      if (result.isConfirmed && result.value) {
+        const { motivo, notas } = result.value;
+        const justificacion = motivo === 'CAMBIO_CICLO'
+          ? 'Cancelación por Cambio de Ciclo'
+          : (motivo === 'CANCELACION_REFILL' ? 'Cancelación por Refill' : 'Ajuste Justificado');
+
+        Swal.fire({
+          title: 'Procesando...',
+          text: 'Saldando crédito con justificación...',
+          allowOutsideClick: false,
+          didOpen: () => Swal.showLoading()
+        });
+
+        this.grupoService.cancelarCreditoJustificado(credito._id, { motivo, justificacion, notas }).subscribe({
+          next: () => {
+            // Actualizar localmente el crédito
+            credito.saldoPendiente = 0;
+            credito.estado = 'Liquidado';
+            credito.motivoCancelacion = motivo;
+            credito.justificacionCancelacion = notas ? `${justificacion}: ${notas}` : justificacion;
+
+            Swal.fire({
+              icon: 'success',
+              title: 'Crédito Anterior Saldado a $0',
+              text: 'El crédito anterior ha sido cerrado en $0. Ya puedes continuar con el registro del nuevo crédito.',
+              confirmButtonColor: '#2563eb'
+            });
+            this.cargarCreditos(); // recargar listado de creditos
+          },
+          error: (err: any) => {
+            console.error('Error al cancelar crédito justificado', err);
+            Swal.fire({
+              icon: 'error',
+              title: 'Error',
+              text: err?.error?.msg || 'No se pudo procesar la cancelación justificada.',
+              confirmButtonColor: '#ef4444'
+            });
+          }
+        });
+      }
+    });
   }
 
   // --- LÓGICA DE FILTRADO Y SELECCIÓN ---
@@ -285,7 +412,8 @@ export class AdminHojaControlInd implements OnInit {
       diaPago: 'Lunes',
       horaVisita: '',
       horarioAtencion: '',
-      porcentajeGarantia: 10
+      porcentajeGarantia: 10,
+      estadoGrupo: 'CC'
     });
     this.clientesFiltrados = [];
   }

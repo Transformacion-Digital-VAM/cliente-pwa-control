@@ -63,6 +63,7 @@ export class ClienteService {
           equivalenciaMeses: payload.equivalenciaMeses,
           garantiaPredial: payload.garantiaPredial,
           grupoOpcional: payload.nombreGrupo,
+          estadoGrupo: payload.estadoGrupo,
           frecuenciaPago: payload.tipoPago
         };
 
