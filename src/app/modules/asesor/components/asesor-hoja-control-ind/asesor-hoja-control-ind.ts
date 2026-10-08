@@ -181,6 +181,15 @@ export class AsesorHojaControlInd implements OnInit {
     return grupos;
   }
 
+  /** Garantía disponible del crédito activo (campo `garantia` del crédito) */
+  get montoGarantia(): number {
+    const g = this.creditoActivo?.garantia;
+    if (g === null || g === undefined) return 0;
+    // Compatibilidad: algunos registros antiguos pueden guardar la garantía como objeto
+    if (typeof g === 'object') return Number(g.montoCalculado ?? g.monto ?? 0) || 0;
+    return Number(g) || 0;
+  }
+
   /** Historial de pagos con pagos consolidados por recibo */
   get pagosHistorial(): any[] {
     if (!this.creditoActivo || !this.creditoActivo.pagos) return [];
@@ -205,9 +214,49 @@ export class AsesorHojaControlInd implements OnInit {
       .reduce((sum: number, pago: any) => sum + (pago.montoPagado || 0), 0);
   }
 
+  /** Garantía aplicada hoy para liquidar (no es dinero recibido) */
+  get montoGarantiaHoy(): number {
+    if (!this.creditoActivo || !this.creditoActivo.pagos) return 0;
+    const hoyStr = this.hoy.toISOString().split('T')[0];
+    return this.creditoActivo.pagos
+      .filter((pago: any) => pago.fechaPago && pago.fechaPago.startsWith(hoyStr))
+      .reduce((sum: number, pago: any) => sum + (pago.montoGarantia || 0), 0);
+  }
+
+  /** El crédito ya no tiene saldo (liquidado con dinero y/o garantía) */
+  get estaLiquidado(): boolean {
+    if (!this.creditoActivo) return false;
+    return this.creditoActivo.estado === 'Liquidado' || (Number(this.creditoActivo.saldoPendiente) || 0) <= 0;
+  }
+
+  /** Total aplicado al crédito: dinero + garantía aplicada */
   get totalPagadoHistorico(): number {
     if (!this.creditoActivo || !this.creditoActivo.pagos) return 0;
-    return this.creditoActivo.pagos.reduce((sum: number, p: any) => sum + (p.montoPagado || 0), 0);
+    return this.creditoActivo.pagos.reduce((sum: number, p: any) => sum + (p.montoPagado || 0) + (p.montoGarantia || 0), 0);
+  }
+
+  /** Determina si el crédito activo es un Refill (inicia en semanas 9 a 16) */
+  get esRefill(): boolean {
+    if (!this.creditoActivo) return false;
+    const c = this.creditoActivo;
+    if (c.esRefill === true || c.esRefill === 'true') return true;
+    if (c.tipoCredito === 'R' || c.estadoGrupo === 'R') return true;
+    if (typeof c.grupoOpcional === 'string' && /refi/i.test(c.grupoOpcional)) return true;
+    // Si la duración pactada es de 8 semanas pero la semana actual está entre 9 y 16
+    if (c.semanas === 8 && this.semanaActual >= 9) return true;
+    // Si todos los pagos registrados son de la semana 9 en adelante
+    const pagos = c.pagos || [];
+    if (pagos.length > 0 && pagos.every((p: any) => (p.numeroPago || 0) >= 9)) return true;
+    return false;
+  }
+
+  /** Semana de inicio del crédito: 9 para Refills (semanas 9 a 16), o 1 para créditos regulares */
+  get semanaInicio(): number {
+    if (!this.creditoActivo) return 1;
+    if (this.esRefill) {
+      return 9;
+    }
+    return 1;
   }
 
   get semanaActual(): number {
@@ -215,14 +264,16 @@ export class AsesorHojaControlInd implements OnInit {
   }
 
   get semanasIncompletas(): { numero: number; pagado: number; falta: number }[] {
-    if (!this.creditoActivo || !this.creditoActivo.pagos) return [];
+    if (!this.creditoActivo || !this.creditoActivo.pagos || this.estaLiquidado) return [];
     const pactado = this.creditoActivo.pagoPactado || 0;
     const semanaActualNum = this.semanaActual;
+    const semanaInicio = this.semanaInicio;
     const incompletas: { numero: number; pagado: number; falta: number }[] = [];
 
     let dineroDisponible = this.totalPagadoHistorico;
 
-    for (let s = 1; s < semanaActualNum; s++) {
+    // Se evalúa únicamente desde la semana de inicio del crédito (ej. sem 9 para Refill, o sem 1)
+    for (let s = semanaInicio; s < semanaActualNum; s++) {
       const pagadoParaEstaSemana = Math.min(dineroDisponible, pactado);
       const faltaEstaSemana = Math.max(0, pactado - pagadoParaEstaSemana);
       dineroDisponible = Math.max(0, dineroDisponible - pagadoParaEstaSemana);
@@ -239,6 +290,7 @@ export class AsesorHojaControlInd implements OnInit {
   }
 
   get totalDeudaAtrasada(): number {
+    if (this.estaLiquidado) return 0;
     return this.semanasIncompletas.reduce((sum, item) => sum + item.falta, 0);
   }
 
@@ -246,19 +298,24 @@ export class AsesorHojaControlInd implements OnInit {
     if (!this.creditoActivo || !this.creditoActivo.pagos) return 0;
     const pactado = this.creditoActivo.pagoPactado || 0;
     const semanaActualNum = this.semanaActual;
-    // Dinero requerido para cubrir semanas anteriores completas (1 a semanaActual - 1)
-    const dineroParaAnteriores = (semanaActualNum - 1) * pactado;
+    const semanaInicio = this.semanaInicio;
+    // Semanas previas transcurridas que efectivamente corresponden a este crédito
+    const semanasPreviasExigibles = Math.max(0, semanaActualNum - semanaInicio);
+    const dineroParaAnteriores = semanasPreviasExigibles * pactado;
     const dineroParaActualYFuturo = Math.max(0, this.totalPagadoHistorico - dineroParaAnteriores);
     return Math.min(pactado, dineroParaActualYFuturo);
   }
 
   get faltaSemanaActual(): number {
+    if (this.estaLiquidado) return 0;
     const pactado = this.creditoActivo?.pagoPactado || 0;
-    return Math.max(0, pactado - this.abonadoSemanaActual);
+    // Nunca pedir más de lo que realmente se debe del crédito
+    const saldo = Number(this.creditoActivo?.saldoPendiente) || 0;
+    return Math.min(saldo, Math.max(0, pactado - this.abonadoSemanaActual));
   }
 
   get tienePagoHoy(): boolean {
-    return this.faltaSemanaActual === 0 && this.totalDeudaAtrasada === 0 && this.montoAbonadoHoy > 0;
+    return !this.estaLiquidado && this.faltaSemanaActual === 0 && this.totalDeudaAtrasada === 0 && this.montoAbonadoHoy > 0;
   }
 
   get textoBotonRegistrar(): string {
@@ -391,11 +448,12 @@ export class AsesorHojaControlInd implements OnInit {
               <input type="number" id="montoTarjeta" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="0" min="0">
             </div>
           </div>
-          ${semanaActual >= ((this.creditoActivo.semanas || 16) - 1) ? `
+          ${semanaActual >= (((this.esRefill || this.semanaInicio >= 9) ? 16 : (this.creditoActivo.semanas || 16)) - 1) ? `
           <div class="flex items-center space-x-3 bg-purple-50 p-2 rounded-lg border border-purple-100 mt-2">
             <label class="flex items-center cursor-pointer w-full justify-center py-1">
               <input type="checkbox" id="aplicaGarantia" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
               <span class="ml-2 text-xs font-bold text-purple-700 uppercase tracking-widest">Aplicar Garantía para Liquidar</span>
+              <span class="ml-2 text-xs font-black text-purple-900 bg-purple-100 border border-purple-200 rounded-full px-2 py-0.5">$${this.montoGarantia.toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
             </label>
           </div>
           ` : ''}
@@ -492,7 +550,9 @@ export class AsesorHojaControlInd implements OnInit {
         const isOffline = res.offline;
         const message = isOffline
           ? 'El pago se ha guardado localmente (Sin internet) y se subirá automáticamente.'
-          : 'Se abonaron $' + pagoData.montoPagado + ' correctamente.';
+          : (pagoData.aplicaGarantia && res?.msg)
+            ? res.msg
+            : 'Se abonaron $' + pagoData.montoPagado + ' correctamente.';
         Swal.fire({
           icon: 'success',
           title: isOffline ? 'Guardado Local' : '¡Pago Registrado!',

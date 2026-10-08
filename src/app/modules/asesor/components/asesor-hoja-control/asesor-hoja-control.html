@@ -55,15 +55,10 @@
 
     <div class="px-1 mb-4">
       <div class="bg-white p-1.5 rounded-2xl shadow-sm border border-slate-100 flex space-x-1">
-        <button (click)="cambiarTab('COMUNAL')"
-          [class]="currentTab === 'COMUNAL' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
+        <button (click)="cambiarTab('COMUNAL_REFIL')"
+          [class]="currentTab === 'COMUNAL_REFIL' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
           class="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200">
-          Comunal
-        </button>
-        <button (click)="cambiarTab('REFIL')"
-          [class]="currentTab === 'REFIL' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
-          class="flex-1 py-2.5 rounded-xl text-[11px] font-black uppercase tracking-wider transition-all duration-200">
-          Refil
+          Comunal / Refil
         </button>
         <button (click)="cambiarTab('MAGICO')"
           [class]="currentTab === 'MAGICO' ? 'bg-blue-600 text-white shadow-md' : 'text-slate-500 hover:bg-slate-50'"
@@ -118,10 +113,27 @@
       <h3 class="text-xs font-black text-slate-500 uppercase tracking-wider">Control por Integrante</h3>
       <span class="h-1.5 w-1.5 bg-emerald-500 rounded-full animate-pulse"></span>
     </div>
+    <!-- ACCORDION (SOLO PARA COMUNAL_REFIL) -->
+    @if (currentTab === 'COMUNAL_REFIL') {
+    <div class="px-1 mt-2 mb-4">
+      <div class="flex space-x-2 bg-indigo-50/50 p-1 rounded-xl">
+        <button (click)="accordionState = 'CC'; expandedMiembroId = null;"
+          [class]="accordionState === 'CC' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-transparent text-indigo-600 hover:bg-indigo-100'"
+          class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200">
+          Comunal (CC)
+        </button>
+        <button (click)="accordionState = 'R'; expandedMiembroId = null;"
+          [class]="accordionState === 'R' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-transparent text-indigo-600 hover:bg-indigo-100'"
+          class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200">
+          Refil (R)
+        </button>
+      </div>
+    </div>
+    }
+
     <!-- TARJETAS DE INTEGRANTES -->
     <div class="space-y-3">
-      <!-- @for (miembro of miembros; track miembro._id; let i = $index) { -->
-      @for (miembro of miembrosFiltrados; track miembro._id; let i = $index) {
+      @for (miembro of miembrosParaMostrar; track miembro._id; let i = $index) {
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden"
         [class.ring-2]="expandedMiembroId === miembro._id" [class.ring-blue-500]="expandedMiembroId === miembro._id"
         [class.opacity-60]="miembro.yaPagoHoy">
@@ -446,6 +458,18 @@
       <div class="px-4 py-1.5 rounded-full text-[10px] font-black bg-purple-100 text-purple-700 shadow-sm border border-purple-200 animate-in fade-in slide-in-from-top-2">
         <span class="tracking-wide uppercase">Solidario-Devuelto: +${{ totalDevuelto | number:'1.2-2' }}</span>
       </div>
+      }
+
+      @if (totalAhorrosRegistrados > 0) {
+        <div class="px-4 py-1.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-700 shadow-sm border border-emerald-200 animate-in fade-in slide-in-from-top-2">
+          <span class="tracking-wide uppercase">Ahorros Registrados: +${{ totalAhorrosRegistrados | number:'1.2-2' }}</span>
+        </div>
+      }
+
+      @if (totalSolidarioRegistrados > 0) {
+        <div class="px-4 py-1.5 rounded-full text-[10px] font-black bg-orange-100 text-orange-700 shadow-sm border border-orange-200 animate-in fade-in slide-in-from-top-2">
+          <span class="tracking-wide uppercase">Solidario Registrado: +${{ totalSolidarioRegistrados | number:'1.2-2' }}</span>
+        </div>
       }
 
       <button type="button" (click)="guardarPagos()" style="pointer-events: auto;"

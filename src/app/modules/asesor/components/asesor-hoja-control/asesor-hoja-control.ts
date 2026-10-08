@@ -9,7 +9,7 @@ import { AuthService } from '../../../../core/services/auth.service';
 import { LocationService } from '../../../../core/services/location.service';
 
 // Tipo para las pestañas
-type TabTipo = 'COMUNAL' | 'REFIL' | 'MAGICO';
+type TabTipo = 'COMUNAL_REFIL' | 'MAGICO';
 
 @Component({
   selector: 'app-asesor-hoja-control',
@@ -32,10 +32,11 @@ export class AsesorHojaControl implements OnInit {
   semanaActualGrupo: string = '-';
   pagos: { [miembroId: string]: any } = {};
   expandedMiembroId: string | null = null;
+  accordionState: 'CC' | 'R' = 'CC';
   showAhorroModal: boolean = false;
   showPagosModal: boolean = false;
-  currentTab: TabTipo = 'COMUNAL';
-  numeroRecibos = { COMUNAL: '', REFIL: '', MAGICO: '' };
+  currentTab: TabTipo = 'COMUNAL_REFIL';
+  numeroRecibos: any = { COMUNAL_REFIL: '', MAGICO: '' };
   todosLosCreditos: any[] = [];
   miembrosFiltradosList: any[] = [];
 
@@ -84,12 +85,22 @@ export class AsesorHojaControl implements OnInit {
 
   // Define un mapeo para normalizar los nombres de los tabs con tus datos en MongoDB
   private readonly MAP_TABS = {
-    'COMUNAL': 'COMUNAL',
-    'REFIL': 'REFILL', // Asegúrate que coincida con cómo lo guardas (ej. 'REFILL')
+    'COMUNAL_REFIL': 'COMUNAL_REFIL',
     'MAGICO': 'MAGICO'
   };
 
   get miembrosFiltrados() {
+    return this.miembrosFiltradosList;
+  }
+
+  get miembrosParaMostrar(): any[] {
+    if (this.currentTab === 'COMUNAL_REFIL') {
+      if (this.accordionState === 'CC') {
+        return this.miembrosFiltradosList.filter(m => m.tipoCredito === 'CC' || m.tipoCredito === '8S');
+      } else {
+        return this.miembrosFiltradosList.filter(m => m.tipoCredito === 'R');
+      }
+    }
     return this.miembrosFiltradosList;
   }
 
@@ -99,13 +110,13 @@ export class AsesorHojaControl implements OnInit {
       return;
     }
 
-    const targetTipos = this.currentTab === 'COMUNAL' ? ['CC', '8S'] : (this.currentTab === 'REFIL' ? ['R'] : ['MAGICO']);
+    const targetTipos = this.currentTab === 'COMUNAL_REFIL' ? ['CC', '8S', 'R'] : ['MAGICO'];
 
     this.miembrosFiltradosList = this.miembros
       .map(m => {
         const creditosMiembro = this.todosLosCreditos.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
-        const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') || 
-                        creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito));
+        const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') ||
+          creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito));
 
         if (credito) {
           const mCopy = { ...m };
@@ -121,6 +132,9 @@ export class AsesorHojaControl implements OnInit {
   cambiarTab(nuevaTab: TabTipo) {
     this.currentTab = nuevaTab;
     this.expandedMiembroId = null;
+    if (nuevaTab === 'COMUNAL_REFIL') {
+      this.accordionState = 'CC';
+    }
 
     // Reset payments to prevent carrying over to the other tab
     this.miembros.forEach(m => {
@@ -187,6 +201,20 @@ export class AsesorHojaControl implements OnInit {
       // Todo el dinero físico recibido: normal + apoyo + recuperacion
       const recuperacion = (p?.recuperacionSolidario) ? (Number(p?.montoRecuperacion) || 0) : 0;
       return sum + (Number(p?.monto) || 0) + (Number(p?.montoSolidario) || 0) + recuperacion;
+    }, 0);
+  }
+
+  get totalAhorrosRegistrados(): number {
+    return this.miembrosFiltrados.reduce((sum, m) => {
+      const p = this.pagos[m._id];
+      return sum + (Number(p?.ahorro) || 0);
+    }, 0);
+  }
+
+  get totalSolidarioRegistrados(): number {
+    return this.miembrosFiltrados.reduce((sum, m) => {
+      const p = this.pagos[m._id];
+      return sum + (Number(p?.montoSolidario) || 0);
     }, 0);
   }
 
@@ -333,7 +361,6 @@ export class AsesorHojaControl implements OnInit {
         return sum + pagado;
       }, 0);
       m.pagoPactado = credito.pagoPactado || m.pagoPactado || 0;
-      m.ahorroTotal = credito.ahorro?.montoTotal || 0;
 
       // El historial de ahorros (Garantía) se compone de dos fuentes:
       // 1. Movimientos independientes en ahorro.pagosAhorro
@@ -356,6 +383,7 @@ export class AsesorHojaControl implements OnInit {
       );
 
       m.pagosAhorro = totalMovements;
+      m.ahorroTotal = totalMovements.reduce((sum, p) => sum + (Number(p.monto) || 0), 0);
 
       m.historialSolidario = false;
       if (credito.pagos && credito.pagos.length > 0) {
@@ -446,8 +474,7 @@ export class AsesorHojaControl implements OnInit {
         m.folioHoy = ultimoPago.numeroRecibo || 'Sin Folio';
 
         const tipo = m.tipoCredito?.toUpperCase();
-        if (tipo === 'CC' && !this.numeroRecibos['COMUNAL']) this.numeroRecibos['COMUNAL'] = ultimoPago.numeroRecibo || '';
-        if (tipo === 'R' && !this.numeroRecibos['REFIL']) this.numeroRecibos['REFIL'] = ultimoPago.numeroRecibo || '';
+        if ((tipo === 'CC' || tipo === 'R' || tipo === '8S') && !this.numeroRecibos['COMUNAL_REFIL']) this.numeroRecibos['COMUNAL_REFIL'] = ultimoPago.numeroRecibo || '';
         if (tipo === 'MAGICO' && !this.numeroRecibos['MAGICO']) this.numeroRecibos['MAGICO'] = ultimoPago.numeroRecibo || '';
       } else {
         m.folioHoy = null;
@@ -669,8 +696,7 @@ export class AsesorHojaControl implements OnInit {
           if (pago.numeroRecibo === numRecibo) {
             const esMismoDia = pago.fechaPago && pago.fechaPago.startsWith(todayStr);
             let esMismoTipo = false;
-            if (this.currentTab === 'COMUNAL' && (m.tipoCredito === 'CC' || m.tipoCredito === '8S')) esMismoTipo = true;
-            if (this.currentTab === 'REFIL' && m.tipoCredito === 'R') esMismoTipo = true;
+            if (this.currentTab === 'COMUNAL_REFIL' && (m.tipoCredito === 'CC' || m.tipoCredito === '8S' || m.tipoCredito === 'R')) esMismoTipo = true;
             if (this.currentTab === 'MAGICO' && m.tipoCredito === 'MAGICO') esMismoTipo = true;
 
             if (!esMismoDia || !esMismoTipo) {
