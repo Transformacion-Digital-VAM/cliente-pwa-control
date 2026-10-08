@@ -184,9 +184,20 @@
 </section>
         <!-- SECCIÓN: Montos -->
         <section class="space-y-6">
-          <div class="flex items-center space-x-3 border-b border-slate-200 pb-3">
-            <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
-            <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Montos y Garantía</h3>
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
+            <div class="flex items-center space-x-3">
+              <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
+              <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Montos y Garantía</h3>
+            </div>
+            
+            <button *ngIf="ultimoCredito && ultimoCredito.estado === 'Activo' && ultimoCredito.saldoPendiente > 0" 
+              type="button" (click)="abrirModalCancelarCredito()" title="Liquidar por Refill o Cambio de Ciclo"
+              class="w-full sm:w-auto px-5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg transition-all text-xs font-bold uppercase tracking-wide shadow-sm active:scale-[0.98] flex items-center justify-center">
+              <svg class="w-4 h-4 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+              </svg>
+              Liquidar CC / R
+            </button>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">

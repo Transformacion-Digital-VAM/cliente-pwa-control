@@ -628,22 +628,72 @@ export class AdminHome implements OnInit {
     }
   }
 
-  descargarInfoIndividual(cliente: any, event: Event) {
+  async descargarInfoIndividual(cliente: any, event: Event) {
     event.stopPropagation();
-
     const ciclo = this.getCicloActualCliente(cliente);
 
-    const url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
-    window.open(url, '_blank');
+    const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
+      title: 'Hoja de Control Individual',
+      text: 'Selecciona cómo deseas imprimir la hoja:',
+      input: 'select',
+      inputOptions: {
+        'completa': 'Completa (Todas las semanas)',
+        '1': 'Semana 1 a 8',
+        '9': 'Semana 9 a 16'
+      },
+      inputPlaceholder: 'Selecciona una opción',
+      showCancelButton: true,
+      confirmButtonText: 'Generar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes seleccionar una opción';
+        }
+        return null;
+      }
+    });
+
+    if (isConfirmed && opcionSeleccionada) {
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
+      if (opcionSeleccionada !== 'completa') {
+        url += `?semanaInicio=${opcionSeleccionada}`;
+      }
+      window.open(url, '_blank');
+    }
   }
 
-  descargarInfoIndividualLlena(cliente: any, event: Event) {
+  async descargarInfoIndividualLlena(cliente: any, event: Event) {
     event.stopPropagation();
-
     const ciclo = this.getCicloActualCliente(cliente);
 
-    const url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
-    window.open(url, '_blank');
+    const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
+      title: 'Hoja de Control Individual (Llena)',
+      text: 'Selecciona cómo deseas imprimir la hoja:',
+      input: 'select',
+      inputOptions: {
+        'completa': 'Completa (Todas las semanas)',
+        '1': 'Semana 1 a 8',
+        '9': 'Semana 9 a 16'
+      },
+      inputPlaceholder: 'Selecciona una opción',
+      showCancelButton: true,
+      confirmButtonText: 'Generar',
+      cancelButtonText: 'Cancelar',
+      inputValidator: (value) => {
+        if (!value) {
+          return 'Debes seleccionar una opción';
+        }
+        return null;
+      }
+    });
+
+    if (isConfirmed && opcionSeleccionada) {
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
+      if (opcionSeleccionada !== 'completa') {
+        url += `&semanaInicio=${opcionSeleccionada}`;
+      }
+      window.open(url, '_blank');
+    }
   }
 
   async vistaPreviaGrupo(grupo: any, event: Event) {
@@ -701,34 +751,51 @@ export class AdminHome implements OnInit {
 
   async vistaPreviaIndividual(cliente: any, event: Event) {
     event.stopPropagation();
-
     const ciclo = this.getCicloActualCliente(cliente);
 
-    const { value: tipo, isConfirmed } = await Swal.fire({
+    const { value: formValues, isConfirmed } = await Swal.fire({
       title: 'Vista Previa Individual',
-      text: 'Selecciona el formato a previsualizar:',
-      input: 'select',
-      inputOptions: {
-        'llena': 'Hoja Llena (con datos)',
-        'vacia': 'Hoja Vacía (en blanco)'
-      },
-      inputPlaceholder: 'Selecciona una opción',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja-ind" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas</label>
+            <select id="swal-rango-semanas-ind" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="completa">Completa (Todas las semanas)</option>
+              <option value="1">Semana 1 a 8</option>
+              <option value="9">Semana 9 a 16</option>
+            </select>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
       showCancelButton: true,
       confirmButtonText: 'Ver Vista Previa',
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#9333ea',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debes seleccionar una opción';
-        }
-        return null;
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja-ind') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas-ind') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
       }
     });
 
-    if (isConfirmed && tipo) {
+    if (isConfirmed && formValues) {
       let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?preview=true`;
-      if (tipo === 'llena') {
+      if (formValues.tipo === 'llena') {
         url += `&llena=true`;
+      }
+      if (formValues.rango !== 'completa') {
+        url += `&semanaInicio=${formValues.rango}`;
       }
       window.open(url, '_blank');
     }
