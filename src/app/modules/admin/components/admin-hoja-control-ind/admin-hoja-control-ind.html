@@ -39,21 +39,9 @@
             </div> -->
 
             <div class="lg:col-span-5 space-y-2">
-              <div class="flex items-center justify-between ml-1 mb-1">
-                <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">
-                  Nombre del Cliente <span class="text-red-500">*</span>
-                </label>
-                <button *ngIf="isAdmin && hojaControlIndForm.get('idCliente')?.value"
-                  type="button"
-                  (click)="abrirModalCancelarCreditoDesdeHoja(hojaControlIndForm.get('idCliente')?.value, hojaControlIndForm.get('nombreCliente')?.value)"
-                  title="Cancelar crédito anterior con justificación (Refill / Cambio de Ciclo)"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-[10px] font-bold transition-all shadow-xs whitespace-nowrap">
-                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                  </svg>
-                  <span>Liquidar por R/CC</span>
-                </button>
-              </div>
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide ml-1">
+                Nombre del Cliente <span class="text-red-500">*</span>
+              </label>
               <div class="relative">
                 <input type="text" formControlName="nombreCliente" (input)="onSearchCliente($event)"
                   (focus)="showClienteSuggestions = true" (blur)="hideClienteSuggestions()" autocomplete="off"
@@ -142,25 +130,6 @@
           <option value="Quincenal">Quincenal</option>
           <option value="Catorcenal">Catorcenal</option>
           <option value="Mensual">Mensual</option>
-        </select>
-        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </div>
-      </div>
-    </div>
-
-    <!-- Estado Crédito -->
-    <div class="space-y-1">
-      <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Estado Crédito <span
-          class="text-red-500">*</span></label>
-      <div class="relative">
-        <select formControlName="estadoGrupo"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
-          <option value="CC">CC</option>
-          <option value="R">R</option>
-          <option value="8S">8S</option>
         </select>
         <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
           <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
