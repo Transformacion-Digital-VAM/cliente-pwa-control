@@ -299,7 +299,7 @@ export class AsesorHome implements OnInit, OnDestroy {
             const userObj = JSON.parse(userStr);
             currentUserId = String(userObj?.id || userObj?._id || '').trim();
             currentUsername = String(userObj?.username || '').trim().toLowerCase();
-          } catch (e) {}
+          } catch (e) { }
         }
 
         const matchAsesor = (item: any) => {

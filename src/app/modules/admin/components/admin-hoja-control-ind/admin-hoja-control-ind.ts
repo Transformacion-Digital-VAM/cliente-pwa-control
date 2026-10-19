@@ -20,6 +20,7 @@ export class AdminHojaControlInd implements OnInit {
 
   // Datos para listas y filtros
   asesores: any[] = [];
+  todosLosAsesores: any[] = [];
   clientesTotales: any[] = [];
   clientesFiltrados: any[] = [];
   creditosTotales: any[] = [];
@@ -58,6 +59,7 @@ export class AdminHojaControlInd implements OnInit {
       horarioAtencion: [''],
       pagoPactado: [0, [Validators.required, Validators.min(0)]],
       nombreGrupo: [''],
+      estadoGrupo: ['CC', Validators.required],
       semanas: [16]
     });
   }
@@ -83,21 +85,90 @@ export class AdminHojaControlInd implements OnInit {
     this.hojaControlIndForm.get('asesor')?.valueChanges.subscribe(asesorId => {
       this.filtrarGruposPorAsesor(asesorId);
     });
+
+    this.hojaControlIndForm.get('nombreGrupo')?.valueChanges.subscribe(grupoId => {
+      if (grupoId) {
+        const grp = this.gruposActivos.find(g => g._id === grupoId);
+        if (grp?.estadoGrupo) {
+          this.hojaControlIndForm.get('estadoGrupo')?.setValue(grp.estadoGrupo);
+        }
+      }
+    });
   }
 
   filtrarGruposPorAsesor(asesorId: string) {
     if (!asesorId) {
       this.gruposFiltradosPorAsesor = [];
-    } else {
+      const currentGrupoId = this.hojaControlIndForm.get('nombreGrupo')?.value;
+      if (currentGrupoId) {
+        this.hojaControlIndForm.get('nombreGrupo')?.setValue('');
+      }
+      return;
+    }
+
+    // Buscar el asesor seleccionado para determinar su coordinación
+    const poolAsesores = this.todosLosAsesores.length > 0 ? this.todosLosAsesores : this.asesores;
+    const asesorSeleccionado = poolAsesores.find(a => String(a._id) === String(asesorId));
+
+    const aCoord = asesorSeleccionado?.coordinacion;
+    const coordinacionId = (aCoord && typeof aCoord === 'object')
+      ? String(aCoord._id || aCoord.id || '')
+      : String(aCoord || '');
+
+    if (coordinacionId) {
+      // Identificar todos los asesores pertenecientes a la misma coordinación
+      const asesoresCoordIds = new Set(
+        poolAsesores
+          .filter(a => {
+            const c = a.coordinacion;
+            const cId = (c && typeof c === 'object') ? String(c._id || c.id || '') : String(c || '');
+            return cId && cId === coordinacionId;
+          })
+          .map(a => String(a._id))
+      );
+      asesoresCoordIds.add(String(asesorId));
+
+      // Filtrar grupos por coordinación completa (coordinación directa o vía asesor del grupo)
       this.gruposFiltradosPorAsesor = this.gruposActivos.filter(g => {
-        const gAsesorId = typeof g.asesor === 'object' ? g.asesor?._id : g.asesor;
-        return gAsesorId === asesorId;
+        // 1. Coordinación asignada directamente al grupo
+        const gCoord = g.coordinacion;
+        const gCoordId = (gCoord && typeof gCoord === 'object')
+          ? String(gCoord._id || gCoord.id || '')
+          : String(gCoord || '');
+        if (gCoordId && gCoordId === coordinacionId) {
+          return true;
+        }
+
+        // 2. Asesor del grupo pertenece a la misma coordinación
+        const gAsesorId = typeof g.asesor === 'object' ? String(g.asesor?._id || '') : String(g.asesor || '');
+        if (gAsesorId && asesoresCoordIds.has(gAsesorId)) {
+          return true;
+        }
+
+        const gAsesorCoord = g.asesor?.coordinacion;
+        const gAsesorCoordId = (gAsesorCoord && typeof gAsesorCoord === 'object')
+          ? String(gAsesorCoord._id || gAsesorCoord.id || '')
+          : String(gAsesorCoord || '');
+        if (gAsesorCoordId && gAsesorCoordId === coordinacionId) {
+          return true;
+        }
+
+        return false;
+      });
+    } else {
+      // Fallback si el asesor no tiene coordinación: mostrar los del asesor
+      this.gruposFiltradosPorAsesor = this.gruposActivos.filter(g => {
+        const gAsesorId = typeof g.asesor === 'object' ? String(g.asesor?._id || '') : String(g.asesor || '');
+        return gAsesorId === String(asesorId);
       });
     }
 
-    // Reset nombreGrupo si el grupo seleccionado ya no está en la lista filtrada
+    // Ordenar alfabéticamente
+    this.gruposFiltradosPorAsesor.sort((a, b) => (a.nombre || '').localeCompare(b.nombre || ''));
+
+    // Reset nombreGrupo si el grupo seleccionado ya no pertenece a la lista de la coordinación
     const currentGrupoId = this.hojaControlIndForm.get('nombreGrupo')?.value;
-    if (currentGrupoId && !this.gruposFiltradosPorAsesor.find(g => g._id === currentGrupoId)) {
+    if (currentGrupoId && !this.gruposFiltradosPorAsesor.find(g => String(g._id) === String(currentGrupoId))) {
       this.hojaControlIndForm.get('nombreGrupo')?.setValue('');
     }
   }
@@ -166,6 +237,14 @@ export class AdminHojaControlInd implements OnInit {
     const garantiaPredial = ultimoCredito?.garantiaPredial || '';
     const tipoPago = ultimoCredito?.frecuenciaPago || cliente.tipoPago || 'Semanal';
 
+    let grupoVal = cliente.grupo || ultimoCredito?.grupoOpcional || '';
+    if (grupoVal && !this.gruposActivos.find(g => String(g._id) === String(grupoVal))) {
+      const match = this.gruposActivos.find(g => (g.nombre || '').trim().toUpperCase() === String(grupoVal).trim().toUpperCase());
+      if (match) {
+        grupoVal = match._id;
+      }
+    }
+
     // 2. PARCHEAR VALORES
     this.hojaControlIndForm.patchValue({
       idCliente: cliente._id,
@@ -182,7 +261,8 @@ export class AdminHojaControlInd implements OnInit {
       diaPago: cliente.diaPago || 'Lunes',
       tipoPago: tipoPago,
       horaVisita: cliente.horaVisita || '',
-      nombreGrupo: cliente.grupo || ultimoCredito?.grupoOpcional || ''
+      nombreGrupo: grupoVal,
+      estadoGrupo: ultimoCredito?.estadoGrupo || (ultimoCredito?.tipoCredito && ['CC', 'R', '8S'].includes(ultimoCredito.tipoCredito) ? ultimoCredito.tipoCredito : 'CC')
     });
 
     this.calcularPagoYTotal();
@@ -239,6 +319,7 @@ export class AdminHojaControlInd implements OnInit {
     this.grupoService.getAsesores().subscribe({
       next: (data) => {
         const allAsesores = Array.isArray(data) ? data : [];
+        this.todosLosAsesores = allAsesores;
         if ((userRole === 'master' || userRole === 'superadmin' || userRole === 'coordinador' || userRole === 'ejecutiva') && userCoordinacion) {
           this.asesores = allAsesores.filter((a: any) => {
             const aCoord = a.coordinacion;
@@ -247,6 +328,11 @@ export class AdminHojaControlInd implements OnInit {
           });
         } else {
           this.asesores = allAsesores;
+        }
+
+        const currentAsesor = this.hojaControlIndForm.get('asesor')?.value;
+        if (currentAsesor) {
+          this.filtrarGruposPorAsesor(currentAsesor);
         }
         this.cdr.detectChanges();
       },
@@ -277,7 +363,9 @@ export class AdminHojaControlInd implements OnInit {
       next: (data: any) => {
         this.gruposActivos = Array.isArray(data?.grupos || data) ? (data.grupos || data) : [];
         const currentAsesor = this.hojaControlIndForm.get('asesor')?.value;
-        this.filtrarGruposPorAsesor(currentAsesor);
+        if (currentAsesor) {
+          this.filtrarGruposPorAsesor(currentAsesor);
+        }
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Error al cargar grupos:', err)
@@ -325,8 +413,11 @@ export class AdminHojaControlInd implements OnInit {
       diaPago: 'Lunes',
       horaVisita: '',
       horarioAtencion: '',
-      porcentajeGarantia: 10
+      porcentajeGarantia: 10,
+      nombreGrupo: '',
+      estadoGrupo: 'CC'
     });
+    this.gruposFiltradosPorAsesor = [];
     this.clientesFiltrados = [];
     this.ultimoCredito = null;
     this.clienteSeleccionado = null;

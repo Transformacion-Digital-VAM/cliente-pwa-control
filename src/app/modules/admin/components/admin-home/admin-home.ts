@@ -331,6 +331,9 @@ export class AdminHome implements OnInit {
         for (const item of this.elementosPrincipales) {
           if (item.tipo === 'INDIVIDUAL') {
             item.credito = this.creditoClienteMap.get(String(item._id)) || null;
+            if (item.credito?.estadoGrupo) {
+              item.estadoGrupo = item.credito.estadoGrupo;
+            }
           }
         }
 
@@ -553,20 +556,106 @@ export class AdminHome implements OnInit {
     return 1;
   }
 
+  getSemanasGrupo(grupo: any, ciclo?: number): number {
+    if (!grupo) return 16;
+    const cicloABuscar = ciclo || this.getCicloActualGrupo(grupo);
+    const semanasEncontradas: number[] = [];
+
+    if (grupo.integrantes && Array.isArray(grupo.integrantes)) {
+      for (const m of grupo.integrantes) {
+        const mId = m._id || m;
+        const cred = this.getCreditoDeMiembro(mId);
+        if (cred) {
+          const cCiclo = Number(cred.ciclo) || 0;
+          if (cCiclo === cicloABuscar || cred.estado === 'Activo') {
+            const sem = Number(cred.semanas) || (cred.tipoCredito === '8S' ? 8 : 0);
+            if (sem > 0) {
+              semanasEncontradas.push(sem);
+            }
+          }
+        }
+      }
+    }
+
+    if (semanasEncontradas.length > 0) {
+      return Math.max(...semanasEncontradas);
+    }
+
+    if (grupo.plazoSemanas && Number(grupo.plazoSemanas) > 0) {
+      return Number(grupo.plazoSemanas);
+    }
+
+    return 16;
+  }
+
+  getSemanasCliente(cliente: any, ciclo?: number): number {
+    if (!cliente) return 16;
+    const cred = this.getCreditoDeCliente(cliente._id);
+    if (cred && cred.semanas && Number(cred.semanas) > 0) {
+      return Number(cred.semanas);
+    }
+    return 16;
+  }
+
+  obtenerRangoSemanas(opcion: string, totalSemanas: number): { inicio: number, fin: number } {
+    if (opcion.includes('-')) {
+      const partes = opcion.split('-');
+      return {
+        inicio: parseInt(partes[0]) || 1,
+        fin: parseInt(partes[1]) || totalSemanas
+      };
+    }
+    const inicio = parseInt(opcion) || 1;
+    return {
+      inicio,
+      fin: Math.min(inicio + 7, totalSemanas)
+    };
+  }
+
+  generarOpcionesSemanas(totalSemanas: number): { [key: string]: string } {
+    const opciones: { [key: string]: string } = {};
+
+    if (totalSemanas <= 8) {
+      opciones['completa'] = `Completa (${totalSemanas} semanas)`;
+      opciones['1'] = `Semana 1 a ${totalSemanas}`;
+      return opciones;
+    }
+
+    if (totalSemanas <= 16) {
+      opciones['completa'] = `Completa (${totalSemanas} semanas)`;
+      for (let inicio = 1; inicio <= totalSemanas; inicio += 8) {
+        const fin = Math.min(inicio + 7, totalSemanas);
+        opciones[`${inicio}-${fin}`] = `Semana ${inicio} a ${fin}`;
+      }
+      return opciones;
+    }
+
+    // Si son más de 16 semanas (ej. 20, 24, 32...)
+    const mitad = Math.ceil(totalSemanas / 2);
+    opciones['completa'] = `Completa (${totalSemanas} semanas en 2 hojas)`;
+    opciones[`1-${mitad}`] = `Parte 1: Semana 1 a ${mitad}`;
+    opciones[`${mitad + 1}-${totalSemanas}`] = `Parte 2: Semana ${mitad + 1} a ${totalSemanas}`;
+
+    for (let inicio = 1; inicio <= totalSemanas; inicio += 8) {
+      const fin = Math.min(inicio + 7, totalSemanas);
+      opciones[`${inicio}-${fin}`] = `Bloque: Semana ${inicio} a ${fin}`;
+    }
+
+    return opciones;
+  }
+
   async descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
 
     const ciclo = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
 
     const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control',
-      text: 'Selecciona cómo deseas imprimir la hoja:',
+      text: `Selecciona cómo deseas imprimir la hoja (${totalSemanas} semanas):`,
       input: 'select',
-      inputOptions: {
-        'completa': 'Completa (Todas las semanas)',
-        '1': 'Semana 1 a 8',
-        '9': 'Semana 9 a 16'
-      },
+      inputOptions: opciones,
       inputPlaceholder: 'Selecciona una opción',
       showCancelButton: true,
       confirmButtonText: 'Generar',
@@ -583,7 +672,8 @@ export class AdminHome implements OnInit {
       const estadoGrupo = grupo.estadoGrupo ? `&estadoGrupo=${grupo.estadoGrupo}` : '';
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}`;
       if (opcionSeleccionada !== 'completa') {
-        url += `?semanaInicio=${opcionSeleccionada}${estadoGrupo}`;
+        const { inicio, fin } = this.obtenerRangoSemanas(opcionSeleccionada, totalSemanas);
+        url += `?semanaInicio=${inicio}&semanaFin=${fin}${estadoGrupo}`;
       } else if (estadoGrupo) {
         url += `?${estadoGrupo.slice(1)}`;
       }
@@ -595,16 +685,14 @@ export class AdminHome implements OnInit {
     event.stopPropagation();
 
     const ciclo = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
 
     const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control (Llena)',
-      text: 'Selecciona cómo deseas imprimir la hoja:',
+      text: `Selecciona cómo deseas imprimir la hoja (${totalSemanas} semanas):`,
       input: 'select',
-      inputOptions: {
-        'completa': 'Completa (Todas las semanas)',
-        '1': 'Semana 1 a 8',
-        '9': 'Semana 9 a 16'
-      },
+      inputOptions: opciones,
       inputPlaceholder: 'Selecciona una opción',
       showCancelButton: true,
       confirmButtonText: 'Generar',
@@ -622,7 +710,8 @@ export class AdminHome implements OnInit {
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
       url += estadoGrupo;
       if (opcionSeleccionada !== 'completa') {
-        url += `&semanaInicio=${opcionSeleccionada}`;
+        const { inicio, fin } = this.obtenerRangoSemanas(opcionSeleccionada, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
       window.open(url, '_blank');
     }
@@ -631,16 +720,14 @@ export class AdminHome implements OnInit {
   async descargarInfoIndividual(cliente: any, event: Event) {
     event.stopPropagation();
     const ciclo = this.getCicloActualCliente(cliente);
+    const totalSemanas = this.getSemanasCliente(cliente, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
 
     const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control Individual',
-      text: 'Selecciona cómo deseas imprimir la hoja:',
+      text: `Selecciona cómo deseas imprimir la hoja (${totalSemanas} semanas):`,
       input: 'select',
-      inputOptions: {
-        'completa': 'Completa (Todas las semanas)',
-        '1': 'Semana 1 a 8',
-        '9': 'Semana 9 a 16'
-      },
+      inputOptions: opciones,
       inputPlaceholder: 'Selecciona una opción',
       showCancelButton: true,
       confirmButtonText: 'Generar',
@@ -654,9 +741,13 @@ export class AdminHome implements OnInit {
     });
 
     if (isConfirmed && opcionSeleccionada) {
+      const estadoGrupo = cliente.estadoGrupo ? `&estadoGrupo=${cliente.estadoGrupo}` : '';
       let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}`;
       if (opcionSeleccionada !== 'completa') {
-        url += `?semanaInicio=${opcionSeleccionada}`;
+        const { inicio, fin } = this.obtenerRangoSemanas(opcionSeleccionada, totalSemanas);
+        url += `?semanaInicio=${inicio}&semanaFin=${fin}${estadoGrupo}`;
+      } else if (estadoGrupo) {
+        url += `?${estadoGrupo.slice(1)}`;
       }
       window.open(url, '_blank');
     }
@@ -665,16 +756,14 @@ export class AdminHome implements OnInit {
   async descargarInfoIndividualLlena(cliente: any, event: Event) {
     event.stopPropagation();
     const ciclo = this.getCicloActualCliente(cliente);
+    const totalSemanas = this.getSemanasCliente(cliente, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
 
     const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control Individual (Llena)',
-      text: 'Selecciona cómo deseas imprimir la hoja:',
+      text: `Selecciona cómo deseas imprimir la hoja (${totalSemanas} semanas):`,
       input: 'select',
-      inputOptions: {
-        'completa': 'Completa (Todas las semanas)',
-        '1': 'Semana 1 a 8',
-        '9': 'Semana 9 a 16'
-      },
+      inputOptions: opciones,
       inputPlaceholder: 'Selecciona una opción',
       showCancelButton: true,
       confirmButtonText: 'Generar',
@@ -688,9 +777,11 @@ export class AdminHome implements OnInit {
     });
 
     if (isConfirmed && opcionSeleccionada) {
-      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true`;
+      const estadoGrupo = cliente.estadoGrupo ? `&estadoGrupo=${cliente.estadoGrupo}` : '';
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?llena=true${estadoGrupo}`;
       if (opcionSeleccionada !== 'completa') {
-        url += `&semanaInicio=${opcionSeleccionada}`;
+        const { inicio, fin } = this.obtenerRangoSemanas(opcionSeleccionada, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
       window.open(url, '_blank');
     }
@@ -700,6 +791,11 @@ export class AdminHome implements OnInit {
     event.stopPropagation();
 
     const ciclo = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
 
     const { value: formValues, isConfirmed } = await Swal.fire({
       title: 'Vista Previa del PDF',
@@ -713,11 +809,9 @@ export class AdminHome implements OnInit {
             </select>
           </div>
           <div>
-            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas</label>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
             <select id="swal-rango-semanas" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-              <option value="completa">Completa (Todas las semanas)</option>
-              <option value="1">Semana 1 a 8</option>
-              <option value="9">Semana 9 a 16</option>
+              ${optionsHtml}
             </select>
           </div>
         </div>
@@ -743,7 +837,8 @@ export class AdminHome implements OnInit {
         url += `&llena=true`;
       }
       if (formValues.rango !== 'completa') {
-        url += `&semanaInicio=${formValues.rango}`;
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
       window.open(url, '_blank');
     }
@@ -752,6 +847,11 @@ export class AdminHome implements OnInit {
   async vistaPreviaIndividual(cliente: any, event: Event) {
     event.stopPropagation();
     const ciclo = this.getCicloActualCliente(cliente);
+    const totalSemanas = this.getSemanasCliente(cliente, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
 
     const { value: formValues, isConfirmed } = await Swal.fire({
       title: 'Vista Previa Individual',
@@ -765,11 +865,9 @@ export class AdminHome implements OnInit {
             </select>
           </div>
           <div>
-            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas</label>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
             <select id="swal-rango-semanas-ind" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-              <option value="completa">Completa (Todas las semanas)</option>
-              <option value="1">Semana 1 a 8</option>
-              <option value="9">Semana 9 a 16</option>
+              ${optionsHtml}
             </select>
           </div>
         </div>
@@ -790,12 +888,14 @@ export class AdminHome implements OnInit {
     });
 
     if (isConfirmed && formValues) {
-      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?preview=true`;
+      const estadoGrupo = cliente.estadoGrupo ? `&estadoGrupo=${cliente.estadoGrupo}` : '';
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?preview=true${estadoGrupo}`;
       if (formValues.tipo === 'llena') {
         url += `&llena=true`;
       }
       if (formValues.rango !== 'completa') {
-        url += `&semanaInicio=${formValues.rango}`;
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
       window.open(url, '_blank');
     }

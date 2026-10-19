@@ -99,16 +99,13 @@ export class AsesorListaClientes implements OnInit {
     this.router.navigate(['/login']);
   }
 
-  cargarClientes(): void {
+  cargarClientes(forceRefresh = false): void {
     this.cargando = true;
     this.cdr.markForCheck();
 
-    forkJoin({
-      clientes: this.clienteService.getClientes(),
-      creditosData: this.grupoService.getCreditos()
-    }).subscribe({
-      next: (res: any) => {
-        let clientesBase = res.clientes || [];
+    this.clienteService.getClientesConCredito(forceRefresh).subscribe({
+      next: (clientes: any) => {
+        let clientesBase = Array.isArray(clientes) ? clientes : [];
         const userRole = (localStorage.getItem('userRole') || '').toLowerCase();
         const userStr = localStorage.getItem('user');
         let currentUserId = '';
@@ -118,7 +115,7 @@ export class AsesorListaClientes implements OnInit {
             const userObj = JSON.parse(userStr);
             currentUserId = String(userObj?.id || userObj?._id || '').trim();
             currentUsername = String(userObj?.username || '').trim().toLowerCase();
-          } catch (e) {}
+          } catch (e) { }
         }
 
         const matchAsesor = (item: any) => {
@@ -139,18 +136,6 @@ export class AsesorListaClientes implements OnInit {
         if (userRole === 'master') {
           clientesBase = clientesBase.filter(matchAsesor);
         }
-        const creditosAll = res.creditosData?.creditos || res.creditosData || [];
-
-        // Indexar créditos por cliente en Map O(1)
-        const creditosPorCliente = new Map<string, any[]>();
-        for (const cred of creditosAll) {
-          const clId = cred.cliente?._id || cred.cliente;
-          if (clId) {
-            const key = String(clId);
-            if (!creditosPorCliente.has(key)) creditosPorCliente.set(key, []);
-            creditosPorCliente.get(key)!.push(cred);
-          }
-        }
 
         const year = new Date().getFullYear();
         const month = String(new Date().getMonth() + 1).padStart(2, '0');
@@ -158,15 +143,13 @@ export class AsesorListaClientes implements OnInit {
         const hoyIsoPrefix = `${year}-${month}-${day}`;
 
         this.clientesConCredito = clientesBase.map((c: any) => {
-          const creditosCliente = creditosPorCliente.get(String(c._id)) || [];
-          const creditoCliente = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
-
+          const creditoCliente = c.creditoActivo || null;
           let estado = 'Sin Crédito';
-          let tienePagoHoy = false;
+          let tienePagoHoy = c.tienePagoHoy || false;
 
           if (creditoCliente) {
             estado = creditoCliente.estado || 'Activo';
-            if (creditoCliente.pagos && creditoCliente.pagos.some((p: any) => p.fechaPago && p.fechaPago.startsWith(hoyIsoPrefix))) {
+            if (!tienePagoHoy && creditoCliente.pagos && creditoCliente.pagos.some((p: any) => p.fechaPago && p.fechaPago.startsWith(hoyIsoPrefix))) {
               tienePagoHoy = true;
             }
           }
@@ -174,10 +157,10 @@ export class AsesorListaClientes implements OnInit {
           return {
             ...c,
             creditoActivo: creditoCliente,
-            montoPactado: creditoCliente ? creditoCliente.pagoPactado : 0,
-            estadoFiltro: estado === 'Liquidado' ? 'Liquidados' : (estado === 'Sin Crédito' ? 'Todos' : 'Activos'),
+            montoPactado: c.montoPactado !== undefined ? c.montoPactado : (creditoCliente ? creditoCliente.pagoPactado : 0),
+            estadoFiltro: c.estadoFiltro || (estado === 'Liquidado' ? 'Liquidados' : (estado === 'Sin Crédito' ? 'Todos' : 'Activos')),
             tienePagoHoy: tienePagoHoy,
-            diaVisitaStr: c.diaPago ? c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : ''
+            diaVisitaStr: c.diaVisitaStr || (c.diaPago ? c.diaPago.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '')
           };
         });
 

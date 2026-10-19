@@ -63,11 +63,15 @@ export class ClienteService {
           equivalenciaMeses: payload.equivalenciaMeses,
           garantiaPredial: payload.garantiaPredial,
           grupoOpcional: payload.nombreGrupo,
+          estadoGrupo: payload.estadoGrupo || null,
           frecuenciaPago: payload.tipoPago
         };
 
         return this.http.post(`${this.apiUrlCredito}/`, bodyCredito).pipe(
-          map(() => clienteGuardado)
+          map(() => {
+            this.clearCache();
+            return clienteGuardado;
+          })
         );
       }),
       catchError(error => {
@@ -81,18 +85,40 @@ export class ClienteService {
     );
   }
 
+  private cacheClientes = new Map<string, { data: any, timestamp: number }>();
+  private readonly CACHE_TTL = 30000; // 30 segundos
+
+  clearCache(): void {
+    this.cacheClientes.clear();
+  }
+
   /**
    * Obtiene la lista de clientes 
    * (el backend filtra el user logueado si es Asesor o Admin).
+   * Soporta ?conCredito=true para traer el crédito activo directamente.
    */
-  getClientes(): Observable<any> {
-    return this.http.get(`${this.apiUrlCliente}`).pipe(
+  getClientes(params?: { conCredito?: boolean; asesor?: string; todos?: boolean; admin?: boolean }, forceRefresh = false): Observable<any> {
+    const queryParts: string[] = [];
+    if (params?.conCredito) queryParts.push('conCredito=true');
+    if (params?.todos) queryParts.push('todos=true');
+    if (params?.admin) queryParts.push('admin=true');
+    if (params?.asesor && params.asesor !== 'todos') queryParts.push(`asesor=${params.asesor}`);
+    const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
+
+    const cacheKey = queryStr || 'default';
+    const cached = this.cacheClientes.get(cacheKey);
+    if (!forceRefresh && cached && (Date.now() - cached.timestamp < this.CACHE_TTL)) {
+      return of(cached.data);
+    }
+
+    return this.http.get(`${this.apiUrlCliente}${queryStr}`).pipe(
       map((clientes: any) => {
+        this.cacheClientes.set(cacheKey, { data: clientes, timestamp: Date.now() });
         // Guardar en Dexie para uso offline
         if (Array.isArray(clientes)) {
           this.dexie.table('clientes').clear().then(() => {
             this.dexie.table('clientes').bulkAdd(clientes);
-          });
+          }).catch(e => console.warn('Dexie save error:', e));
         }
         return clientes;
       }),
@@ -105,6 +131,42 @@ export class ClienteService {
     );
   }
 
+  /**
+   * Obtiene clientes directamente con su crédito activo en una sola petición ultrarrápida.
+   */
+  getClientesConCredito(forceRefresh = false): Observable<any> {
+    return this.getClientes({ conCredito: true }, forceRefresh);
+  }
+
+  /**
+   * Obtiene un cliente específico por su ID sin descargar todos los clientes.
+   */
+  getClientePorId(id: string): Observable<any> {
+    return this.http.get(`${this.apiUrlCliente}/${id}`).pipe(
+      catchError(error => {
+        if (!navigator.onLine || error.status === 0) {
+          return from(this.dexie.table('clientes').where('_id').equals(id).first());
+        }
+        return throwError(() => error);
+      })
+    );
+  }
+
+  /**
+   * Obtiene únicamente los créditos de un cliente específico por su ID.
+   */
+  getCreditosCliente(clienteId: string): Observable<any> {
+    return this.http.get(`${this.apiUrlCredito}/?cliente=${clienteId}`).pipe(
+      catchError(error => {
+        if (!navigator.onLine || error.status === 0) {
+          return from(this.dexie.table('creditos').where('cliente').equals(clienteId).toArray()).pipe(
+            map(creditos => ({ creditos }))
+          );
+        }
+        return throwError(() => error);
+      })
+    );
+  }
 
   /**
    * Obtiene todos los créditos (incluyendo los individuales).
@@ -140,7 +202,12 @@ export class ClienteService {
       return this.guardarPagoLocal(creditoId, pagoParams);
     }
 
+    this.clearCache();
     return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
+      map((res) => {
+        this.clearCache();
+        return res;
+      }),
       catchError(error => {
         if (!navigator.onLine || error.status === 0) {
           return this.guardarPagoLocal(creditoId, pagoParams);
@@ -159,7 +226,12 @@ export class ClienteService {
       return this.guardarUpdateCreditoLocal(creditoId, payload);
     }
 
+    this.clearCache();
     return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload).pipe(
+      map((res) => {
+        this.clearCache();
+        return res;
+      }),
       catchError(error => {
         if (!navigator.onLine || error.status === 0) {
           return this.guardarUpdateCreditoLocal(creditoId, payload);

@@ -508,17 +508,54 @@ export class AsesorHojaControl implements OnInit {
     const todosLosPagos: any[] = [];
     this.miembros.forEach(miembro => {
       if (miembro.pagosHistoricos && miembro.pagosHistoricos.length > 0) {
+        const normales: any[] = [];
+        const solidariosMap: { [key: string]: any } = {};
+
         miembro.pagosHistoricos.forEach((pago: any) => {
-          todosLosPagos.push({
-            miembroNombre: `${miembro.nombre} ${miembro.apellidos}`,
-            fechaPago: pago.fechaPago,
-            montoPagado: pago.montoPagado || pago.montoSolidario || 0,
-            montoAhorro: Number(pago.montoAhorro) || 0,
-            numeroRecibo: pago.numeroRecibo,
-            metodoPago: pago.metodoPago,
-            pagoSolidario: pago.pagoSolidario === true || pago.pagoSolidario === 'true'
-          });
+          const isSolidario = pago.pagoSolidario === true || pago.pagoSolidario === 'true';
+          const fechaStr = pago.fechaPago ? new Date(pago.fechaPago).toISOString().split('T')[0] : 'sin_fecha';
+          const numPago = pago.numeroPago || 0;
+
+          if (isSolidario) {
+            const key = `${fechaStr}_${numPago}`;
+            const montoSol = Number(pago.montoSolidario || pago.montoPagado) || 0;
+            if (!solidariosMap[key]) {
+              solidariosMap[key] = {
+                miembroNombre: `${miembro.nombre} ${miembro.apellidos}`,
+                fechaPago: pago.fechaPago,
+                montoPagado: montoSol,
+                montoAhorro: Number(pago.montoAhorro) || 0,
+                numeroRecibo: pago.numeroRecibo,
+                metodoPago: pago.metodoPago,
+                pagoSolidario: true,
+                numeroPago: numPago
+              };
+            } else {
+              // Sumar monto solidario en la misma fecha y número de pago
+              solidariosMap[key].montoPagado += montoSol;
+              solidariosMap[key].montoAhorro += (Number(pago.montoAhorro) || 0);
+              if (pago.numeroRecibo && !solidariosMap[key].numeroRecibo?.includes(pago.numeroRecibo)) {
+                solidariosMap[key].numeroRecibo = `${solidariosMap[key].numeroRecibo || ''}, ${pago.numeroRecibo}`.replace(/^, /, '');
+              }
+              if (pago.metodoPago && solidariosMap[key].metodoPago !== pago.metodoPago) {
+                solidariosMap[key].metodoPago = 'MIXTO';
+              }
+            }
+          } else {
+            normales.push({
+              miembroNombre: `${miembro.nombre} ${miembro.apellidos}`,
+              fechaPago: pago.fechaPago,
+              montoPagado: Number(pago.montoPagado) || 0,
+              montoAhorro: Number(pago.montoAhorro) || 0,
+              numeroRecibo: pago.numeroRecibo,
+              metodoPago: pago.metodoPago,
+              pagoSolidario: false,
+              numeroPago: numPago
+            });
+          }
         });
+
+        todosLosPagos.push(...normales, ...Object.values(solidariosMap));
       }
     });
     return todosLosPagos.sort((a, b) => new Date(b.fechaPago).getTime() - new Date(a.fechaPago).getTime());

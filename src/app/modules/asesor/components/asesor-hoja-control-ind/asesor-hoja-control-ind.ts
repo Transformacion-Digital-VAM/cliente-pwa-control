@@ -1,6 +1,7 @@
 import { Component, OnInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 import { ClienteService } from '../../../../core/services/cliente.service';
 import { AuthService } from '../../../../core/services/auth.service';
@@ -60,13 +61,15 @@ export class AsesorHojaControlInd implements OnInit {
   }
 
   cargarDatos(): void {
+    if (!this.clienteId) return;
     this.cargando = true;
 
-    // Primero obtenemos el cliente, luego su crédito
-    this.clienteService.getClientes().subscribe({
-      next: (clientes) => {
-        this.cliente = clientes.find((c: any) => c._id === this.clienteId);
-
+    forkJoin({
+      cliente: this.clienteService.getClientePorId(this.clienteId),
+      creditosData: this.clienteService.getCreditosCliente(this.clienteId)
+    }).subscribe({
+      next: (res: any) => {
+        this.cliente = res.cliente;
         if (!this.cliente) {
           this.error = 'Cliente no encontrado.';
           this.cargando = false;
@@ -74,35 +77,49 @@ export class AsesorHojaControlInd implements OnInit {
           return;
         }
 
-        // Cargar los créditos para encontrar el que pertenece a este cliente
-        this.clienteService.getCreditos().subscribe({
-          next: (creditosData) => {
-            const arrCreditos = creditosData.creditos || creditosData || [];
+        const arrCreditos = res.creditosData?.creditos || res.creditosData || [];
+        const creditosCliente = Array.isArray(arrCreditos) ? arrCreditos : [];
 
-            // Buscar el crédito del cliente (tipo Individual y que no esté liquidado)
-            const creditosCliente = arrCreditos.filter((cred: any) =>
-              (cred.cliente?._id === this.clienteId || cred.cliente === this.clienteId) &&
-              (cred.tipoCredito === 'Individual' || cred.cliente)
-            );
-            this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
+        this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
 
-            this.cargando = false;
-            this.cdr.detectChanges();
+        this.cargando = false;
+        this.cdr.detectChanges();
+      },
+      error: (err) => {
+        console.error('Error al cargar datos específicos del cliente, intentando fallback:', err);
+        // Fallback resiliente usando getClientes
+        this.clienteService.getClientes().subscribe({
+          next: (clientes) => {
+            this.cliente = (clientes || []).find((c: any) => c._id === this.clienteId);
+            if (!this.cliente) {
+              this.error = 'Cliente no encontrado.';
+              this.cargando = false;
+              this.cdr.detectChanges();
+              return;
+            }
+            this.clienteService.getCreditos().subscribe({
+              next: (creditosData) => {
+                const arrCreditos = creditosData?.creditos || creditosData || [];
+                const creditosCliente = arrCreditos.filter((cred: any) =>
+                  (cred.cliente?._id === this.clienteId || cred.cliente === this.clienteId)
+                );
+                this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
+                this.cargando = false;
+                this.cdr.detectChanges();
+              },
+              error: () => {
+                this.error = 'No se pudieron cargar los datos del crédito.';
+                this.cargando = false;
+                this.cdr.detectChanges();
+              }
+            });
           },
-          error: (err) => {
-            console.error('Error al cargar créditos:', err);
-            this.error = 'No se pudieron cargar los datos del crédito.';
+          error: () => {
+            this.error = 'No se pudo cargar la información del cliente.';
             this.cargando = false;
             this.cdr.detectChanges();
           }
         });
-
-      },
-      error: (err) => {
-        console.error('Error al cargar cliente:', err);
-        this.error = 'No se pudo cargar la información del cliente.';
-        this.cargando = false;
-        this.cdr.detectChanges();
       }
     });
   }
@@ -235,28 +252,68 @@ export class AsesorHojaControlInd implements OnInit {
     return this.creditoActivo.pagos.reduce((sum: number, p: any) => sum + (p.montoPagado || 0) + (p.montoGarantia || 0), 0);
   }
 
-  /** Determina si el crédito activo es un Refill (inicia en semanas 9 a 16) */
+  /** Determina si el crédito activo es un Refill (según banderas o rango de semanas) */
   get esRefill(): boolean {
     if (!this.creditoActivo) return false;
     const c = this.creditoActivo;
     if (c.esRefill === true || c.esRefill === 'true') return true;
     if (c.tipoCredito === 'R' || c.estadoGrupo === 'R') return true;
     if (typeof c.grupoOpcional === 'string' && /refi/i.test(c.grupoOpcional)) return true;
-    // Si la duración pactada es de 8 semanas pero la semana actual está entre 9 y 16
-    if (c.semanas === 8 && this.semanaActual >= 9) return true;
-    // Si todos los pagos registrados son de la semana 9 en adelante
+    const totalSemanas = Number(c.semanas) || 16;
+    const mitad = Math.floor(totalSemanas / 2);
+    // Si la duración pactada es menor o igual a la mitad del ciclo pero la semana actual ya superó esa mitad
+    if (totalSemanas <= 12 && this.semanaActual > totalSemanas) return true;
+    // Si todos los pagos registrados son de la semana siguiente a la mitad en adelante (o >= 9)
     const pagos = c.pagos || [];
-    if (pagos.length > 0 && pagos.every((p: any) => (p.numeroPago || 0) >= 9)) return true;
+    if (pagos.length > 0 && pagos.every((p: any) => (p.numeroPago || 0) > 1 && (p.numeroPago || 0) >= (mitad > 0 ? mitad + 1 : 9))) return true;
     return false;
   }
 
-  /** Semana de inicio del crédito: 9 para Refills (semanas 9 a 16), o 1 para créditos regulares */
+  /** Semana de inicio del crédito: según la duración total para Refills, o 1 para créditos regulares */
   get semanaInicio(): number {
     if (!this.creditoActivo) return 1;
-    if (this.esRefill) {
-      return 9;
+    if (!this.esRefill) return 1;
+
+    const totalSem = Number(this.creditoActivo.semanas) || 16;
+    const pagosValidos = (this.creditoActivo.pagos || [])
+      .map((p: any) => Number(p.numeroPago))
+      .filter((n: number) => !isNaN(n) && n > 1);
+
+    // Si el crédito se guardó con la duración específica del refill (<= 12 semanas)
+    // ej: 8 semanas de refill en ciclo de 16, o 10 semanas de refill en ciclo de 20
+    if (totalSem <= 12) {
+      if (pagosValidos.length > 0) {
+        return Math.min(...pagosValidos);
+      }
+      return totalSem + 1; // 8 -> 9; 10 -> 11; 12 -> 13
     }
-    return 1;
+
+    // Si el crédito tiene el total de semanas del ciclo (ej: 16, 20, 24, 32...)
+    const mitadCiclo = Math.floor(totalSem / 2);
+    const inicioCalculado = mitadCiclo + 1; // 16 -> 9; 20 -> 11; 24 -> 13; 32 -> 17
+
+    if (pagosValidos.length > 0) {
+      const minPago = Math.min(...pagosValidos);
+      // Validamos si el pago mínimo es razonablemente el inicio del refill
+      if (minPago >= inicioCalculado - 1 && minPago <= inicioCalculado + 2) {
+        return minPago;
+      }
+    }
+
+    return inicioCalculado;
+  }
+
+  /** Semana final del crédito según su duración (ej: 16, 20, 24, 32) */
+  get semanaFin(): number {
+    if (!this.creditoActivo) return 16;
+    const totalSem = Number(this.creditoActivo.semanas) || 16;
+    if (this.esRefill) {
+      if (totalSem <= 12) {
+        return this.semanaInicio + totalSem - 1;
+      }
+      return totalSem;
+    }
+    return totalSem;
   }
 
   get semanaActual(): number {
@@ -448,7 +505,7 @@ export class AsesorHojaControlInd implements OnInit {
               <input type="number" id="montoTarjeta" class="w-full border-slate-300 focus:ring-blue-500 rounded-lg font-bold pl-7 pr-3 py-2" placeholder="0" min="0">
             </div>
           </div>
-          ${semanaActual >= (((this.esRefill || this.semanaInicio >= 9) ? 16 : (this.creditoActivo.semanas || 16)) - 1) ? `
+          ${semanaActual >= (this.semanaFin - 1) ? `
           <div class="flex items-center space-x-3 bg-purple-50 p-2 rounded-lg border border-purple-100 mt-2">
             <label class="flex items-center cursor-pointer w-full justify-center py-1">
               <input type="checkbox" id="aplicaGarantia" class="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500">
