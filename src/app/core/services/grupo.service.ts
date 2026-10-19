@@ -180,13 +180,16 @@ export class GrupoService {
         );
     }
 
-    getCreditos(params?: { coordinacion?: string; asesor?: string }, forceRefresh = false): Observable<any> {
-        let queryStr = '';
+    getCreditos(params?: { coordinacion?: string; asesor?: string; admin?: boolean; todos?: boolean }, forceRefresh = false): Observable<any> {
+        const queryParts: string[] = [];
+        if (params?.admin) queryParts.push('admin=true');
+        if (params?.todos) queryParts.push('todos=true');
         if (params?.coordinacion && params.coordinacion !== 'todas') {
-            queryStr += `?coordinacion=${params.coordinacion}`;
+            queryParts.push(`coordinacion=${params.coordinacion}`);
         } else if (params?.asesor && params.asesor !== 'todos') {
-            queryStr += `?asesor=${params.asesor}`;
+            queryParts.push(`asesor=${params.asesor}`);
         }
+        const queryStr = queryParts.length > 0 ? `?${queryParts.join('&')}` : '';
 
         const cacheKey = queryStr || 'all';
         const cached = this.cacheCreditos.get(cacheKey);

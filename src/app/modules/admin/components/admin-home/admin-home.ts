@@ -110,6 +110,7 @@ export class AdminHome implements OnInit {
   }
 
   refrescarDatos() {
+    this.clienteService.clearCache();
     this.grupoService.limpiarCache();
     this.cargarDatos(true);
   }
@@ -149,7 +150,7 @@ export class AdminHome implements OnInit {
     forkJoin({
       grupos: this.grupoService.getGrupos(forceRefresh),
       asesores: this.grupoService.getAsesores(forceRefresh),
-      clientes: this.clienteService.getClientes(),
+      clientes: this.clienteService.getClientes({ admin: true }, forceRefresh),
       coordinaciones: this.grupoService.getCoordinaciones(forceRefresh)
     }).subscribe({
       next: (res: any) => {
@@ -238,7 +239,7 @@ export class AdminHome implements OnInit {
 
   private cargarCreditosEnSegundoPlano(forceRefresh = false) {
     forkJoin({
-      creditos: this.grupoService.getCreditos({}, forceRefresh),
+      creditos: this.grupoService.getCreditos({ admin: true }, forceRefresh),
       miembros: this.grupoService.getMiembros(forceRefresh)
     }).subscribe({
       next: (res: any) => {
@@ -356,7 +357,11 @@ export class AdminHome implements OnInit {
     if (!itemCoordId && item.asesor) {
       const asId = item.asesor?._id || item.asesor;
       const asInfo = this.asesoresMap.get(String(asId));
-      if (asInfo) itemCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+      if (asInfo) {
+        itemCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+      } else if (typeof item.asesor === 'object' && item.asesor.coordinacion) {
+        itemCoordId = item.asesor.coordinacion?._id || item.asesor.coordinacion;
+      }
     }
     return itemCoordId && String(itemCoordId) === String(coordId);
   }
@@ -367,7 +372,11 @@ export class AdminHome implements OnInit {
     if (!idStr && item.asesor) {
       const asId = item.asesor?._id || item.asesor;
       const asInfo = this.asesoresMap.get(String(asId));
-      if (asInfo) idStr = asInfo.coordinacion?._id || asInfo.coordinacion;
+      if (asInfo) {
+        idStr = asInfo.coordinacion?._id || asInfo.coordinacion;
+      } else if (typeof item.asesor === 'object' && item.asesor.coordinacion) {
+        idStr = item.asesor.coordinacion?._id || item.asesor.coordinacion;
+      }
     }
     if (!idStr) return 'Sin Coor.';
 
@@ -419,7 +428,11 @@ export class AdminHome implements OnInit {
       if (!coordId && item.asesor) {
         const asId = item.asesor?._id || item.asesor;
         const asInfo = this.asesoresMap.get(String(asId));
-        if (asInfo) coordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+        if (asInfo) {
+          coordId = asInfo.coordinacion?._id || asInfo.coordinacion;
+        } else if (typeof item.asesor === 'object' && item.asesor.coordinacion) {
+          coordId = item.asesor.coordinacion?._id || item.asesor.coordinacion;
+        }
       }
       if (coordId) {
         const cKey = String(coordId);

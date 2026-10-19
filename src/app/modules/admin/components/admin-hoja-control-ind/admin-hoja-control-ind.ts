@@ -341,7 +341,7 @@ export class AdminHojaControlInd implements OnInit {
   }
 
   cargarClientes(): void {
-    this.clienteService.getClientes().subscribe({
+    this.clienteService.getClientes({ admin: true }).subscribe({
       next: (data) => {
         this.clientesTotales = data || [];
       },
