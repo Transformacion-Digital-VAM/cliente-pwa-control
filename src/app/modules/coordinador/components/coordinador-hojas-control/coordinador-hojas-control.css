@@ -1,0 +1,8 @@
+/* Ocultar barra de desplazamiento en filtros horizontales manteniendo scroll */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}

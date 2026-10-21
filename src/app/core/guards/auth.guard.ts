@@ -20,7 +20,7 @@ export const roleGuard = (allowedRoles: string[]): CanActivateFn => {
 
         if (userRole === 'admin' || userRole === 'master' || userRole === 'superadmin' || userRole === 'lector') {
             return router.createUrlTree(['/home-admin']);
-        } else if (userRole === 'user' || userRole === 'asesor') {
+        } else if (userRole === 'user' || userRole === 'asesor' || userRole === 'coordinador') {
             return router.createUrlTree(['/home-asesor']);
         }
 
@@ -38,7 +38,7 @@ export const noAuthGuard: CanActivateFn = () => {
     if (isLoggedIn && userRole) {
         if (userRole === 'admin' || userRole === 'master' || userRole === 'superadmin' || userRole === 'lector') {
             return router.createUrlTree(['/home-admin']);
-        } else if (userRole === 'user' || userRole === 'asesor') {
+        } else if (userRole === 'user' || userRole === 'asesor' || userRole === 'coordinador') {
             return router.createUrlTree(['/home-asesor']);
         }
     }

@@ -40,8 +40,14 @@
         <a routerLink="/clientes-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Clientes</a>
       </ng-container>
 
+      <!-- COORDINADOR -->
+      <ng-container *ngIf="isCoordinador">
+        <a routerLink="/home-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio Asesor</a>
+        <a routerLink="/coordinador-hojas-control" routerLinkActive="text-purple-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-purple-600 transition-colors">Supervisión Hojas</a>
+      </ng-container>
+
       <!-- ASESOR / USER -->
-      <ng-container *ngIf="isUser">
+      <ng-container *ngIf="isUser && !isCoordinador">
         <a routerLink="/home-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
       </ng-container>
 

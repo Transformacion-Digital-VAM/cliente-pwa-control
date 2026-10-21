@@ -39,7 +39,7 @@ export class Navbar implements OnInit, OnDestroy {
   }
 
   private checkRoute(url: string) {
-    this.isAsesorPage = ((url.includes('asesor') && !url.includes('mapa-asesores')) || url.includes('hoja-control-individual')) && !this.isMaster;
+    this.isAsesorPage = ((url.includes('asesor') && !url.includes('mapa-asesores')) || url.includes('hoja-control-individual') || url.includes('coordinador-hojas-control')) && !this.isMaster;
     this.isLoginPage = url.includes('login') || url === '/';
     this.cdr.detectChanges();
   }
@@ -80,10 +80,17 @@ export class Navbar implements OnInit, OnDestroy {
     return false;
   }
 
+  get isCoordinador(): boolean {
+    if (isPlatformBrowser(this.platformId)) {
+      return localStorage.getItem('userRole') === 'coordinador';
+    }
+    return false;
+  }
+
   get isUser(): boolean {
     if (isPlatformBrowser(this.platformId)) {
       const role = localStorage.getItem('userRole');
-      return role === 'user' || role === 'asesor';
+      return role === 'user' || role === 'asesor' || role === 'coordinador';
     }
     return false;
   }

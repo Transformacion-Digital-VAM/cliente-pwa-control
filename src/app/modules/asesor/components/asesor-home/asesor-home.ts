@@ -24,6 +24,7 @@ export class AsesorHome implements OnInit, OnDestroy {
 
   vistaActual: 'grupos' | 'individuales' = 'grupos';
   asesorName: string = '';
+  isCoordinador: boolean = false;
 
   expandedGroupId: string | null = null;
   clientesHoy: any[] = [];
@@ -142,6 +143,9 @@ export class AsesorHome implements OnInit, OnDestroy {
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       const userStr = localStorage.getItem('user');
+      const role = (localStorage.getItem('userRole') || '').toLowerCase();
+      this.isCoordinador = role === 'coordinador';
+
       if (userStr) {
         try {
           const userObj = JSON.parse(userStr);
@@ -160,6 +164,10 @@ export class AsesorHome implements OnInit, OnDestroy {
         }
       }, 1500);
     }
+  }
+
+  irAModuloCoordinador(): void {
+    this.router.navigate(['/coordinador-hojas-control']);
   }
 
   verDetalleGrupo(grupoId: string): void {
