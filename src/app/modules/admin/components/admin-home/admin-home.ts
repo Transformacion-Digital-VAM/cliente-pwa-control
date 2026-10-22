@@ -21,6 +21,9 @@ import { UppercaseDirective } from '../../uppercase.directive';
 export class AdminHome implements OnInit {
   elementosPrincipales: any[] = [];
   elementosFiltrados: any[] = [];
+  individualesEnGrupo: any[] = [];
+  individualesEnGrupoFiltrados: any[] = [];
+  isLoadingIndividualesEnGrupo: boolean = false;
   asesoresDeCoordinacion: any[] = [];
   asesoresFiltrados: any[] = [];
 
@@ -46,7 +49,7 @@ export class AdminHome implements OnInit {
   asesorSearchTerm: string = '';
   selectedCoordinacionId: string = 'todas';
   selectedAsesorId: string = 'todos';
-  activeTab: 'grupos' | 'individuales' = 'grupos';
+  activeTab: 'grupos' | 'individuales' | 'individuales_en_grupo' = 'grupos';
 
   // Paginación
   currentPage: number = 1;
@@ -114,10 +117,16 @@ export class AdminHome implements OnInit {
     this.cargarDatos(true);
   }
 
-  cambiarTab(tab: 'grupos' | 'individuales') {
+  cambiarTab(tab: 'grupos' | 'individuales' | 'individuales_en_grupo') {
     this.activeTab = tab;
     this.selectedAsesorId = 'todos';
-    this.aplicarFiltros();
+    this.actualizarAsesoresDeCoordinacion();
+    // Si por alguna razón los datos no cargaron aún, reintenta
+    if (tab === 'individuales_en_grupo' && this.individualesEnGrupo.length === 0 && !this.isLoadingIndividualesEnGrupo) {
+      this.cargarIndividualesEnGrupo();
+    } else {
+      this.aplicarFiltros();
+    }
   }
 
   selectCoordinacion(coordId: string) {
@@ -145,18 +154,24 @@ export class AdminHome implements OnInit {
     this.isLoading = true;
     this.cdr.markForCheck();
 
-    // 1. CARGA: Coordinaciones, Asesores, Grupos y Clientes
+    // 1. CARGA: Coordinaciones, Asesores, Grupos, Clientes e Individuales en Grupo
     forkJoin({
       grupos: this.grupoService.getGrupos(forceRefresh),
       asesores: this.grupoService.getAsesores(forceRefresh),
       clientes: this.clienteService.getClientes(),
-      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh)
+      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh),
+      individualesEnGrupo: this.clienteService.getClientesIndv()
     }).subscribe({
       next: (res: any) => {
         const allAsesores = res.asesores || [];
         const allCoordinaciones = res.coordinaciones || [];
         const allGruposRaw = res.grupos || [];
         const allClientesRaw = res.clientes || [];
+        // El endpoint devuelve { success, total, data: [...] }
+        const rawIndGrupo = res.individualesEnGrupo;
+        const allIndividualGruposRaw: any[] = Array.isArray(rawIndGrupo)
+          ? rawIndGrupo
+          : (rawIndGrupo?.data || []);
 
         // 1. Filtrado por rol si es restringido
         const isRestricted = !this.isGlobalRole && !!this.userCoordinacion;
@@ -214,8 +229,32 @@ export class AdminHome implements OnInit {
           }
         }
 
+        // 5. Individuales en grupos (ya tienen asesor y coordinacion del servidor)
+        const individualesEnGrupoProcesados: any[] = [];
+        for (const ig of allIndividualGruposRaw) {
+          let grupoNombre = ig.grupo;
+          if (grupoNombre && /^[0-9a-fA-F]{24}$/.test(grupoNombre.trim())) {
+            const grEncontrado = gruposProcesados.find((g: any) => String(g._id) === grupoNombre.trim());
+            if (grEncontrado && grEncontrado.nombre) {
+              grupoNombre = grEncontrado.nombre;
+            }
+          }
+          const igObj = {
+            ...ig,
+            grupo: grupoNombre,
+            coordinacionNombre: this.resolverNombreCoordinacion(ig)
+          };
+          if (!isRestricted || this.perteneceACoordinacion(igObj, this.userCoordinacion)) {
+            individualesEnGrupoProcesados.push(igObj);
+          }
+        }
+
         this.grupos = gruposProcesados;
         this.elementosPrincipales = [...this.grupos, ...clientesProcesados];
+        // Guardar lista maestra de individuales en grupo (se filtrará en aplicarFiltros)
+        this.individualesEnGrupo = individualesEnGrupoProcesados;
+        this.individualesEnGrupoFiltrados = [...individualesEnGrupoProcesados];
+        this.isLoadingIndividualesEnGrupo = false;
 
         // Actualizar Asesores de la coordinación activa y renderizar interfaz
         this.actualizarAsesoresDeCoordinacion();
@@ -347,32 +386,58 @@ export class AdminHome implements OnInit {
     });
   }
 
+  private extraerIdCoordinacion(item: any): string {
+    if (!item) return '';
+    const rawCoord = item.coordinacion;
+    if (rawCoord) {
+      if (typeof rawCoord === 'object') {
+        const id = rawCoord._id || rawCoord.id || rawCoord.$oid;
+        if (id) return String(id);
+      } else {
+        return String(rawCoord);
+      }
+    }
+    if (item.asesor) {
+      const asId = typeof item.asesor === 'object' ? (item.asesor._id || item.asesor.id) : item.asesor;
+      if (asId) {
+        const asInfo = this.asesoresMap.get(String(asId));
+        if (asInfo?.coordinacion) {
+          const c = asInfo.coordinacion;
+          return typeof c === 'object' ? String(c._id || c.id || '') : String(c);
+        }
+      }
+    }
+    return '';
+  }
+
+  private extraerIdAsesor(item: any): string {
+    if (!item || !item.asesor) return '';
+    const as = item.asesor;
+    if (typeof as === 'object') {
+      return String(as._id || as.id || as.$oid || '');
+    }
+    return String(as);
+  }
+
   private perteneceACoordinacion(item: any, coordId: string): boolean {
     if (!coordId) return true;
-    let itemCoordId = item.coordinacion?._id || item.coordinacion;
-    if (!itemCoordId && item.asesor) {
-      const asId = item.asesor?._id || item.asesor;
-      const asInfo = this.asesoresMap.get(String(asId));
-      if (asInfo) itemCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
-    }
-    return itemCoordId && String(itemCoordId) === String(coordId);
+    const itemCoordId = this.extraerIdCoordinacion(item);
+    return !!itemCoordId && itemCoordId === String(coordId);
   }
 
   private resolverNombreCoordinacion(item: any): string {
     if (!item) return 'Sin Coor.';
-    let idStr = item.coordinacion?._id || item.coordinacion;
-    if (!idStr && item.asesor) {
-      const asId = item.asesor?._id || item.asesor;
-      const asInfo = this.asesoresMap.get(String(asId));
-      if (asInfo) idStr = asInfo.coordinacion?._id || asInfo.coordinacion;
+    if (item.coordinacion && typeof item.coordinacion === 'object' && item.coordinacion.nombre) {
+      return item.coordinacion.nombre;
     }
+    const idStr = this.extraerIdCoordinacion(item);
     if (!idStr) return 'Sin Coor.';
 
-    const coordObj = this.coordinacionesMap.get(String(idStr));
+    const coordObj = this.coordinacionesMap.get(idStr);
     if (coordObj && coordObj.nombre) {
       return coordObj.nombre;
     }
-    return `Coordinación ${idStr.toString().substring(idStr.toString().length - 4)}`;
+    return `Coordinación ${idStr.length > 4 ? idStr.substring(idStr.length - 4) : idStr}`;
   }
 
   actualizarAsesoresDeCoordinacion() {
@@ -398,6 +463,52 @@ export class AdminHome implements OnInit {
 
   aplicarFiltros() {
     this.currentPage = 1;
+
+    // Tab especial: Individuales en Grupo — calcula contadores y filtra por coordinación, asesor y búsqueda
+    if (this.activeTab === 'individuales_en_grupo') {
+      const filterCoord = this.selectedCoordinacionId !== 'todas';
+      const filterAsesor = this.selectedAsesorId !== 'todos';
+      const hasSearch = !!(this.searchTerm && this.searchTerm.trim() !== '');
+      const term = hasSearch ? this.searchTerm.toLowerCase().trim() : '';
+
+      const cCounts: { [key: string]: number } = {};
+      const aCounts: { [key: string]: number } = {};
+      const filtrados: any[] = [];
+
+      for (const item of this.individualesEnGrupo) {
+        const coordId = this.extraerIdCoordinacion(item);
+        if (coordId) {
+          cCounts[coordId] = (cCounts[coordId] || 0) + 1;
+        }
+
+        const asesorId = this.extraerIdAsesor(item);
+        if (asesorId) {
+          aCounts[asesorId] = (aCounts[asesorId] || 0) + 1;
+        }
+
+        if (filterCoord && coordId !== String(this.selectedCoordinacionId)) {
+          continue;
+        }
+        if (filterAsesor && asesorId !== String(this.selectedAsesorId)) {
+          continue;
+        }
+        if (hasSearch) {
+          const matchClave = item.creditoIndividual?._id && item.creditoIndividual._id.toString().toLowerCase().includes(term);
+          const matchNombre = item.nombre && item.nombre.toLowerCase().includes(term);
+          const matchGrupo = item.grupo && item.grupo.toLowerCase().includes(term);
+          if (!matchClave && !matchNombre && !matchGrupo) continue;
+        }
+
+        filtrados.push(item);
+      }
+
+      this.coordinacionCounts = cCounts;
+      this.asesorCounts = aCounts;
+      this.individualesEnGrupoFiltrados = filtrados;
+      this.cdr.markForCheck();
+      return;
+    }
+
     const targetTipo = this.activeTab === 'grupos' ? 'GRUPO' : 'INDIVIDUAL';
     const filterCoord = this.selectedCoordinacionId !== 'todas';
     const filterAsesor = this.selectedAsesorId !== 'todos';
@@ -411,30 +522,21 @@ export class AdminHome implements OnInit {
     for (const item of this.elementosPrincipales) {
       if (item.tipo !== targetTipo) continue;
 
-      // Calcular contadores
-      let coordId = item.coordinacion?._id || item.coordinacion;
-      if (!coordId && item.asesor) {
-        const asId = item.asesor?._id || item.asesor;
-        const asInfo = this.asesoresMap.get(String(asId));
-        if (asInfo) coordId = asInfo.coordinacion?._id || asInfo.coordinacion;
-      }
+      const coordId = this.extraerIdCoordinacion(item);
       if (coordId) {
-        const cKey = String(coordId);
-        cCounts[cKey] = (cCounts[cKey] || 0) + 1;
+        cCounts[coordId] = (cCounts[coordId] || 0) + 1;
       }
 
-      const itemAsesorId = item.asesor?._id || item.asesor;
-      let asesorKey = '';
-      if (itemAsesorId) {
-        asesorKey = String(typeof itemAsesorId === 'object' ? itemAsesorId._id : itemAsesorId);
-        aCounts[asesorKey] = (aCounts[asesorKey] || 0) + 1;
+      const asesorId = this.extraerIdAsesor(item);
+      if (asesorId) {
+        aCounts[asesorId] = (aCounts[asesorId] || 0) + 1;
       }
 
       // Evaluar si pasa los filtros activos
-      if (filterCoord && String(coordId) !== String(this.selectedCoordinacionId)) {
+      if (filterCoord && coordId !== String(this.selectedCoordinacionId)) {
         continue;
       }
-      if (filterAsesor && String(asesorKey) !== String(this.selectedAsesorId)) {
+      if (filterAsesor && asesorId !== String(this.selectedAsesorId)) {
         continue;
       }
       if (hasSearch) {
@@ -450,6 +552,55 @@ export class AdminHome implements OnInit {
     this.asesorCounts = aCounts;
     this.elementosFiltrados = filtrados;
     this.cdr.markForCheck();
+  }
+
+  /** Recarga manual si la carga inicial falló */
+  cargarIndividualesEnGrupo() {
+    this.isLoadingIndividualesEnGrupo = true;
+    this.cdr.markForCheck();
+    this.clienteService.getClientesIndv().subscribe({
+      next: (data: any) => {
+        const rawList = Array.isArray(data) ? data : (data?.data || []);
+        const isRestricted = !this.isGlobalRole && !!this.userCoordinacion;
+        const individualesEnGrupoProcesados: any[] = [];
+        for (const ig of rawList) {
+          let grupoNombre = ig.grupo;
+          if (grupoNombre && /^[0-9a-fA-F]{24}$/.test(grupoNombre.trim())) {
+            const grEncontrado = this.grupos.find((g: any) => String(g._id) === grupoNombre.trim());
+            if (grEncontrado && grEncontrado.nombre) {
+              grupoNombre = grEncontrado.nombre;
+            }
+          }
+          const igObj = {
+            ...ig,
+            grupo: grupoNombre,
+            coordinacionNombre: this.resolverNombreCoordinacion(ig)
+          };
+          if (!isRestricted || this.perteneceACoordinacion(igObj, this.userCoordinacion)) {
+            individualesEnGrupoProcesados.push(igObj);
+          }
+        }
+        this.individualesEnGrupo = individualesEnGrupoProcesados;
+        this.isLoadingIndividualesEnGrupo = false;
+        this.actualizarAsesoresDeCoordinacion();
+        this.aplicarFiltros();
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        console.error('Error cargando individuales en grupo', err);
+        this.isLoadingIndividualesEnGrupo = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  get individualesEnGrupoPaginados(): any[] {
+    const start = (this.currentPage - 1) * this.itemsPerPage;
+    return this.individualesEnGrupoFiltrados.slice(start, start + this.itemsPerPage);
+  }
+
+  get totalPagesIndividualesEnGrupo(): number {
+    return Math.ceil(this.individualesEnGrupoFiltrados.length / this.itemsPerPage) || 1;
   }
 
   trackById(index: number, item: any): string {

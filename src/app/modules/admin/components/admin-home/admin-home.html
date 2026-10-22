@@ -72,6 +72,20 @@
                     clip-rule="evenodd" />
                 </svg>
               </button>
+              <button (click)="cambiarTab('individuales_en_grupo')"
+                [class.bg-yellow-500]="activeTab === 'individuales_en_grupo'"
+                [class.text-white]="activeTab === 'individuales_en_grupo'"
+                [class.bg-white]="activeTab !== 'individuales_en_grupo'"
+                [class.text-slate-600]="activeTab !== 'individuales_en_grupo'"
+                class="px-4 py-3 rounded-2xl text-[11px] font-bold uppercase tracking-wider text-left border border-slate-100 shadow-sm transition-all flex items-center justify-between">
+                <span>Individuales en grupo</span>
+                <svg *ngIf="activeTab === 'individuales_en_grupo'" xmlns="http://www.w3.org/2000/svg"
+                  class="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                  <path fill-rule="evenodd"
+                    d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
+                    clip-rule="evenodd" />
+                </svg>
+              </button>
             </div>
           </div>
 
@@ -143,17 +157,18 @@
         <div class="max-h-[500px] overflow-y-auto w-full">
           <table class="w-full text-left">
             <thead class="bg-blue-600 text-white border-b border-slate-100 sticky top-0 z-10"
-              [ngClass]="{'bg-blue-600': activeTab === 'grupos', 'bg-emerald-600': activeTab === 'individuales'}">
+              [ngClass]="{'bg-blue-600': activeTab === 'grupos', 'bg-emerald-600': activeTab === 'individuales', 'bg-yellow-500': activeTab === 'individuales_en_grupo'}">
               <tr>
                 <th class="px-6 py-4 text-xs font-bold text-white uppercase tracking-widest">Clave</th>
                 <th class="px-4 py-4 text-center text-xs font-bold text-white uppercase tracking-widest">Estado</th>
-                <th class="px-6 py-4 text-xs font-bold text-white uppercase tracking-widest">{{ activeTab === 'grupos' ?
-                  'Grupo' : 'Cliente' }}</th>
+                <th class="px-6 py-4 text-xs font-bold text-white uppercase tracking-widest">{{ activeTab === 'grupos' ? 'Grupo' : 'Cliente' }}</th>
+                <th *ngIf="activeTab === 'individuales_en_grupo'" class="px-6 py-4 text-xs font-bold text-white uppercase tracking-widest">Grupo</th>
                 <th class="px-6 py-4 text-center text-xs font-bold text-white uppercase tracking-widest">Acción</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-slate-50 text-sm">
-              <ng-container *ngIf="!isLoading">
+              <!-- ── GRUPOS e INDIVIDUALES ── -->
+              <ng-container *ngIf="!isLoading && activeTab !== 'individuales_en_grupo'">
                 <ng-container *ngFor="let item of elementosPaginados; trackBy: trackById">
                   <tr class="hover:bg-slate-50/50 transition-colors cursor-pointer" (click)="toggleGroup(item._id)">
                     <td class="px-6 py-3 font-mono font-bold text-sm"
@@ -420,15 +435,103 @@
                   </tr>
                 </ng-container>
               </ng-container>
+
+              <!-- ── TABLA: INDIVIDUALES EN GRUPO ── -->
+              <ng-container *ngIf="activeTab === 'individuales_en_grupo'">
+                <!-- Loading -->
+                <tr *ngIf="isLoadingIndividualesEnGrupo">
+                  <td colspan="5" class="px-6 py-10 text-center">
+                    <div class="flex items-center justify-center gap-3 text-yellow-500">
+                      <svg class="h-5 w-5 animate-spin" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+                      </svg>
+                      <span class="text-sm font-bold text-slate-500">Cargando individuales en grupo...</span>
+                    </div>
+                  </td>
+                </tr>
+                <!-- Sin resultados -->
+                <tr *ngIf="!isLoadingIndividualesEnGrupo && individualesEnGrupoFiltrados.length === 0">
+                  <td colspan="5" class="px-6 py-10 text-center text-slate-400 text-sm font-semibold">
+                    No se encontraron clientes con crédito individual dentro de grupos.
+                  </td>
+                </tr>
+                <!-- Filas -->
+                <tr *ngFor="let item of individualesEnGrupoPaginados; trackBy: trackById"
+                  class="hover:bg-yellow-50/50 transition-colors">
+                  <!-- Clave del crédito (últimos 6 chars del ID) -->
+                  <td class="px-6 py-3 font-mono font-bold text-sm text-yellow-600">
+                    {{ item.creditoIndividual?._id?.slice(-6)?.toUpperCase() || 'S/C' }}
+                  </td>
+                  <!-- Estado del crédito -->
+                  <td class="px-4 py-3 text-center">
+                    <span class="px-2 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider"
+                      [ngClass]="{
+                        'bg-emerald-100 text-emerald-700': item.creditoIndividual?.estado === 'Activo',
+                        'bg-slate-100 text-slate-500': item.creditoIndividual?.estado !== 'Activo'
+                      }">
+                      {{ item.creditoIndividual?.estado || '—' }}
+                    </span>
+                  </td>
+                  <!-- Nombre del cliente -->
+                  <td class="px-6 py-3">
+                    <p class="font-bold text-slate-800 text-sm">{{ item.nombre }}</p>
+                    <p class="text-xs text-slate-400 font-bold">{{ item.diaPago }} · {{ item.tipoPago }}</p>
+                  </td>
+                  <!-- Grupo al que pertenece -->
+                  <td class="px-6 py-3">
+                    <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-yellow-50 text-yellow-700 border border-yellow-200 text-xs font-bold uppercase tracking-wide">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                      </svg>
+                      {{ item.grupo }}
+                    </span>
+                    <p class="text-[10px] text-slate-400 mt-1 font-semibold">Ciclo {{ item.creditoIndividual?.ciclo || '—' }} · Sem. {{ item.creditoIndividual?.semanaActual || '—' }}</p>
+                  </td>
+                  <!-- Acciones -->
+                  <td class="px-6 py-4 flex items-center justify-center space-x-2">
+                    <button *ngIf="userRole !== 'lector'"
+                      class="bg-yellow-50 text-yellow-600 p-2 rounded-lg hover:bg-yellow-500 hover:text-white transition-colors border border-yellow-200 shadow-sm"
+                      title="Hoja de Control Individual (Vacía)"
+                      (click)="descargarInfoIndividual(item, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+                    <button *ngIf="userRole !== 'lector'"
+                      class="bg-blue-50 text-blue-600 p-2 rounded-lg hover:bg-blue-600 hover:text-white transition-colors border border-blue-100 shadow-sm"
+                      title="Hoja Individual (Llena con datos)"
+                      (click)="descargarInfoIndividualLlena(item, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                    </button>
+                    <button
+                      class="bg-purple-50 text-purple-600 p-2 rounded-lg hover:bg-purple-600 hover:text-white transition-colors border border-purple-100 shadow-sm"
+                      title="Vista Previa PDF"
+                      (click)="vistaPreviaIndividual(item, $event)">
+                      <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                          d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                      </svg>
+                    </button>
+                  </td>
+                </tr>
+              </ng-container>
             </tbody>
           </table>
         </div>
-        
+
         <!-- Paginación -->
-        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-b-2xl" *ngIf="totalPages > 1">
+        <div class="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-slate-50/50 rounded-b-2xl"
+          *ngIf="(activeTab !== 'individuales_en_grupo' && totalPages > 1) || (activeTab === 'individuales_en_grupo' && totalPagesIndividualesEnGrupo > 1)">
           <div class="text-sm text-slate-500 font-medium">
-            Pág. <span class="font-bold text-slate-800">{{ currentPage }}</span> / <span class="font-bold text-slate-800">{{ totalPages }}</span>
-            <span class="ml-2">({{ elementosFiltrados.length }} registros)</span>
+            Pág. <span class="font-bold text-slate-800">{{ currentPage }}</span> / <span
+              class="font-bold text-slate-800">{{ activeTab === 'individuales_en_grupo' ? totalPagesIndividualesEnGrupo : totalPages }}</span>
+            <span class="ml-2">({{ activeTab === 'individuales_en_grupo' ? individualesEnGrupoFiltrados.length : elementosFiltrados.length }} registros)</span>
           </div>
           <div class="flex items-center space-x-2">
             <button (click)="cambiarPagina(currentPage - 1)" [disabled]="currentPage === 1"
@@ -436,14 +539,13 @@
               Anterior
             </button>
             <div class="flex items-center space-x-1">
-              <button *ngFor="let p of [].constructor(totalPages); let i = index" 
-                (click)="cambiarPagina(i + 1)"
-                [ngClass]="currentPage === i + 1 ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+              <button *ngFor="let p of [].constructor(activeTab === 'individuales_en_grupo' ? totalPagesIndividualesEnGrupo : totalPages); let i = index" (click)="cambiarPagina(i + 1)"
+                [ngClass]="currentPage === i + 1 ? 'bg-yellow-500 text-white border-yellow-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
                 class="w-8 h-8 rounded-lg border text-sm font-bold transition-colors flex items-center justify-center">
                 {{ i + 1 }}
               </button>
             </div>
-            <button (click)="cambiarPagina(currentPage + 1)" [disabled]="currentPage === totalPages"
+            <button (click)="cambiarPagina(currentPage + 1)" [disabled]="currentPage === (activeTab === 'individuales_en_grupo' ? totalPagesIndividualesEnGrupo : totalPages)"
               class="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors">
               Siguiente
             </button>

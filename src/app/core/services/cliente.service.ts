@@ -105,6 +105,18 @@ export class ClienteService {
     );
   }
 
+  /** 
+   * Obtiene los individuales dentro de grupos
+  */
+
+  getClientesIndv(): Observable<any> {
+    return this.http.get(`${this.apiUrlCliente}/miembros-grupo-con-individual`).pipe(
+      catchError(error => {
+        console.error('[ClienteService] Error cargando individuales en grupo:', error);
+        return throwError(() => error);
+      })
+    );
+  }
 
   /**
    * Obtiene todos los créditos (incluyendo los individuales).
