@@ -1,8 +1,9 @@
-import { HttpInterceptorFn } from '@angular/common/http';
+import { HttpInterceptorFn, HttpErrorResponse } from '@angular/common/http';
 import { inject, PLATFORM_ID } from '@angular/core';
+import { Router } from '@angular/router';
 import { isPlatformBrowser } from '@angular/common';
 import { DexieService } from '../database/dexie.service';
-import { from, switchMap, of } from 'rxjs';
+import { from, switchMap, of, throwError } from 'rxjs';
 import { catchError, timeout } from 'rxjs/operators';
 
 export const authInterceptor: HttpInterceptorFn = (req, next) => {
@@ -11,6 +12,7 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
         return next(req);
     }
     const dexie = inject(DexieService);
+    const router = inject(Router);
 
     let activeUsername: string | null = null;
     try {
@@ -51,7 +53,19 @@ export const authInterceptor: HttpInterceptorFn = (req, next) => {
                 const cloned = req.clone({
                     setHeaders: { Authorization: `Bearer ${session.token}` }
                 });
-                return next(cloned);
+                return next(cloned).pipe(
+                    catchError((err: HttpErrorResponse) => {
+                        if (err.status === 401 && !req.url.includes('/login')) {
+                            console.warn('[AuthInterceptor] Sesión expirada o token inválido (401). Redirigiendo a /login...');
+                            localStorage.removeItem('isLoggedIn');
+                            localStorage.removeItem('userRole');
+                            if (!window.location.pathname.includes('/login')) {
+                                router.navigate(['/login']);
+                            }
+                        }
+                        return throwError(() => err);
+                    })
+                );
             }
             console.warn('[AuthInterceptor] No session or token found, request will be sent without auth header');
             return next(req);

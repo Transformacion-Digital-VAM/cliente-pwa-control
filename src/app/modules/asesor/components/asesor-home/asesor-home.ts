@@ -2,11 +2,14 @@ import { Component, OnInit, OnDestroy, Inject, PLATFORM_ID, ChangeDetectorRef, I
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { NotificationService } from '../../../../core/services/notification.service';
 import { forkJoin } from 'rxjs';
 import { ClienteService } from '../../../../core/services/cliente.service';
+import { environment } from '../../../../../environments/environment';
+import Swal from 'sweetalert2';
 
 @Component({
   selector: 'app-asesor-home',
@@ -28,6 +31,14 @@ export class AsesorHome implements OnInit, OnDestroy {
 
   expandedGroupId: string | null = null;
   clientesHoy: any[] = [];
+  creditosAll: any[] = [];
+  creditosPorMiembro: Map<string, any[]> = new Map();
+  creditosPorCliente: Map<string, any[]> = new Map();
+
+  // Modal Vista Previa (Solo Lectura)
+  previewUrl: string | null = null;
+  previewSafeUrl: SafeResourceUrl | null = null;
+  previewGrupoNombre: string = '';
 
   get gruposHoyFiltrados(): any[] {
     if (!this.searchTerm || !this.searchTerm.trim()) return this.gruposHoy;
@@ -137,7 +148,8 @@ export class AsesorHome implements OnInit, OnDestroy {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private injector: Injector,
-    private clienteService: ClienteService
+    private clienteService: ClienteService,
+    private sanitizer: DomSanitizer
   ) { }
 
   ngOnInit(): void {
@@ -250,6 +262,10 @@ export class AsesorHome implements OnInit, OnDestroy {
           }
         }
 
+        this.creditosAll = creditosAll;
+        this.creditosPorMiembro = creditosPorMiembro;
+        this.creditosPorCliente = creditosPorCliente;
+
         const normalize = (s: string) =>
           s ? s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim() : '';
 
@@ -326,7 +342,7 @@ export class AsesorHome implements OnInit, OnDestroy {
         };
 
         let gruposFiltrados = grupos;
-        if (userRole === 'master') {
+        if (userRole === 'master' || userRole === 'coordinador') {
           gruposFiltrados = grupos.filter(matchAsesor);
         }
 
@@ -472,7 +488,7 @@ export class AsesorHome implements OnInit, OnDestroy {
 
         // Procesar Clientes
         let clientesFiltrados = clientes || [];
-        if (userRole === 'master') {
+        if (userRole === 'master' || userRole === 'coordinador') {
           clientesFiltrados = clientesFiltrados.filter(matchAsesor);
         }
 
@@ -539,5 +555,252 @@ export class AsesorHome implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.notificationService.limpiarTimerDiario();
+  }
+
+  // --- VISTA PREVIA (SOLO LECTURA) ---
+
+  getCicloActualGrupo(grupo: any): number {
+    if (!grupo) return 1;
+    let maxCiclo = Number(grupo.cicloActual) || 0;
+    const integrantes = grupo.integrantes || [];
+    for (const m of integrantes) {
+      const mId = String(m._id || m);
+      const creds = this.creditosPorMiembro.get(mId) || [];
+      for (const cred of creds) {
+        const cCiclo = Number(cred.ciclo) || 0;
+        if (cred.estado === 'Activo' && cCiclo > 0) return cCiclo;
+        if (cCiclo > maxCiclo) maxCiclo = cCiclo;
+      }
+    }
+    return maxCiclo > 0 ? maxCiclo : 1;
+  }
+
+  getSemanasGrupo(grupo: any, ciclo?: number): number {
+    if (!grupo) return 16;
+    const cicloABuscar = ciclo || this.getCicloActualGrupo(grupo);
+    const integrantes = grupo.integrantes || [];
+    const semanasEncontradas: number[] = [];
+
+    for (const m of integrantes) {
+      const mId = String(m._id || m);
+      const creds = this.creditosPorMiembro.get(mId) || [];
+      for (const cred of creds) {
+        const cCiclo = Number(cred.ciclo) || 0;
+        if (cCiclo === cicloABuscar || cred.estado === 'Activo') {
+          const sem = Number(cred.semanas) || (cred.tipoCredito === '8S' ? 8 : 0);
+          if (sem > 0) semanasEncontradas.push(sem);
+        }
+      }
+    }
+
+    if (semanasEncontradas.length > 0) {
+      return Math.max(...semanasEncontradas);
+    }
+    return Number(grupo.plazoSemanas) || 16;
+  }
+
+  getCicloActualCliente(cliente: any): number {
+    if (!cliente) return 1;
+    let maxCiclo = Number(cliente.cicloActual) || 0;
+    const clId = String(cliente._id || cliente.id);
+    const creds = this.creditosPorCliente.get(clId) || [];
+    for (const cred of creds) {
+      const cCiclo = Number(cred.ciclo) || 0;
+      if (cred.estado === 'Activo' && cCiclo > 0) return cCiclo;
+      if (cCiclo > maxCiclo) maxCiclo = cCiclo;
+    }
+    return maxCiclo > 0 ? maxCiclo : 1;
+  }
+
+  getSemanasCliente(cliente: any, ciclo?: number): number {
+    if (!cliente) return 16;
+    const cicloABuscar = ciclo || this.getCicloActualCliente(cliente);
+    const clId = String(cliente._id || cliente.id);
+    const creds = this.creditosPorCliente.get(clId) || [];
+    for (const cred of creds) {
+      const cCiclo = Number(cred.ciclo) || 0;
+      if (cCiclo === cicloABuscar || cred.estado === 'Activo') {
+        const sem = Number(cred.semanas) || 16;
+        if (sem > 0) return sem;
+      }
+    }
+    return Number(cliente.plazoSemanas) || 16;
+  }
+
+  generarOpcionesSemanas(totalSemanas: number): { [key: string]: string } {
+    const opciones: { [key: string]: string } = {};
+    opciones['completa'] = `Hoja Completa (1 - ${totalSemanas})`;
+
+    if (totalSemanas > 8) {
+      const mitad = Math.ceil(totalSemanas / 2);
+      opciones['1-8'] = `Parte 1: Semanas 1 a ${mitad}`;
+      opciones['9-16'] = `Parte 2: Semanas ${mitad + 1} a ${totalSemanas}`;
+    }
+    return opciones;
+  }
+
+  obtenerRangoSemanas(opcion: string, totalSemanas: number): { inicio: number, fin: number } {
+    if (opcion === 'completa') {
+      return { inicio: 1, fin: totalSemanas };
+    }
+    const mitad = Math.ceil(totalSemanas / 2);
+    if (opcion === '1-8') {
+      return { inicio: 1, fin: mitad };
+    }
+    if (opcion === '9-16') {
+      return { inicio: mitad + 1, fin: totalSemanas };
+    }
+    return { inicio: 1, fin: totalSemanas };
+  }
+
+  async vistaPreviaGrupo(grupo: any, event?: Event): Promise<void> {
+    if (event) event.stopPropagation();
+
+    const ciclo = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa (Solo Lectura)',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+            Grupo: <strong style="color: #1e293b;">${grupo.nombre || 'Sin Nombre'}</strong> (${grupo.clave || 'S/C'})
+          </p>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja-home" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos de crédito)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-rango-semanas-home" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+          <div style="margin-top: 14px; padding: 8px 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="font-size: 11px; color: #1e40af; margin: 0; font-weight: 600;">
+              Esta vista es únicamente para visualizar información en campo, sin descargas.
+            </p>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Abrir Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja-home') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas-home') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
+      }
+    });
+
+    if (isConfirmed && formValues) {
+      let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?preview=true`;
+      if (formValues.tipo === 'llena') {
+        url += '&llena=true';
+      }
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
+      }
+      this.abrirModalPreview(url, `${grupo.nombre || 'Grupo'} (Ciclo ${ciclo})`);
+    }
+  }
+
+  async vistaPreviaIndividual(cliente: any, event?: Event): Promise<void> {
+    if (event) event.stopPropagation();
+
+    const ciclo = this.getCicloActualCliente(cliente);
+    const totalSemanas = this.getSemanasCliente(cliente, ciclo);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa Individual (Solo Lectura)',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+            Cliente: <strong style="color: #1e293b;">${cliente.nombre || 'Sin Nombre'} ${cliente.apellidos || ''}</strong>
+          </p>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja-ind-home" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-rango-semanas-ind-home" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+          <div style="margin-top: 14px; padding: 8px 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="font-size: 11px; color: #1e40af; margin: 0; font-weight: 600;">
+              Esta vista es únicamente para visualizar información en campo, sin descargas.
+            </p>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Abrir Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja-ind-home') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas-ind-home') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
+      }
+    });
+
+    if (isConfirmed && formValues) {
+      const estadoGrupo = cliente.estadoGrupo ? `&estadoGrupo=${cliente.estadoGrupo}` : '';
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?preview=true${estadoGrupo}`;
+      if (formValues.tipo === 'llena') {
+        url += '&llena=true';
+      }
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
+      }
+      this.abrirModalPreview(url, `${cliente.nombre || 'Cliente'} (Ciclo ${ciclo})`);
+    }
+  }
+
+  abrirModalPreview(url: string, nombre: string): void {
+    this.previewGrupoNombre = nombre;
+    this.previewUrl = url;
+    this.previewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${url}#toolbar=0`);
+    this.cdr.markForCheck();
+  }
+
+  cerrarPreview(): void {
+    this.previewUrl = null;
+    this.previewSafeUrl = null;
+    this.previewGrupoNombre = '';
+    this.cdr.markForCheck();
+  }
+
+  abrirEnNuevaPestana(): void {
+    if (this.previewUrl) {
+      window.open(`${this.previewUrl}#toolbar=0`, '_blank');
+    }
   }
 }

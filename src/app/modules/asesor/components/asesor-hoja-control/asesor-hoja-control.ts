@@ -1,12 +1,14 @@
 import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { FormsModule } from '@angular/forms';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LocationService } from '../../../../core/services/location.service';
+import { environment } from '../../../../../environments/environment';
 
 // Tipo para las pestañas
 type TabTipo = 'COMUNAL_REFIL' | 'MAGICO';
@@ -40,6 +42,11 @@ export class AsesorHojaControl implements OnInit {
   todosLosCreditos: any[] = [];
   miembrosFiltradosList: any[] = [];
 
+  // Modal Vista Previa (Solo Lectura)
+  previewUrl: string | null = null;
+  previewSafeUrl: SafeResourceUrl | null = null;
+  previewGrupoNombre: string = '';
+
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private route: ActivatedRoute,
@@ -47,7 +54,8 @@ export class AsesorHojaControl implements OnInit {
     private grupoService: GrupoService,
     private authService: AuthService,
     private locationService: LocationService,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer
   ) { }
 
   // --- LIFECYCLE HOOKS ---
@@ -904,6 +912,137 @@ export class AsesorHojaControl implements OnInit {
     this.onPagoChange();
   }
 
+  // --- VISTA PREVIA (SOLO LECTURA) ---
+
+  getSemanasGrupoActual(): number {
+    if (!this.grupo) return 16;
+    const semanasEncontradas: number[] = [];
+    for (const c of this.todosLosCreditos) {
+      const miembroId = c.miembro?._id || c.miembro;
+      const pertenece = this.miembros.some(m => m._id === miembroId);
+      if (pertenece) {
+        const sem = Number(c.semanas) || (c.tipoCredito === '8S' ? 8 : 0);
+        if (sem > 0) semanasEncontradas.push(sem);
+      }
+    }
+    if (semanasEncontradas.length > 0) {
+      return Math.max(...semanasEncontradas);
+    }
+    return Number(this.grupo.plazoSemanas) || 16;
+  }
+
+  generarOpcionesSemanas(totalSemanas: number): { [key: string]: string } {
+    const opciones: { [key: string]: string } = {};
+    opciones['completa'] = `Hoja Completa (1 - ${totalSemanas})`;
+
+    if (totalSemanas > 8) {
+      const mitad = Math.ceil(totalSemanas / 2);
+      opciones['1-8'] = `Parte 1: Semanas 1 a ${mitad}`;
+      opciones['9-16'] = `Parte 2: Semanas ${mitad + 1} a ${totalSemanas}`;
+    }
+    return opciones;
+  }
+
+  obtenerRangoSemanas(opcion: string, totalSemanas: number): { inicio: number, fin: number } {
+    if (opcion === 'completa') {
+      return { inicio: 1, fin: totalSemanas };
+    }
+    const mitad = Math.ceil(totalSemanas / 2);
+    if (opcion === '1-8') {
+      return { inicio: 1, fin: mitad };
+    }
+    if (opcion === '9-16') {
+      return { inicio: mitad + 1, fin: totalSemanas };
+    }
+    return { inicio: 1, fin: totalSemanas };
+  }
+
+  async vistaPreviaGrupo(): Promise<void> {
+    if (!this.grupo || !this.grupoId) return;
+
+    let ciclo = Number(this.cicloGrupo);
+    if (isNaN(ciclo) || ciclo <= 0) ciclo = 1;
+
+    const totalSemanas = this.getSemanasGrupoActual();
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa (Solo Lectura)',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+            Grupo: <strong style="color: #1e293b;">${this.grupo.nombre || 'Sin Nombre'}</strong> (${this.grupo.clave || 'S/C'})
+          </p>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja-hc" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos de crédito)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-rango-semanas-hc" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+          <div style="margin-top: 14px; padding: 8px 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="font-size: 11px; color: #1e40af; margin: 0; font-weight: 600;">
+              Esta vista es únicamente para visualizar información en campo, sin descargas.
+            </p>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Abrir Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja-hc') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas-hc') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
+      }
+    });
+
+    if (isConfirmed && formValues) {
+      let url = `${environment.apiUrl}/creditos/hoja-control/${this.grupoId}/${ciclo}?preview=true`;
+      if (formValues.tipo === 'llena') {
+        url += '&llena=true';
+      }
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
+      }
+      this.abrirModalPreview(url, `${this.grupo.nombre || 'Grupo'} (Ciclo ${ciclo})`);
+    }
+  }
+
+  abrirModalPreview(url: string, nombre: string): void {
+    this.previewGrupoNombre = nombre;
+    this.previewUrl = url;
+    this.previewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${url}#toolbar=0`);
+    this.cdr.detectChanges();
+  }
+
+  cerrarPreview(): void {
+    this.previewUrl = null;
+    this.previewSafeUrl = null;
+    this.previewGrupoNombre = '';
+    this.cdr.detectChanges();
+  }
+
+  abrirEnNuevaPestana(): void {
+    if (this.previewUrl) {
+      window.open(`${this.previewUrl}#toolbar=0`, '_blank');
+    }
+  }
 }
 
 

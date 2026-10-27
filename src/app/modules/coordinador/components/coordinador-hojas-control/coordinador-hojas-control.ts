@@ -92,8 +92,19 @@ export class CoordinadorHojasControl implements OnInit {
         const allClientes = res.clientes || [];
         const allCreditos = res.creditosRes?.creditos || res.creditosRes || [];
 
-        // 1. Obtener nombre de la coordinación
-        if (this.coordinacionId) {
+        // 1. Obtener nombre de la coordinación (o auto-vincular si falta coordinacionId)
+        if (!this.coordinacionId && this.coordinadorName) {
+          const matchedCoord = allCoordinaciones.find((c: any) =>
+            c.coordinador && (
+              c.coordinador.toLowerCase().includes(this.coordinadorName.toLowerCase()) ||
+              this.coordinadorName.toLowerCase().includes(c.coordinador.toLowerCase())
+            )
+          );
+          if (matchedCoord) {
+            this.coordinacionId = String(matchedCoord._id);
+            this.coordinacionNombre = matchedCoord.nombre;
+          }
+        } else if (this.coordinacionId) {
           const coordObj = allCoordinaciones.find((c: any) => String(c._id) === String(this.coordinacionId));
           if (coordObj && coordObj.nombre) {
             this.coordinacionNombre = coordObj.nombre;
@@ -111,6 +122,8 @@ export class CoordinadorHojasControl implements OnInit {
         } else {
           this.asesoresList = allAsesores;
         }
+
+        const asesorIdsEnCoord = new Set(this.asesoresList.map((a: any) => String(a._id || a.id)));
 
         // 3. Crear mapa de créditos
         this.creditoMiembroMap.clear();
@@ -131,8 +144,18 @@ export class CoordinadorHojasControl implements OnInit {
           }
         }
 
-        // 4. Asignar créditos a integrantes de grupos para modo solo lectura
-        this.grupos = allGrupos.map((g: any) => {
+        // 4. Filtrar y asignar créditos a integrantes de grupos para modo solo lectura
+        let gruposAProcesar = allGrupos;
+        if (this.coordinacionId && asesorIdsEnCoord.size > 0) {
+          gruposAProcesar = allGrupos.filter((g: any) => {
+            const gCoord = (g.coordinacion && typeof g.coordinacion === 'object') ? (g.coordinacion._id || g.coordinacion.id) : g.coordinacion;
+            if (gCoord && String(gCoord) === String(this.coordinacionId)) return true;
+            const aId = (g.asesor && typeof g.asesor === 'object') ? (g.asesor._id || g.asesor.id) : g.asesor;
+            return aId && asesorIdsEnCoord.has(String(aId));
+          });
+        }
+
+        this.grupos = gruposAProcesar.map((g: any) => {
           const integrantesConCredito = (g.integrantes || []).map((m: any) => {
             const mId = String(m._id || m);
             const cred = this.creditoMiembroMap.get(mId) || null;
@@ -147,8 +170,18 @@ export class CoordinadorHojasControl implements OnInit {
           };
         });
 
-        // 5. Asignar créditos a clientes individuales
-        this.clientes = allClientes.map((c: any) => {
+        // 5. Filtrar y asignar créditos a clientes individuales
+        let clientesAProcesar = allClientes;
+        if (this.coordinacionId && asesorIdsEnCoord.size > 0) {
+          clientesAProcesar = allClientes.filter((c: any) => {
+            const cCoord = (c.coordinacion && typeof c.coordinacion === 'object') ? (c.coordinacion._id || c.coordinacion.id) : c.coordinacion;
+            if (cCoord && String(cCoord) === String(this.coordinacionId)) return true;
+            const aId = (c.asesor && typeof c.asesor === 'object') ? (c.asesor._id || c.asesor.id) : c.asesor;
+            return aId && asesorIdsEnCoord.has(String(aId));
+          });
+        }
+
+        this.clientes = clientesAProcesar.map((c: any) => {
           const clId = String(c._id);
           const cred = c.credito || this.creditoClienteMap.get(clId) || null;
           return {
@@ -238,7 +271,8 @@ export class CoordinadorHojasControl implements OnInit {
     this.filtroEstado = 'todos';
   }
 
-  toggleAccordion(id: string): void {
+  toggleAccordion(id: string, event?: Event): void {
+    if (event) event.stopPropagation();
     this.expandedItems[id] = !this.expandedItems[id];
   }
 
@@ -246,7 +280,17 @@ export class CoordinadorHojasControl implements OnInit {
     this.router.navigate(['/home-asesor']);
   }
 
-  // --- VISTA PREVIA HOJAS DE CONTROL (SOLO LECTURA) ---
+  abrirHojaControlGrupo(grupo: any, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.router.navigate(['/hoja-control-asesor', grupo._id]);
+  }
+
+  abrirHojaControlCliente(cliente: any, event?: Event): void {
+    if (event) event.stopPropagation();
+    this.router.navigate(['/hoja-control-individual', cliente._id]);
+  }
+
+  // --- VISTA PREVIA HOJAS DE CONTROL PDF ---
 
   async vistaPreviaGrupo(grupo: any, event: Event): Promise<void> {
     event.stopPropagation();

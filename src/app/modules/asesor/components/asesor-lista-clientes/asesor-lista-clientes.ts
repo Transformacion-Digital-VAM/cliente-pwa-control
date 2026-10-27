@@ -133,7 +133,7 @@ export class AsesorListaClientes implements OnInit {
           return false;
         };
 
-        if (userRole === 'master') {
+        if (userRole === 'master' || userRole === 'coordinador') {
           clientesBase = clientesBase.filter(matchAsesor);
         }
 

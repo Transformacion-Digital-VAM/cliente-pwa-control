@@ -88,10 +88,23 @@
               </div>
             </div>
           </div>
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-300" fill="none" viewBox="0 0 24 24"
-            stroke="currentColor" stroke-width="2.5">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-          </svg>
+          <div class="flex items-center gap-2">
+            <!-- BOTÓN VISTA PREVIA (SOLO LECTURA) -->
+            <button type="button" (click)="vistaPreviaGrupo(grupo, $event)"
+              class="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-600 hover:text-white border border-blue-200/80 font-bold text-xs shadow-xs active:scale-95 transition-all"
+              title="Vista previa solo lectura">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span>Vista Previa</span>
+            </button>
+
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-slate-300" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+            </svg>
+          </div>
         </div>
 
         <div [class]="'border-t p-3 ' + (gruposResumen[grupo._id]?.pagosTotal === 0 && !gruposResumen[grupo._id]?.sinPagosAtrasados ? 'bg-red-50 border-red-200' : 'bg-slate-50 border-slate-100')">
@@ -203,4 +216,71 @@
           <span class="text-[9px] font-black uppercase mt-0.5 tracking-widest">Salir</span>
       </button>
   </nav>
+
+  <!-- MODAL DE VISTA PREVIA (SOLO LECTURA) -->
+  @if (previewUrl) {
+  <div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-200">
+    <div class="bg-white w-full h-[94vh] max-w-5xl rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+      
+      <!-- Encabezado del Modal -->
+      <div class="px-5 py-3.5 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h3 class="font-black text-sm md:text-base tracking-tight leading-tight">HDCD</h3>
+              <!-- <span class="bg-amber-400 text-slate-900 text-[10px] font-black px-2 py-0.5 rounded-full uppercase tracking-wider shadow-xs">Solo Lectura</span> -->
+            </div>
+            <p class="text-[11px] text-blue-100 font-medium mt-0.5">{{ previewGrupoNombre }}</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- Botón abrir en ventana si se desea ampliar -->
+          <button (click)="abrirEnNuevaPestana()" type="button"
+            class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-xl text-xs font-bold transition-all border border-white/20"
+            title="Abrir en pantalla completa">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span>Pantalla Completa</span>
+          </button>
+
+          <!-- Botón cerrar -->
+          <button (click)="cerrarPreview()" type="button"
+            class="px-3.5 py-1.5 bg-white text-blue-700 hover:bg-blue-50 active:scale-95 rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            <!-- <span>Cerrar</span> -->
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor del Visor (iframe seguro) -->
+      <div class="flex-1 bg-slate-200 relative overflow-hidden">
+        <iframe [src]="previewSafeUrl" class="w-full h-full border-0" title="Vista Previa de Hoja de Control"></iframe>
+      </div>
+
+      <!-- Pie informativo: Modo solo lectura y sin descarga -->
+      <div class="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-slate-500 text-[11px] shrink-0">
+        <div class="flex items-center gap-1.5 font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-blue-600 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Vista de consulta y supervisión en campo. No se permite la descarga de este archivo.</span>
+        </div>
+        <button (click)="cerrarPreview()" type="button" class="text-xs font-bold text-slate-600 hover:text-blue-600">
+          Entendido
+        </button>
+      </div>
+
+    </div>
+  </div>
+  }
 </div>
