@@ -351,7 +351,7 @@ export class AsesorHome implements OnInit, OnDestroy {
         const esDiaCobro = (diaVisitaOPago: string): boolean => {
           if (!diaVisitaOPago) return false;
           const normalizado = normalize(diaVisitaOPago);
-          const match = normalizado.match(/^(\d+)(?:\s+de\s+cada\s+mes)?$/);
+          const match = normalizado.match(/(?:dia\s+)?(\d{1,2})(?:\s+de\s+cada\s+mes)?/i);
 
           if (match) {
             const diaPactado = parseInt(match[1], 10);

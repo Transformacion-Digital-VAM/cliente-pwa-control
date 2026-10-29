@@ -14,7 +14,10 @@ export interface OfflineRequest {
 export class DexieService extends Dexie {
     syncQueue!: Table<OfflineRequest, number>;
     user_session!: Table<any, string>;
-    grupos!: Table<any, number>; // Local table for groups
+    grupos!: Table<any, number>;
+    miembros!: Table<any, number>;
+    clientes!: Table<any, number>;
+    creditos!: Table<any, number>;
 
     constructor() {
         super('pwa-hcontrol');
@@ -23,6 +26,15 @@ export class DexieService extends Dexie {
                 syncQueue: '++id, type, timestamp',
                 user_session: 'user, token, role, lastLogin',
                 grupos: '++id, clave, nombre',
+                clientes: '++id, _id, nombre, apellidos',
+                creditos: '++id, _id, miembro, cliente'
+            });
+
+            this.version(5).stores({
+                syncQueue: '++id, type, timestamp',
+                user_session: 'user, token, role, lastLogin',
+                grupos: '++id, _id, clave, nombre',
+                miembros: '++id, _id, grupo, nombre',
                 clientes: '++id, _id, nombre, apellidos',
                 creditos: '++id, _id, miembro, cliente'
             });

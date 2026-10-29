@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, forkJoin, of, throwError, from } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { catchError, map, switchMap, timeout } from 'rxjs/operators';
 import { DexieService } from '../database/dexie.service';
 import { environment } from '../../../environments/environment';
 
@@ -112,6 +112,7 @@ export class ClienteService {
     }
 
     return this.http.get(`${this.apiUrlCliente}${queryStr}`).pipe(
+      timeout(3500),
       map((clientes: any) => {
         this.cacheClientes.set(cacheKey, { data: clientes, timestamp: Date.now() });
         // Guardar en Dexie para uso offline
@@ -123,10 +124,8 @@ export class ClienteService {
         return clientes;
       }),
       catchError(error => {
-        if (!navigator.onLine || error.status === 0) {
-          return from(this.dexie.table('clientes').toArray());
-        }
-        return throwError(() => error);
+        console.warn('[ClienteService] Falló getClientes en red, recurriendo a Dexie local:', error?.message);
+        return from(this.dexie.table('clientes').toArray());
       })
     );
   }
@@ -143,11 +142,10 @@ export class ClienteService {
    */
   getClientePorId(id: string): Observable<any> {
     return this.http.get(`${this.apiUrlCliente}/${id}`).pipe(
+      timeout(3500),
       catchError(error => {
-        if (!navigator.onLine || error.status === 0) {
-          return from(this.dexie.table('clientes').where('_id').equals(id).first());
-        }
-        return throwError(() => error);
+        console.warn('[ClienteService] Falló getClientePorId en red, recurriendo a Dexie local:', error?.message);
+        return from(this.dexie.table('clientes').where('_id').equals(id).first());
       })
     );
   }
@@ -157,13 +155,12 @@ export class ClienteService {
    */
   getCreditosCliente(clienteId: string): Observable<any> {
     return this.http.get(`${this.apiUrlCredito}/?cliente=${clienteId}`).pipe(
+      timeout(3500),
       catchError(error => {
-        if (!navigator.onLine || error.status === 0) {
-          return from(this.dexie.table('creditos').where('cliente').equals(clienteId).toArray()).pipe(
-            map(creditos => ({ creditos }))
-          );
-        }
-        return throwError(() => error);
+        console.warn('[ClienteService] Falló getCreditosCliente en red, recurriendo a Dexie local:', error?.message);
+        return from(this.dexie.table('creditos').where('cliente').equals(clienteId).toArray()).pipe(
+          map(creditos => ({ creditos }))
+        );
       })
     );
   }
@@ -173,22 +170,21 @@ export class ClienteService {
    */
   getCreditos(): Observable<any> {
     return this.http.get(`${this.apiUrlCredito}/`).pipe(
+      timeout(3500),
       map((res: any) => {
         const creditos = res.creditos || res || [];
         if (Array.isArray(creditos)) {
           this.dexie.table('creditos').clear().then(() => {
             this.dexie.table('creditos').bulkAdd(creditos);
-          });
+          }).catch(e => console.warn('Dexie save creditos error:', e));
         }
         return res;
       }),
       catchError(error => {
-        if (!navigator.onLine || error.status === 0) {
-          return from(this.dexie.table('creditos').toArray()).pipe(
-            map(creditos => ({ creditos })) // Envolver en objeto para mantener compatibilidad
-          );
-        }
-        return throwError(() => error);
+        console.warn('[ClienteService] Falló getCreditos en red, recurriendo a Dexie local:', error?.message);
+        return from(this.dexie.table('creditos').toArray()).pipe(
+          map(creditos => ({ creditos })) // Envolver en objeto para mantener compatibilidad
+        );
       })
     );
   }
@@ -204,15 +200,14 @@ export class ClienteService {
 
     this.clearCache();
     return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
+      timeout(3500),
       map((res) => {
         this.clearCache();
         return res;
       }),
       catchError(error => {
-        if (!navigator.onLine || error.status === 0) {
-          return this.guardarPagoLocal(creditoId, pagoParams);
-        }
-        return throwError(() => error);
+        console.warn('[ClienteService] Falló registrarPago en red (error o timeout), guardando localmente:', error?.message);
+        return this.guardarPagoLocal(creditoId, pagoParams);
       })
     );
   }
@@ -228,32 +223,58 @@ export class ClienteService {
 
     this.clearCache();
     return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload).pipe(
+      timeout(3500),
       map((res) => {
         this.clearCache();
         return res;
       }),
       catchError(error => {
-        if (!navigator.onLine || error.status === 0) {
-          return this.guardarUpdateCreditoLocal(creditoId, payload);
-        }
-        return throwError(() => error);
+        console.warn('[ClienteService] Falló actualizarCredito en red (error o timeout), guardando localmente:', error?.message);
+        return this.guardarUpdateCreditoLocal(creditoId, payload);
       })
     );
   }
 
   private guardarPagoLocal(creditoId: string, pagoParams: any): Observable<any> {
-    return from(
-      this.dexie.syncQueue.add({
+    return from((async () => {
+      await this.dexie.syncQueue.add({
         type: 'POST_PAGO',
         data: { creditoId, pagoParams },
         timestamp: Date.now()
-      })
-    ).pipe(
-      map(() => ({
+      });
+
+      // Actualizar crédito en Dexie optimísticamente
+      try {
+        const cred = await this.dexie.table('creditos').where('_id').equals(creditoId).first()
+          || await this.dexie.table('creditos').get(creditoId);
+        if (cred) {
+          if (!cred.pagos) cred.pagos = [];
+          const montoPag = Number(pagoParams.montoPagado) || 0;
+          const montoAhorro = Number(pagoParams.montoAhorro) || 0;
+
+          cred.pagos.push({
+            montoPagado: montoPag,
+            fechaPago: pagoParams.fechaPago || new Date().toISOString(),
+            numeroRecibo: pagoParams.numeroRecibo || null,
+            metodoPago: pagoParams.metodoPago || 'EFECTIVO',
+            montoAhorro: montoAhorro,
+            pagoSolidario: false
+          });
+
+          if (montoPag > 0 && cred.saldoPendiente !== undefined) {
+            cred.saldoPendiente = Math.max(0, cred.saldoPendiente - montoPag);
+          }
+          await this.dexie.table('creditos').put(cred);
+        }
+      } catch (e) {
+        console.warn('[Dexie] Error al actualizar crédito individual local:', e);
+      }
+
+      return {
         offline: true,
         message: 'Pago individual guardado localmente (Sin internet).'
-      }))
-    );
+      };
+    })());
   }
 
   private guardarUpdateCreditoLocal(creditoId: string, payload: any): Observable<any> {

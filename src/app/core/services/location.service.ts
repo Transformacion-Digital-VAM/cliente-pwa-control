@@ -88,7 +88,7 @@ export class LocationService {
           console.warn('[LocationService] getCoordsFresh falló:', err.message);
           resolve(null); // No bloqueamos el pago, simplemente va sin coords
         },
-        { enableHighAccuracy: true, timeout: 8000, maximumAge: 60000 }
+        { enableHighAccuracy: true, timeout: 2500, maximumAge: 60000 }
       );
     });
   }

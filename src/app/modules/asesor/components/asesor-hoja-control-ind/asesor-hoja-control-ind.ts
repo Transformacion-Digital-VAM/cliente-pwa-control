@@ -576,9 +576,68 @@ export class AsesorHojaControlInd implements OnInit {
           aplicaGarantia: aplicaGarantia
         };
       }
-    }).then((result) => {
-      if (result.isConfirmed) {
-        this.procesarPagoEnServidor(result.value);
+    }).then(async (result) => {
+      if (result.isConfirmed && result.value) {
+        const pagoData = result.value;
+        const ahora = new Date();
+        const fechaHoraStr = ahora.toLocaleDateString('es-MX', {
+          day: '2-digit',
+          month: '2-digit',
+          year: 'numeric'
+        }) + ' ' + ahora.toLocaleTimeString('es-MX', {
+          hour: '2-digit',
+          minute: '2-digit',
+          hour12: true
+        });
+
+        const nombreCliente = `${this.cliente?.nombre || ''} ${this.cliente?.apellidos || ''}`.trim() || 'Cliente Individual';
+        const totalStr = Number(pagoData.montoPagado || 0).toLocaleString('es-MX', {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+
+        const confirmResult = await Swal.fire({
+          title: '¿Confirmar Registro de Pago?',
+          icon: 'question',
+          html: `
+            <div style="text-align: left; font-size: 13px; color: #334155; line-height: 1.6;">
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 14px; margin-top: 10px;">
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Cliente (Individual):</span>
+                  <span style="font-size: 14px; font-weight: 800; color: #1e293b; text-transform: uppercase;">${nombreCliente}</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">Fecha y Hora:</span>
+                  <span style="font-weight: 600; color: #334155;">${fechaHoraStr}</span>
+                </div>
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; display: block;">No. de Recibo / Folio:</span>
+                  <span style="font-weight: 700; color: #2563eb;">#${pagoData.numeroRecibo}</span>
+                </div>
+                ${pagoData.aplicaGarantia ? `
+                <div style="margin-bottom: 8px;">
+                  <span style="font-size: 11px; font-weight: 700; color: #b45309; text-transform: uppercase; display: block;">Garantía:</span>
+                  <span style="font-weight: 600; color: #b45309;">Aplica Garantía</span>
+                </div>` : ''}
+                <div style="border-top: 1px dashed #cbd5e1; padding-top: 10px; margin-top: 10px; display: flex; justify-content: space-between; align-items: baseline;">
+                  <span style="font-size: 13px; font-weight: 800; color: #0f172a; text-transform: uppercase;">Total a registrar:</span>
+                  <span style="font-size: 20px; font-weight: 900; color: #16a34a;">$ ${totalStr}</span>
+                </div>
+              </div>
+            </div>
+          `,
+          showCancelButton: true,
+          confirmButtonText: 'Guardar',
+          cancelButtonText: 'Cancelar',
+          confirmButtonColor: '#16a34a',
+          cancelButtonColor: '#94a3b8',
+          reverseButtons: true,
+          focusConfirm: true
+        });
+
+        if (confirmResult.isConfirmed) {
+          this.procesarPagoEnServidor(pagoData);
+        }
       }
     });
   }
