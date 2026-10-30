@@ -305,7 +305,17 @@
                               <td class="px-4 py-3 text-slate-500 text-sm">{{ m.rol }}</td>
                               <td class="px-4 py-3 font-medium text-blue-600 text-sm">{{ m.credito?.tipoCredito || 'N/A'
                                 }}</td>
-                              <td class="px-4 py-3 font-medium text-slate-500 text-sm">{{ m.credito?.ciclo || 'N/A' }}
+                              <td class="px-4 py-3 font-medium text-slate-500 text-sm whitespace-nowrap">
+                                <button *ngIf="m.credito?.ciclo" 
+                                        (click)="vistaPreviaGrupoConCiclo(item, m.credito.ciclo, $event)"
+                                        title="Ver Hoja de Control del Ciclo {{ m.credito.ciclo }}"
+                                        class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-bold bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors shadow-xs cursor-pointer">
+                                  <span>Ciclo {{ m.credito.ciclo }}</span>
+                                  <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 text-blue-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                  </svg>
+                                </button>
+                                <span *ngIf="!m.credito?.ciclo" class="text-slate-400">N/A</span>
                               </td>
                               <td class="px-4 py-3 font-medium text-slate-500 text-sm">{{ m.credito?.semanas || 0 }}
                               </td>

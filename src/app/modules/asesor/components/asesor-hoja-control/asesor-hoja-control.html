@@ -140,9 +140,9 @@
 
         <!-- MEMBER HEADER (Clickable to expand) -->
         <div class="px-4 py-3 flex justify-between items-center cursor-pointer active:bg-slate-50 transition-colors"
-          (click)="!miembro.yaPagoHoy && togglePagoForm(miembro._id)" [class.bg-blue-50]="expandedMiembroId === miembro._id"
+          (click)="!miembro.yaPagoHoy && (miembro.creditoPendiente > 0) && togglePagoForm(miembro._id)" [class.bg-blue-50]="expandedMiembroId === miembro._id"
           [class.bg-slate-50]="expandedMiembroId !== miembro._id"
-          [class.cursor-not-allowed]="miembro.yaPagoHoy">
+          [class.cursor-not-allowed]="miembro.yaPagoHoy || (miembro.creditoPendiente <= 0)">
 
           <div class="flex items-center space-x-3 w-full">
             <span
@@ -160,6 +160,11 @@
                       'Integrante' }}</p>
                     <span class="bg-indigo-100 text-indigo-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{{
                       miembro.tipoCredito || 'N/A' }}</span>
+                    @if(miembro.estadoCredito === 'Liquidado' || (miembro.creditoPendiente !== undefined && miembro.creditoPendiente <= 0)) {
+                      <span class="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-1">
+                        Liquidado (Ciclo {{ miembro.ciclo || '-' }})
+                      </span>
+                    }
                     @if(miembro.yaPagoHoy) {
                       <span class="bg-emerald-100 text-emerald-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-1" title="Folio: {{ miembro.folioHoy }}">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-2 w-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7" /></svg>
