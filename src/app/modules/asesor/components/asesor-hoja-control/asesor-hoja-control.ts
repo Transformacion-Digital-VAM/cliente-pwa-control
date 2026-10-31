@@ -98,18 +98,55 @@ export class AsesorHojaControl implements OnInit {
   };
 
   get miembrosFiltrados() {
-    return this.miembrosFiltradosList;
+    return this.miembrosParaMostrar;
   }
 
   get miembrosParaMostrar(): any[] {
-    if (this.currentTab === 'COMUNAL_REFIL') {
-      if (this.accordionState === 'CC') {
-        return this.miembrosFiltradosList.filter(m => m.tipoCredito === 'CC' || m.tipoCredito === '8S');
-      } else {
-        return this.miembrosFiltradosList.filter(m => m.tipoCredito === 'R');
-      }
+    if (!this.miembros || !this.todosLosCreditos) {
+      return [];
     }
-    return this.miembrosFiltradosList;
+
+    if (this.currentTab === 'COMUNAL_REFIL') {
+      const isCC = this.accordionState === 'CC';
+      const targetTipos = isCC ? ['CC', '8S'] : ['R'];
+
+      return this.miembros
+        .map(m => {
+          const creditosMiembro = this.todosLosCreditos
+            .filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id))
+            .sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0));
+
+          const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') ||
+            creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado !== 'Cancelado');
+
+          if (credito) {
+            const mCopy = { ...m };
+            this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
+            return mCopy;
+          }
+          return null;
+        })
+        .filter(m => m !== null);
+    } else {
+      // MAGICO
+      return this.miembros
+        .map(m => {
+          const creditosMiembro = this.todosLosCreditos
+            .filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id))
+            .sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0));
+
+          const credito = creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' && c.estado === 'Activo') ||
+            creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' && c.estado !== 'Cancelado');
+
+          if (credito) {
+            const mCopy = { ...m };
+            this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
+            return mCopy;
+          }
+          return null;
+        })
+        .filter(m => m !== null);
+    }
   }
 
   filtrarYAsociarMiembros(): void {
@@ -117,23 +154,7 @@ export class AsesorHojaControl implements OnInit {
       this.miembrosFiltradosList = [];
       return;
     }
-
-    const targetTipos = this.currentTab === 'COMUNAL_REFIL' ? ['CC', '8S', 'R'] : ['MAGICO'];
-
-    this.miembrosFiltradosList = this.miembros
-      .map(m => {
-        const creditosMiembro = this.todosLosCreditos.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
-        const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') ||
-          creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito));
-
-        if (credito) {
-          const mCopy = { ...m };
-          this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
-          return mCopy;
-        }
-        return null;
-      })
-      .filter(m => m !== null);
+    this.miembrosFiltradosList = this.miembrosParaMostrar;
   }
 
   // --- UI CONTROLS ---
@@ -270,7 +291,7 @@ export class AsesorHojaControl implements OnInit {
 
     forkJoin({
       miembrosAll: this.grupoService.getMiembros(),
-      creditosAll: this.grupoService.getCreditos()
+      creditosAll: this.grupoService.getCreditos({ todos: true })
     }).subscribe({
       next: (res: any) => {
         this.processGrupoData(id, res);
