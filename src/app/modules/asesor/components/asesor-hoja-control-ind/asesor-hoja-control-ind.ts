@@ -78,7 +78,12 @@ export class AsesorHojaControlInd implements OnInit {
         }
 
         const arrCreditos = res.creditosData?.creditos || res.creditosData || [];
-        const creditosCliente = Array.isArray(arrCreditos) ? arrCreditos : [];
+        const todosCreditos = Array.isArray(arrCreditos) ? arrCreditos : [];
+        const creditosCliente = todosCreditos.filter((cred: any) => {
+          const cId = cred.cliente ? (cred.cliente._id ? cred.cliente._id.toString() : cred.cliente.toString()) : null;
+          const mId = cred.miembro ? (cred.miembro._id ? cred.miembro._id.toString() : cred.miembro.toString()) : null;
+          return cId === this.clienteId || mId === this.clienteId || cred._id === this.clienteId;
+        });
 
         this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
 
@@ -100,9 +105,11 @@ export class AsesorHojaControlInd implements OnInit {
             this.clienteService.getCreditos().subscribe({
               next: (creditosData) => {
                 const arrCreditos = creditosData?.creditos || creditosData || [];
-                const creditosCliente = arrCreditos.filter((cred: any) =>
-                  (cred.cliente?._id === this.clienteId || cred.cliente === this.clienteId)
-                );
+                const creditosCliente = (Array.isArray(arrCreditos) ? arrCreditos : []).filter((cred: any) => {
+                  const cId = cred.cliente ? (cred.cliente._id ? cred.cliente._id.toString() : cred.cliente.toString()) : null;
+                  const mId = cred.miembro ? (cred.miembro._id ? cred.miembro._id.toString() : cred.miembro.toString()) : null;
+                  return cId === this.clienteId || mId === this.clienteId || cred._id === this.clienteId;
+                });
                 this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
                 this.cargando = false;
                 this.cdr.detectChanges();

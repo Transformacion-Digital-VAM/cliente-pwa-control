@@ -159,8 +159,15 @@ export class ClienteService {
     return this.http.get(`${this.apiUrlCredito}/?cliente=${clienteId}`).pipe(
       catchError(error => {
         if (!navigator.onLine || error.status === 0) {
-          return from(this.dexie.table('creditos').where('cliente').equals(clienteId).toArray()).pipe(
-            map(creditos => ({ creditos }))
+          return from(this.dexie.table('creditos').toArray()).pipe(
+            map((creditos: any[]) => {
+              const filtrados = (creditos || []).filter(c => {
+                const cId = c.cliente ? (c.cliente._id ? c.cliente._id.toString() : c.cliente.toString()) : null;
+                const mId = c.miembro ? (c.miembro._id ? c.miembro._id.toString() : c.miembro.toString()) : null;
+                return cId === clienteId || mId === clienteId || c._id === clienteId;
+              });
+              return { creditos: filtrados };
+            })
           );
         }
         return throwError(() => error);
