@@ -34,12 +34,13 @@ export class GrupoService {
         console.log('[GrupoService] Enviando grupo:', bodyGrupo);
 
         const grupoObs = grupoId
-            ? of({ _id: grupoId })
+            ? this.http.put(`${this.apiUrlGrupo}/update/${grupoId}`, bodyGrupo)
             : this.http.post(`${this.apiUrlGrupo}/create`, bodyGrupo);
 
-        // Enviar un POST del Grupo o usar id existente
+        // Enviar un POST o PUT del Grupo
         return grupoObs.pipe(
             switchMap((grupoGuardado: any) => {
+                this.limpiarCache();
                 console.log('[GrupoService] Grupo guardado exitosamente:', grupoGuardado);
                 // Enviar peticiones para cada Integrante
                 if (integrantes && integrantes.length > 0) {
@@ -62,7 +63,7 @@ export class GrupoService {
                         };
 
                         return integ.miembroId
-                            ? of({ _id: integ.miembroId })
+                            ? this.http.put(`${this.apiUrlMiembro}/update/${integ.miembroId}`, bodyMiembro)
                             : this.http.post(`${this.apiUrlMiembro}/create`, bodyMiembro);
                     });
 

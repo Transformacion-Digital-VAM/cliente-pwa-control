@@ -118,60 +118,63 @@
         <!-- SECCIÓN: Logística -->
         <section class="space-y-6">
           <div class="flex flex-wrap items-end gap-x-8 gap-y-6">
-            <div class="space-y-1 w-48">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span
-                  class="text-red-500">*</span></label>
-              <select formControlName="diaVisita"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
-                <option>Lunes</option>
-                <option>Martes</option>
-                <option>Miércoles</option>
-                <option>Jueves</option>
-                <option>Viernes</option>
-                <option>Sábado</option>
-              </select>
-            </div>
-            <div class="space-y-1 w-32">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de
-                Visita <span class="text-red-500">*</span></label>
-              <input type="time" formControlName="horaVisita"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
-            </div>
+            <!--Primer día de pago-->
             <div class="space-y-1 w-48 relative">
               <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Fecha Primer Pago
                 <span class="text-red-500">*</span></label>
               <input type="date" formControlName="fechaPrimerPago"
                 class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
             </div>
-            
-            <!-- Estado Crédito -->
-            <div class="lg:col-span-1 space-y-2">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">
-                Estado Crédito <span class="text-red-500">*</span>
-              </label>
-              <div class="relative">
-                <select formControlName="estadoGrupo"
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-bold text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-8 hover:border-blue-400">
-                  <option value="CC">C.C</option>
-                  <option value="R">R</option>
-                  <option value="8S">8S</option>
+            <div class="space-y-1 w-32">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">Hora de
+                Visita <span class="text-red-500">*</span></label>
+              <input type="time" formControlName="horaVisita"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              </iv>
+              <!-- Día de Visita-->
+              <div class="space-y-1 w-48">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span
+                    class="text-red-500">*</span></label>
+                <select formControlName="diaVisita"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
+                  <option value="Lunes">Lunes</option>
+                  <option value="Martes">Martes</option>
+                  <option value="Miércoles">Miércoles</option>
+                  <option value="Jueves">Jueves</option>
+                  <option value="Viernes">Viernes</option>
+                  <option value="Sábado">Sábado</option>
+                  <option value="Domingo">Domingo</option>
                 </select>
-                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
+              </div>
+
+              <!-- Estado Crédito -->
+              <div class="lg:col-span-1 space-y-2">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">
+                  Estado Crédito <span class="text-red-500">*</span>
+                </label>
+                <div class="relative">
+                  <select formControlName="estadoGrupo"
+                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-bold text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-8 hover:border-blue-400">
+                    <option value="CC">C.C</option>
+                    <option value="R">R</option>
+                    <option value="8S">8S</option>
+                  </select>
+                  <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                    </svg>
+                  </div>
                 </div>
               </div>
-            </div>
 
-            <div class="flex-1"></div>
-            <div class="space-y-1 w-24">
-              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">%
-                Garantía <span class="text-red-500">*</span></label>
-              <input type="number" formControlName="porcentajeGarantia"
-                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              <div class="flex-1"></div>
+              <div class="space-y-1 w-24">
+                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">%
+                  Garantía <span class="text-red-500">*</span></label>
+                <input type="number" formControlName="porcentajeGarantia"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+              </div>
             </div>
-          </div>
         </section>
 
         <!-- SECCIÓN: Integrantes -->
@@ -191,7 +194,8 @@
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Nombre
                       del Integrante <span class="text-red-500">*</span></th>
                     <th class="px-6 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-widest">Apellidos
-                      <span class="text-red-500">*</span></th>
+                      <span class="text-red-500">*</span>
+                    </th>
                     <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest">Tipo
                       Credito <span class="text-red-500">*</span></th>
                     <th class="px-6 py-4 text-center text-xs font-bold text-slate-700 uppercase tracking-widest w-48">
@@ -291,8 +295,10 @@
                           (click)="abrirModalCancelarCreditoDesdeHoja(integrantes.at(i).get('miembroId')?.value, integrantes.at(i).get('nombre')?.value + ' ' + integrantes.at(i).get('apellidos')?.value)"
                           title="Cancelar crédito anterior con justificación (Refill / Cambio de Ciclo)"
                           class="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg text-xs font-bold transition-all shadow-xs whitespace-nowrap">
-                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5 text-amber-600" fill="none"
+                            viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                              d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                           <span>Liquidar por R/CC</span>
                         </button>

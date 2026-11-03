@@ -94,6 +94,28 @@ export class AdminHojaControlInd implements OnInit {
         }
       }
     });
+
+    this.hojaControlIndForm.get('fechaPrimerPago')?.valueChanges.subscribe(fecha => {
+      if (fecha) {
+        const diaDetectado = this.obtenerDiaSemanaDeFecha(fecha);
+        if (diaDetectado) {
+          this.hojaControlIndForm.get('diaPago')?.setValue(diaDetectado, { emitEvent: false });
+        }
+      }
+    });
+  }
+
+  obtenerDiaSemanaDeFecha(fechaStr: string): string {
+    if (!fechaStr) return '';
+    const partes = String(fechaStr).split('T')[0].split('-');
+    if (partes.length !== 3) return '';
+    const year = Number(partes[0]);
+    const month = Number(partes[1]) - 1;
+    const day = Number(partes[2]);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return '';
+    const fechaLocal = new Date(year, month, day);
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return dias[fechaLocal.getDay()] || '';
   }
 
   filtrarGruposPorAsesor(asesorId: string) {
@@ -258,7 +280,7 @@ export class AdminHojaControlInd implements OnInit {
       porcentajeGarantia: porcentajeGarantia,
       garantiaPredial: garantiaPredial,
       fechaPrimerPago: fechaLimpia,
-      diaPago: cliente.diaPago || 'Lunes',
+      diaPago: cliente.diaPago || (fechaLimpia ? this.obtenerDiaSemanaDeFecha(fechaLimpia) : 'Lunes'),
       tipoPago: tipoPago,
       horaVisita: cliente.horaVisita || '',
       nombreGrupo: grupoVal,
@@ -386,6 +408,8 @@ export class AdminHojaControlInd implements OnInit {
       this.clienteService.crearClienteIndividual(this.hojaControlIndForm.value).subscribe({
         next: () => {
           Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Registro guardado.' });
+          this.cargarClientes();
+          this.cargarCreditos();
           this.cancelar();
         },
         error: (err) => {

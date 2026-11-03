@@ -116,9 +116,26 @@ export class AdminHojaControl implements OnInit {
     this.hojaControlForm.get('fechaPrimerPago')?.valueChanges.subscribe((fecha) => {
       const semanas = Number(this.hojaControlForm.get('plazoSemanas')?.value) || 16;
       if (fecha) {
+        const diaDetectado = this.obtenerDiaSemanaDeFecha(fecha);
+        if (diaDetectado) {
+          this.hojaControlForm.get('diaVisita')?.setValue(diaDetectado, { emitEvent: false });
+        }
         this.generarSemanasOpcionales(fecha, semanas);
       }
     });
+  }
+
+  obtenerDiaSemanaDeFecha(fechaStr: string): string {
+    if (!fechaStr) return '';
+    const partes = String(fechaStr).split('T')[0].split('-');
+    if (partes.length !== 3) return '';
+    const year = Number(partes[0]);
+    const month = Number(partes[1]) - 1;
+    const day = Number(partes[2]);
+    if (isNaN(year) || isNaN(month) || isNaN(day)) return '';
+    const fechaLocal = new Date(year, month, day);
+    const dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return dias[fechaLocal.getDay()] || '';
   }
 
   recularTodosLosPagos() {
@@ -178,8 +195,8 @@ export class AdminHojaControl implements OnInit {
     });
   }
 
-  cargarGrupos(): void {
-    this.grupoService.getGrupos().subscribe({
+  cargarGrupos(forceRefresh = false): void {
+    this.grupoService.getGrupos(forceRefresh).subscribe({
       next: (data) => {
         this.gruposLocales = data || [];
       },
@@ -187,8 +204,8 @@ export class AdminHojaControl implements OnInit {
     });
   }
 
-  cargarMiembros(): void {
-    this.grupoService.getMiembros().subscribe({
+  cargarMiembros(forceRefresh = false): void {
+    this.grupoService.getMiembros(forceRefresh).subscribe({
       next: (data) => {
         this.miembrosLocales = data || [];
       },
@@ -196,8 +213,8 @@ export class AdminHojaControl implements OnInit {
     });
   }
 
-  cargarCreditos(): void {
-    this.grupoService.getCreditos().subscribe({
+  cargarCreditos(forceRefresh = false): void {
+    this.grupoService.getCreditos(undefined, forceRefresh).subscribe({
       next: (res) => {
         this.creditosLocales = res?.creditos || res || [];
       },
@@ -318,6 +335,12 @@ export class AdminHojaControl implements OnInit {
 
     if (fechaFuenteISO) {
       this.hojaControlForm.get('fechaPrimerPago')?.setValue(fechaFuenteISO, { emitEvent: false });
+      if (!grupo.diaVisita) {
+        const diaDetectado = this.obtenerDiaSemanaDeFecha(fechaFuenteISO);
+        if (diaDetectado) {
+          this.hojaControlForm.get('diaVisita')?.setValue(diaDetectado, { emitEvent: false });
+        }
+      }
     }
 
     // Generar las semanas (para uso interno si se necesitan)
@@ -686,6 +709,9 @@ export class AdminHojaControl implements OnInit {
               confirmButtonColor: '#3085d6'
             });
           }
+          this.cargarGrupos(true);
+          this.cargarMiembros(true);
+          this.cargarCreditos(true);
           this.cancelar(); // Limpiar el formulario
         },
         error: (err) => {
