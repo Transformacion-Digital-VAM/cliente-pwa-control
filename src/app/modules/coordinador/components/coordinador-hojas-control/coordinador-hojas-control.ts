@@ -2,10 +2,13 @@ import { Component, OnInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angu
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { forkJoin } from 'rxjs';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { ClienteService } from '../../../../core/services/cliente.service';
+import { AuthService } from '../../../../core/services/auth.service';
 import { environment } from '../../../../../environments/environment';
 
 @Component({
@@ -21,6 +24,9 @@ export class CoordinadorHojasControl implements OnInit {
   activeTab: 'grupos' | 'individuales' = 'grupos';
 
   // Datos del coordinador
+  currentUserId: string = '';
+  currentUsername: string = '';
+  userRole: string = 'coordinador';
   coordinadorName: string = 'Coordinador';
   coordinacionId: string = '';
   coordinacionNombre: string = 'Mi Coordinación';
@@ -29,32 +35,66 @@ export class CoordinadorHojasControl implements OnInit {
   grupos: any[] = [];
   clientes: any[] = [];
   asesoresList: any[] = [];
+  asesoresSoloList: any[] = [];
+  ejecutivasList: any[] = [];
 
   // Filtros
   searchTerm: string = '';
+  filtroOrigen: 'todos' | 'asesores' | 'ejecutiva' = 'todos';
   filtroAsesorId: string = 'todos';
   filtroEstado: string = 'todos';
+
+  // Paginación (máximo 7 por página)
+  currentPage: number = 1;
+  readonly itemsPerPage: number = 7;
 
   // Acordeón para inspeccionar detalles en solo lectura
   expandedItems: { [id: string]: boolean } = {};
 
-  // Mapeos rápidos para créditos
+  // Modal Vista Previa (Solo Lectura)
+  previewUrl: string | null = null;
+  previewSafeUrl: SafeResourceUrl | null = null;
+  previewGrupoNombre: string = '';
+
+  // Mapeos rápidos para créditos y usuarios
   private creditoMiembroMap = new Map<string, any>();
   private creditoClienteMap = new Map<string, any>();
+  private usuariosMap = new Map<string, any>();
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private grupoService: GrupoService,
     private clienteService: ClienteService,
+    private authService: AuthService,
     private router: Router,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
       this.cargarDatosUsuario();
-      this.cargarDatos();
+      this.cargarDatos(true);
     }
+  }
+
+  private extraerId(val: any): string {
+    if (!val) return '';
+    if (typeof val === 'object') {
+      return String(val._id || val.id || val.$oid || '');
+    }
+    return String(val);
+  }
+
+  private normalizarRol(role: any): string {
+    const r = String(role || '').trim().toLowerCase();
+    if (['coordinador', 'acoordinador', 'cop', 'coordinacion'].includes(r)) {
+      return 'coordinador';
+    }
+    if (['master', 'ejecutiva'].includes(r)) {
+      return 'master';
+    }
+    return r;
   }
 
   private cargarDatosUsuario(): void {
@@ -62,11 +102,14 @@ export class CoordinadorHojasControl implements OnInit {
     if (userStr) {
       try {
         const userObj = JSON.parse(userStr);
+        this.currentUserId = this.extraerId(userObj._id || userObj.id);
+        this.currentUsername = String(userObj.username || '').trim();
+        this.userRole = this.normalizarRol(userObj.role || 'coordinador');
         this.coordinadorName = userObj.nombre || userObj.username || 'Coordinador';
-        const rawCoord = userObj.coordinacion;
-        this.coordinacionId = (rawCoord && typeof rawCoord === 'object')
-          ? String(rawCoord._id || rawCoord.id || '')
-          : String(rawCoord || '');
+        this.coordinacionId = this.extraerId(userObj.coordinacion);
+        if (userObj.coordinacion && typeof userObj.coordinacion === 'object' && userObj.coordinacion.nombre) {
+          this.coordinacionNombre = userObj.coordinacion.nombre;
+        }
       } catch (e) {
         console.error('Error parseando datos de usuario:', e);
       }
@@ -77,13 +120,18 @@ export class CoordinadorHojasControl implements OnInit {
     this.isLoading = true;
     this.cdr.markForCheck();
 
+    if (forceRefresh) {
+      this.grupoService.limpiarCache();
+      this.clienteService.clearCache();
+    }
+
     forkJoin({
-      grupos: this.grupoService.getGrupos(forceRefresh),
-      asesores: this.grupoService.getAsesores(forceRefresh),
-      clientes: this.clienteService.getClientes({ conCredito: true }, forceRefresh),
-      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh),
-      creditosRes: this.grupoService.getCreditos({}, forceRefresh),
-      miembrosRes: this.grupoService.getMiembros(forceRefresh)
+      grupos: this.grupoService.getGrupos(forceRefresh).pipe(catchError(() => of([]))),
+      asesores: this.grupoService.getAsesores(forceRefresh).pipe(catchError(() => of([]))),
+      clientes: this.clienteService.getClientes({ conCredito: true }, forceRefresh).pipe(catchError(() => of([]))),
+      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh).pipe(catchError(() => of([]))),
+      creditosRes: this.grupoService.getCreditos({}, forceRefresh).pipe(catchError(() => of([]))),
+      miembrosRes: this.grupoService.getMiembros(forceRefresh).pipe(catchError(() => of([])))
     }).subscribe({
       next: (res: any) => {
         const allCoordinaciones = res.coordinaciones || [];
@@ -92,7 +140,21 @@ export class CoordinadorHojasControl implements OnInit {
         const allClientes = res.clientes || [];
         const allCreditos = res.creditosRes?.creditos || res.creditosRes || [];
 
-        // 1. Obtener nombre de la coordinación (o auto-vincular si falta coordinacionId)
+        // 1. Resolver coordinacionId si no venía en localStorage (ej. usuario al que se le cambió el rol en BD)
+        if (!this.coordinacionId) {
+          const meInAsesores = allAsesores.find((a: any) => {
+            const aId = this.extraerId(a);
+            return (this.currentUserId && aId === this.currentUserId) ||
+              (this.currentUsername && String(a.username || '').toLowerCase() === this.currentUsername.toLowerCase());
+          });
+          if (meInAsesores) {
+            const coordFromMe = this.extraerId(meInAsesores.coordinacion);
+            if (coordFromMe) {
+              this.coordinacionId = coordFromMe;
+            }
+          }
+        }
+
         if (!this.coordinacionId && this.coordinadorName) {
           const matchedCoord = allCoordinaciones.find((c: any) =>
             c.coordinador && (
@@ -104,26 +166,82 @@ export class CoordinadorHojasControl implements OnInit {
             this.coordinacionId = String(matchedCoord._id);
             this.coordinacionNombre = matchedCoord.nombre;
           }
-        } else if (this.coordinacionId) {
+        }
+
+        if (!this.coordinacionId && allGrupos.length > 0) {
+          for (const g of allGrupos) {
+            const gCoord = this.extraerId(g.coordinacion) || this.extraerId(g.asesor?.coordinacion);
+            if (gCoord) {
+              this.coordinacionId = gCoord;
+              break;
+            }
+          }
+        }
+
+        if (this.coordinacionId) {
           const coordObj = allCoordinaciones.find((c: any) => String(c._id) === String(this.coordinacionId));
           if (coordObj && coordObj.nombre) {
             this.coordinacionNombre = coordObj.nombre;
           }
         }
 
-        // 2. Filtrar asesores de su coordinación
+        // 2. Identificar hojas (grupos y clientes) que pertenecen a la coordinación
+        // Si el usuario tiene rol 'coordinador', el backend ya filtró allGrupos y allClientes por su coordinación.
+        let usuariosCoordinacion: any[] = [];
         if (this.coordinacionId) {
-          this.asesoresList = allAsesores.filter((a: any) => {
-            const aCoord = (a.coordinacion && typeof a.coordinacion === 'object')
-              ? (a.coordinacion._id || a.coordinacion.id)
-              : a.coordinacion;
-            return aCoord && String(aCoord) === String(this.coordinacionId);
+          usuariosCoordinacion = allAsesores.filter((a: any) => {
+            const aCoord = this.extraerId(a.coordinacion);
+            return aCoord && aCoord === String(this.coordinacionId);
           });
         } else {
-          this.asesoresList = allAsesores;
+          usuariosCoordinacion = [...allAsesores];
         }
 
-        const asesorIdsEnCoord = new Set(this.asesoresList.map((a: any) => String(a._id || a.id)));
+        this.usuariosMap.clear();
+        for (const u of usuariosCoordinacion) {
+          const uid = this.extraerId(u);
+          if (uid) this.usuariosMap.set(uid, u);
+        }
+
+        // Registrar también cualquier asesor/master poblado en los grupos o clientes recibidos
+        for (const item of [...allGrupos, ...allClientes]) {
+          if (item?.asesor && typeof item.asesor === 'object') {
+            const aId = this.extraerId(item.asesor);
+            const itemCoord = this.extraerId(item.coordinacion) || this.extraerId(item.asesor.coordinacion);
+            const perteneceACoord = this.userRole === 'coordinador' || !this.coordinacionId || !itemCoord || itemCoord === String(this.coordinacionId);
+            if (aId && perteneceACoord) {
+              if (!this.usuariosMap.has(aId)) {
+                this.usuariosMap.set(aId, item.asesor);
+              } else {
+                const existing = this.usuariosMap.get(aId);
+                if (!existing.role && item.asesor.role) {
+                  existing.role = item.asesor.role;
+                }
+              }
+            }
+          }
+        }
+
+        // Contar qué usuarios tienen hojas asignadas para saber si un coordinador tiene hojas propias
+        const idsConHojas = new Set<string>();
+        for (const item of [...allGrupos, ...allClientes]) {
+          const aId = this.extraerId(item?.asesor);
+          if (aId) idsConHojas.add(aId);
+        }
+
+        const todosUsuariosCoord = Array.from(this.usuariosMap.values());
+        this.ejecutivasList = todosUsuariosCoord.filter((u: any) => this.normalizarRol(u.role) === 'master');
+        this.asesoresSoloList = todosUsuariosCoord.filter((u: any) => {
+          const rolNorm = this.normalizarRol(u.role);
+          if (rolNorm === 'master') return false;
+          if (rolNorm === 'coordinador') {
+            return idsConHojas.has(this.extraerId(u));
+          }
+          return true;
+        });
+        this.asesoresList = [...this.ejecutivasList, ...this.asesoresSoloList];
+
+        const asesorIdsEnCoord = new Set(this.asesoresList.map((a: any) => this.extraerId(a)));
 
         // 3. Crear mapa de créditos
         this.creditoMiembroMap.clear();
@@ -131,33 +249,33 @@ export class CoordinadorHojasControl implements OnInit {
 
         for (const c of allCreditos) {
           if (c.miembro) {
-            const mId = typeof c.miembro === 'object' ? String(c.miembro._id || c.miembro.id) : String(c.miembro);
+            const mId = this.extraerId(c.miembro);
             if (!this.creditoMiembroMap.has(mId) || c.estado === 'Activo') {
               this.creditoMiembroMap.set(mId, c);
             }
           }
           if (c.cliente) {
-            const clId = typeof c.cliente === 'object' ? String(c.cliente._id || c.cliente.id) : String(c.cliente);
+            const clId = this.extraerId(c.cliente);
             if (!this.creditoClienteMap.has(clId) || c.estado === 'Activo') {
               this.creditoClienteMap.set(clId, c);
             }
           }
         }
 
-        // 4. Filtrar y asignar créditos a integrantes de grupos para modo solo lectura
+        // 4. Filtrar y asignar créditos a integrantes de grupos (asesores y ejecutiva/master)
         let gruposAProcesar = allGrupos;
-        if (this.coordinacionId && asesorIdsEnCoord.size > 0) {
+        if (this.userRole !== 'coordinador' && this.coordinacionId) {
           gruposAProcesar = allGrupos.filter((g: any) => {
-            const gCoord = (g.coordinacion && typeof g.coordinacion === 'object') ? (g.coordinacion._id || g.coordinacion.id) : g.coordinacion;
-            if (gCoord && String(gCoord) === String(this.coordinacionId)) return true;
-            const aId = (g.asesor && typeof g.asesor === 'object') ? (g.asesor._id || g.asesor.id) : g.asesor;
-            return aId && asesorIdsEnCoord.has(String(aId));
+            const gCoord = this.extraerId(g.coordinacion) || this.extraerId(g.asesor?.coordinacion);
+            if (gCoord && gCoord === String(this.coordinacionId)) return true;
+            const aId = this.extraerId(g.asesor);
+            return aId && asesorIdsEnCoord.has(aId);
           });
         }
 
         this.grupos = gruposAProcesar.map((g: any) => {
           const integrantesConCredito = (g.integrantes || []).map((m: any) => {
-            const mId = String(m._id || m);
+            const mId = this.extraerId(m);
             const cred = this.creditoMiembroMap.get(mId) || null;
             return {
               ...m,
@@ -166,26 +284,28 @@ export class CoordinadorHojasControl implements OnInit {
           });
           return {
             ...g,
+            esEjecutiva: this.esHojaDeEjecutiva(g),
             integrantes: integrantesConCredito
           };
         });
 
-        // 5. Filtrar y asignar créditos a clientes individuales
+        // 5. Filtrar y asignar créditos a clientes individuales (asesores y ejecutiva/master)
         let clientesAProcesar = allClientes;
-        if (this.coordinacionId && asesorIdsEnCoord.size > 0) {
+        if (this.userRole !== 'coordinador' && this.coordinacionId) {
           clientesAProcesar = allClientes.filter((c: any) => {
-            const cCoord = (c.coordinacion && typeof c.coordinacion === 'object') ? (c.coordinacion._id || c.coordinacion.id) : c.coordinacion;
-            if (cCoord && String(cCoord) === String(this.coordinacionId)) return true;
-            const aId = (c.asesor && typeof c.asesor === 'object') ? (c.asesor._id || c.asesor.id) : c.asesor;
-            return aId && asesorIdsEnCoord.has(String(aId));
+            const cCoord = this.extraerId(c.coordinacion) || this.extraerId(c.asesor?.coordinacion);
+            if (cCoord && cCoord === String(this.coordinacionId)) return true;
+            const aId = this.extraerId(c.asesor);
+            return aId && asesorIdsEnCoord.has(aId);
           });
         }
 
         this.clientes = clientesAProcesar.map((c: any) => {
           const clId = String(c._id);
-          const cred = c.credito || this.creditoClienteMap.get(clId) || null;
+          const cred = c.credito || c.creditoActivo || this.creditoClienteMap.get(clId) || null;
           return {
             ...c,
+            esEjecutiva: this.esHojaDeEjecutiva(c),
             credito: cred
           };
         });
@@ -201,15 +321,80 @@ export class CoordinadorHojasControl implements OnInit {
     });
   }
 
+  // --- IDENTIFICACIÓN DE EJECUTIVA (ROL MASTER) ---
+
+  esUsuarioEjecutiva(usuario: any): boolean {
+    if (!usuario) return false;
+    if (this.normalizarRol(usuario.role) === 'master') return true;
+    const id = this.extraerId(usuario);
+    return this.ejecutivasList.some(e => this.extraerId(e) === id);
+  }
+
+  esHojaDeEjecutiva(item: any): boolean {
+    if (!item?.asesor) return false;
+    if (typeof item.asesor === 'object' && this.normalizarRol(item.asesor.role) === 'master') {
+      return true;
+    }
+    const aId = this.extraerId(item.asesor);
+    const userEnMapa = this.usuariosMap.get(aId);
+    if (userEnMapa && this.normalizarRol(userEnMapa.role) === 'master') {
+      return true;
+    }
+    return this.ejecutivasList.some(e => this.extraerId(e) === aId);
+  }
+
+  get nombreEjecutivaCoordinacion(): string {
+    if (this.ejecutivasList.length === 0) return 'Sin Ejecutiva asignada';
+    return this.ejecutivasList.map(e => e.nombre || e.username).join(', ');
+  }
+
+  get totalHojasEjecutiva(): number {
+    const gCount = this.grupos.filter(g => g.esEjecutiva).length;
+    const cCount = this.clientes.filter(c => c.esEjecutiva).length;
+    return gCount + cCount;
+  }
+
+  get gruposEjecutivaCount(): number {
+    return this.grupos.filter(g => g.esEjecutiva).length;
+  }
+
+  get clientesEjecutivaCount(): number {
+    return this.clientes.filter(c => c.esEjecutiva).length;
+  }
+
+  contarHojasPorUsuario(userId: string): number {
+    const idStr = String(userId);
+    const lista = this.activeTab === 'grupos' ? this.grupos : this.clientes;
+    return lista.filter(item => this.extraerId(item.asesor) === idStr).length;
+  }
+
   // --- FILTROS COMPUTADOS ---
+
+  get usuariosFiltroDisponibles(): any[] {
+    if (this.filtroOrigen === 'ejecutiva') {
+      return this.ejecutivasList;
+    }
+    if (this.filtroOrigen === 'asesores') {
+      return this.asesoresSoloList;
+    }
+    return this.asesoresList;
+  }
+
   get gruposFiltrados(): any[] {
     let result = this.grupos;
 
-    // Filtro por Asesor
+    // Filtro por Origen (Todos / Asesores / Ejecutiva)
+    if (this.filtroOrigen === 'ejecutiva') {
+      result = result.filter(g => g.esEjecutiva);
+    } else if (this.filtroOrigen === 'asesores') {
+      result = result.filter(g => !g.esEjecutiva);
+    }
+
+    // Filtro por Asesor / Ejecutiva específico
     if (this.filtroAsesorId && this.filtroAsesorId !== 'todos') {
       result = result.filter(g => {
-        const aId = (g.asesor && typeof g.asesor === 'object') ? (g.asesor._id || g.asesor.id) : g.asesor;
-        return aId && String(aId) === String(this.filtroAsesorId);
+        const aId = this.extraerId(g.asesor);
+        return aId && aId === String(this.filtroAsesorId);
       });
     }
 
@@ -218,13 +403,13 @@ export class CoordinadorHojasControl implements OnInit {
       result = result.filter(g => g.estadoGrupo === this.filtroEstado);
     }
 
-    // Búsqueda por texto (nombre, clave, asesor)
+    // Búsqueda por texto (nombre, clave, asesor/ejecutiva)
     if (this.searchTerm && this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase().trim();
       result = result.filter(g => {
         const nombre = (g.nombre || '').toLowerCase();
         const clave = (g.clave || '').toLowerCase();
-        const asesorNombre = typeof g.asesor === 'object' ? (g.asesor?.nombre || '').toLowerCase() : '';
+        const asesorNombre = this.obtenerNombreAsesor(g).toLowerCase();
         return nombre.includes(term) || clave.includes(term) || asesorNombre.includes(term);
       });
     }
@@ -235,21 +420,28 @@ export class CoordinadorHojasControl implements OnInit {
   get clientesFiltrados(): any[] {
     let result = this.clientes;
 
-    // Filtro por Asesor
+    // Filtro por Origen (Todos / Asesores / Ejecutiva)
+    if (this.filtroOrigen === 'ejecutiva') {
+      result = result.filter(c => c.esEjecutiva);
+    } else if (this.filtroOrigen === 'asesores') {
+      result = result.filter(c => !c.esEjecutiva);
+    }
+
+    // Filtro por Asesor / Ejecutiva específico
     if (this.filtroAsesorId && this.filtroAsesorId !== 'todos') {
       result = result.filter(c => {
-        const aId = (c.asesor && typeof c.asesor === 'object') ? (c.asesor._id || c.asesor.id) : c.asesor;
-        return aId && String(aId) === String(this.filtroAsesorId);
+        const aId = this.extraerId(c.asesor);
+        return aId && aId === String(this.filtroAsesorId);
       });
     }
 
-    // Búsqueda por texto (nombre, clave, asesor)
+    // Búsqueda por texto (nombre, clave, asesor/ejecutiva)
     if (this.searchTerm && this.searchTerm.trim()) {
       const term = this.searchTerm.toLowerCase().trim();
       result = result.filter(c => {
         const nombre = (c.nombre || '').toLowerCase();
         const clave = (c.clave || '').toLowerCase();
-        const asesorNombre = typeof c.asesor === 'object' ? (c.asesor?.nombre || '').toLowerCase() : '';
+        const asesorNombre = this.obtenerNombreAsesor(c).toLowerCase();
         return nombre.includes(term) || clave.includes(term) || asesorNombre.includes(term);
       });
     }
@@ -257,18 +449,101 @@ export class CoordinadorHojasControl implements OnInit {
     return result;
   }
 
+  // --- PAGINACIÓN (MÁX 7 POR PÁGINA) ---
+
+  get totalRegistrosActivos(): number {
+    return this.activeTab === 'grupos' ? this.gruposFiltrados.length : this.clientesFiltrados.length;
+  }
+
+  get totalPages(): number {
+    return Math.max(1, Math.ceil(this.totalRegistrosActivos / this.itemsPerPage));
+  }
+
+  get paginaActualSegura(): number {
+    return Math.min(Math.max(1, this.currentPage), this.totalPages);
+  }
+
+  get gruposPaginados(): any[] {
+    const start = (this.paginaActualSegura - 1) * this.itemsPerPage;
+    return this.gruposFiltrados.slice(start, start + this.itemsPerPage);
+  }
+
+  get clientesPaginados(): any[] {
+    const start = (this.paginaActualSegura - 1) * this.itemsPerPage;
+    return this.clientesFiltrados.slice(start, start + this.itemsPerPage);
+  }
+
+  get rangoInicioPagina(): number {
+    if (this.totalRegistrosActivos === 0) return 0;
+    return (this.paginaActualSegura - 1) * this.itemsPerPage + 1;
+  }
+
+  get rangoFinPagina(): number {
+    return Math.min(this.paginaActualSegura * this.itemsPerPage, this.totalRegistrosActivos);
+  }
+
+  get paginasVisibles(): number[] {
+    const total = this.totalPages;
+    const actual = this.paginaActualSegura;
+    const paginas: number[] = [];
+
+    if (total <= 7) {
+      for (let i = 1; i <= total; i++) paginas.push(i);
+      return paginas;
+    }
+
+    let inicio = Math.max(1, actual - 2);
+    let fin = Math.min(total, inicio + 4);
+    if (fin - inicio < 4) {
+      inicio = Math.max(1, fin - 4);
+    }
+    for (let i = inicio; i <= fin; i++) {
+      paginas.push(i);
+    }
+    return paginas;
+  }
+
+  cambiarPagina(page: number): void {
+    const total = this.totalPages;
+    if (page >= 1 && page <= total) {
+      this.currentPage = page;
+      this.cdr.markForCheck();
+    }
+  }
+
+  onSearchChange(): void {
+    this.currentPage = 1;
+  }
+
   setTab(tab: 'grupos' | 'individuales'): void {
     this.activeTab = tab;
+    this.currentPage = 1;
+  }
+
+  setFiltroOrigen(origen: 'todos' | 'asesores' | 'ejecutiva'): void {
+    this.filtroOrigen = origen;
+    this.filtroAsesorId = 'todos';
+    this.currentPage = 1;
+    if (origen === 'ejecutiva') {
+      if (this.activeTab === 'grupos' && this.gruposEjecutivaCount === 0 && this.clientesEjecutivaCount > 0) {
+        this.activeTab = 'individuales';
+      } else if (this.activeTab === 'individuales' && this.clientesEjecutivaCount === 0 && this.gruposEjecutivaCount > 0) {
+        this.activeTab = 'grupos';
+      }
+    }
   }
 
   setFiltroAsesor(asesorId: string): void {
     this.filtroAsesorId = asesorId;
+    this.currentPage = 1;
   }
 
   limpiarFiltros(): void {
     this.searchTerm = '';
+    this.filtroOrigen = 'todos';
     this.filtroAsesorId = 'todos';
     this.filtroEstado = 'todos';
+    this.currentPage = 1;
   }
 
   toggleAccordion(id: string, event?: Event): void {
@@ -278,6 +553,10 @@ export class CoordinadorHojasControl implements OnInit {
 
   irAAsesorHome(): void {
     this.router.navigate(['/home-asesor']);
+  }
+
+  async logout(): Promise<void> {
+    await this.authService.logout();
   }
 
   abrirHojaControlGrupo(grupo: any, event?: Event): void {
@@ -348,7 +627,7 @@ export class CoordinadorHojasControl implements OnInit {
         const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
         url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
-      window.open(url, '_blank');
+      this.abrirModalPreview(url, `${grupo.nombre || 'Grupo'} (Ciclo ${ciclo})`);
     }
   }
 
@@ -409,7 +688,27 @@ export class CoordinadorHojasControl implements OnInit {
         const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
         url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
-      window.open(url, '_blank');
+      this.abrirModalPreview(url, `${cliente.nombre || 'Cliente'} (Ciclo ${ciclo})`);
+    }
+  }
+
+  abrirModalPreview(url: string, nombre: string): void {
+    this.previewGrupoNombre = nombre;
+    this.previewUrl = url;
+    this.previewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${url}#toolbar=0`);
+    this.cdr.markForCheck();
+  }
+
+  cerrarPreview(): void {
+    this.previewUrl = null;
+    this.previewSafeUrl = null;
+    this.previewGrupoNombre = '';
+    this.cdr.markForCheck();
+  }
+
+  abrirEnNuevaPestana(): void {
+    if (this.previewUrl) {
+      window.open(`${this.previewUrl}#toolbar=0`, '_blank');
     }
   }
 

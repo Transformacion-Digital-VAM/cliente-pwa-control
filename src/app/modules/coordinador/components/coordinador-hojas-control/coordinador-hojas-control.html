@@ -1,30 +1,30 @@
 <div class="min-h-screen bg-gradient-to-b from-slate-50 via-slate-100 to-slate-200 font-sans pb-28 text-slate-800">
 
   <!-- CABECERA PRINCIPAL (SUPERVISIÓN COORDINACIÓN) -->
-  <header class="bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-600 rounded-b-[2rem] shadow-xl shadow-indigo-200/50 px-5 pt-6 pb-6 text-white relative">
+  <header
+    class="bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-600 rounded-b-[2rem] shadow-xl shadow-indigo-200/50 px-5 pt-6 pb-6 text-white relative">
     <div class="max-w-6xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-4">
-      
+
       <!-- Identidad Coordinador & Coordinación -->
       <div class="flex items-center space-x-3.5">
         <div class="bg-white/20 p-2.5 rounded-2xl backdrop-blur-md shadow-inner border border-white/20">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
           </svg>
         </div>
         <div>
-          <!-- <div class="flex items-center gap-2">
-            <span class="text-[10px] font-black uppercase tracking-widest bg-white/20 px-2.5 py-0.5 rounded-full text-purple-100 border border-white/20">
-              Módulo de Supervisión
-            </span>
-            <span class="text-[10px] font-bold bg-amber-400 text-slate-900 px-2 py-0.5 rounded-full shadow-xs">
-              Solo Lectura
-            </span>
-          </div> -->
           <h1 class="text-xl md:text-2xl font-black tracking-tight text-white mt-1">
             Hojas de Control
           </h1>
           <p class="text-xs text-purple-100/90 font-medium">
             Coord: <strong class="text-white">{{ coordinacionNombre }}</strong> &bull; {{ coordinadorName }}
+          </p>
+          <p *ngIf="ejecutivasList.length > 0"
+            class="text-[11px] text-amber-200 font-bold mt-0.5 flex items-center gap-1">
+            <span class="inline-block w-1.5 h-1.5 rounded-full bg-amber-300"></span>
+            Ejecutiva: <strong class="text-white">{{ nombreEjecutivaCoordinacion }}</strong>
           </p>
         </div>
       </div>
@@ -34,16 +34,15 @@
         <button (click)="cargarDatos(true)" [disabled]="isLoading"
           class="p-2.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-2xl backdrop-blur-md transition-all border border-white/20 shadow-sm"
           title="Refrescar Datos">
-          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" [class.animate-spin]="isLoading" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" [class.animate-spin]="isLoading" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
           </svg>
         </button>
 
         <button (click)="irAAsesorHome()"
           class="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-900 hover:bg-purple-50 active:scale-95 rounded-2xl font-bold text-xs shadow-md transition-all">
-          <!-- <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-indigo-700" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-          </svg> -->
           <span>Vista Asesor</span>
         </button>
       </div>
@@ -55,7 +54,7 @@
   <main class="max-w-6xl mx-auto px-4 mt-5 space-y-5">
 
     <!-- TARJETAS DE MÉTRICAS RÁPIDAS (KPIs) -->
-    <div class="grid grid-cols-3 gap-3 md:gap-5">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
       <!-- Total Grupos -->
       <div (click)="setTab('grupos')"
         class="bg-white rounded-2xl p-3.5 md:p-4 border border-slate-200/80 shadow-xs cursor-pointer hover:border-purple-300 transition-all"
@@ -63,13 +62,15 @@
         <div class="flex items-center justify-between">
           <span class="text-[10px] md:text-xs font-black uppercase tracking-wider text-slate-400">Grupales</span>
           <div class="bg-blue-100 text-blue-700 p-1.5 rounded-xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
             </svg>
           </div>
         </div>
-        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ grupos.length }}</p>
-        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Grupos registrados</p>
+        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ gruposFiltrados.length }}</p>
+        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">de {{ grupos.length }} grupos</p>
       </div>
 
       <!-- Total Individuales -->
@@ -79,86 +80,134 @@
         <div class="flex items-center justify-between">
           <span class="text-[10px] md:text-xs font-black uppercase tracking-wider text-slate-400">Individuales</span>
           <div class="bg-emerald-100 text-emerald-700 p-1.5 rounded-xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
             </svg>
           </div>
         </div>
-        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ clientes.length }}</p>
-        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">Clientes individuales</p>
+        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ clientesFiltrados.length }}</p>
+        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">de {{ clientes.length }} individuales</p>
       </div>
 
       <!-- Total Asesores -->
-      <div class="bg-white rounded-2xl p-3.5 md:p-4 border border-slate-200/80 shadow-xs">
+      <div (click)="setFiltroOrigen(filtroOrigen === 'asesores' ? 'todos' : 'asesores')"
+        class="bg-white rounded-2xl p-3.5 md:p-4 border border-slate-200/80 shadow-xs cursor-pointer hover:border-purple-300 transition-all"
+        [class.ring-2]="filtroOrigen === 'asesores'" [class.ring-purple-500]="filtroOrigen === 'asesores'">
         <div class="flex items-center justify-between">
           <span class="text-[10px] md:text-xs font-black uppercase tracking-wider text-slate-400">Asesores</span>
           <div class="bg-purple-100 text-purple-700 p-1.5 rounded-xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
             </svg>
           </div>
         </div>
-        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ asesoresList.length }}</p>
+        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ asesoresSoloList.length }}</p>
         <p class="text-[10px] text-slate-400 font-semibold mt-0.5">En tu coordinación</p>
+      </div>
+
+      <!-- Hojas de Ejecutiva (Rol Master) -->
+      <div (click)="setFiltroOrigen(filtroOrigen === 'ejecutiva' ? 'todos' : 'ejecutiva')"
+        class="bg-white rounded-2xl p-3.5 md:p-4 border border-slate-200/80 shadow-xs cursor-pointer hover:border-amber-400 transition-all"
+        [class.ring-2]="filtroOrigen === 'ejecutiva'" [class.ring-amber-500]="filtroOrigen === 'ejecutiva'"
+        [class.bg-amber-50/40]="filtroOrigen === 'ejecutiva'">
+        <div class="flex items-center justify-between">
+          <span class="text-[10px] md:text-xs font-black uppercase tracking-wider text-amber-600">Ejecutiva</span>
+          <div class="bg-amber-100 text-amber-700 p-1.5 rounded-xl">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+            </svg>
+          </div>
+        </div>
+        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ totalHojasEjecutiva }}</p>
+        <p class="text-[10px] text-slate-500 font-semibold mt-0.5 truncate" [title]="nombreEjecutivaCoordinacion">
+          {{ ejecutivasList.length > 0 ? nombreEjecutivaCoordinacion : 'Hojas de ejecutiva' }}
+        </p>
       </div>
     </div>
 
     <!-- PANEL DE CONTROL & FILTROS -->
     <div class="bg-white rounded-3xl p-4 md:p-5 border border-slate-200/80 shadow-sm space-y-4">
 
-      <!-- PESTAÑAS PRINCIPALES: GRUPOS VS INDIVIDUALES -->
-      <!-- <div class="flex items-center gap-2 border-b border-slate-100 pb-3">
-        <button (click)="setTab('grupos')"
-          class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all"
-          [class.bg-purple-600]="activeTab === 'grupos'" [class.text-white]="activeTab === 'grupos'"
-          [class.shadow-md]="activeTab === 'grupos'" [class.bg-slate-100]="activeTab !== 'grupos'"
-          [class.text-slate-600]="activeTab !== 'grupos'">
-          <span>Créditos Grupales</span>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-            [class.bg-white]="activeTab === 'grupos'" [class.text-purple-700]="activeTab === 'grupos'"
-            [class.bg-slate-200]="activeTab !== 'grupos'" [class.text-slate-700]="activeTab !== 'grupos'">
-            {{ gruposFiltrados.length }}
-          </span>
-        </button>
+      <!-- SELECTOR DE ORIGEN DE HOJAS: TODAS / ASESORES / EJECUTIVA -->
+      <div class="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 pb-3">
+        <div class="flex flex-wrap items-center gap-2">
+          <button (click)="setFiltroOrigen('todos')"
+            class="px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5"
+            [ngClass]="filtroOrigen === 'todos' ? 'bg-purple-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
+            <span>Todas las Hojas</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]"
+              [ngClass]="filtroOrigen === 'todos' ? 'bg-white text-purple-700' : 'bg-slate-200 text-slate-700'">
+              {{ activeTab === 'grupos' ? grupos.length : clientes.length }}
+            </span>
+          </button>
 
-        <button (click)="setTab('individuales')"
-          class="flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-black transition-all"
-          [class.bg-emerald-600]="activeTab === 'individuales'" [class.text-white]="activeTab === 'individuales'"
-          [class.shadow-md]="activeTab === 'individuales'" [class.bg-slate-100]="activeTab !== 'individuales'"
-          [class.text-slate-600]="activeTab !== 'individuales'">
-          <span>Créditos Individuales</span>
-          <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-            [class.bg-white]="activeTab === 'individuales'" [class.text-emerald-700]="activeTab === 'individuales'"
-            [class.bg-slate-200]="activeTab !== 'individuales'" [class.text-slate-700]="activeTab !== 'individuales'">
-            {{ clientesFiltrados.length }}
-          </span>
+          <button (click)="setFiltroOrigen('asesores')"
+            class="px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5"
+            [ngClass]="filtroOrigen === 'asesores' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'">
+            <span>Hojas de Asesores</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]"
+              [ngClass]="filtroOrigen === 'asesores' ? 'bg-white text-indigo-700' : 'bg-slate-200 text-slate-700'">
+              {{ activeTab === 'grupos' ? (grupos.length - gruposEjecutivaCount) : (clientes.length -
+              clientesEjecutivaCount) }}
+            </span>
+          </button>
+
+          <button (click)="setFiltroOrigen('ejecutiva')"
+            class="px-3.5 py-2 rounded-2xl text-xs font-black transition-all flex items-center gap-1.5"
+            [ngClass]="filtroOrigen === 'ejecutiva' ? 'bg-amber-500 text-white shadow-sm' : 'bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100'">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+            </svg>
+            <span>Hojas de Ejecutiva</span>
+            <span class="px-1.5 py-0.5 rounded-full text-[10px]"
+              [ngClass]="filtroOrigen === 'ejecutiva' ? 'bg-white text-amber-700' : 'bg-amber-200/80 text-amber-900'">
+              {{ activeTab === 'grupos' ? gruposEjecutivaCount : clientesEjecutivaCount }}
+            </span>
+          </button>
+        </div>
+
+        <button *ngIf="filtroOrigen !== 'todos' || filtroAsesorId !== 'todos' || searchTerm" (click)="limpiarFiltros()"
+          class="text-[11px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
+          <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          Quitar filtros
         </button>
-      </div> -->
+      </div>
 
       <!-- BUSCADOR -->
       <div class="relative w-full">
-        <svg class="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+        <svg class="absolute left-3.5 top-3.5 h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24"
+          stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
         </svg>
-        <input type="text" [(ngModel)]="searchTerm"
-          [placeholder]="activeTab === 'grupos' ? 'Buscar grupo por clave, nombre o asesor...' : 'Buscar cliente por clave, nombre o asesor...'"
+        <input type="text" [(ngModel)]="searchTerm" (ngModelChange)="onSearchChange()"
+          [placeholder]="activeTab === 'grupos' ? 'Buscar grupo por clave, nombre, asesor o ejecutiva...' : 'Buscar cliente por clave, nombre, asesor o ejecutiva...'"
           class="w-full bg-slate-50 border border-slate-200 rounded-2xl pl-10 pr-10 py-2.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:border-purple-500 focus:bg-white focus:ring-4 focus:ring-purple-100 outline-none transition-all shadow-xs" />
-        <button *ngIf="searchTerm" (click)="searchTerm = ''" class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600">
+        <button *ngIf="searchTerm" (click)="searchTerm = ''; onSearchChange()"
+          class="absolute right-3.5 top-3 text-slate-400 hover:text-slate-600">
           <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <!-- FILTRO POR ASESOR (CHIPS HORIZONTALES) -->
-      <div class="space-y-1.5">
+      <!-- FILTRO POR ASESOR / EJECUTIVA (CHIPS HORIZONTALES) -->
+      <div class="space-y-1.5" *ngIf="usuariosFiltroDisponibles.length > 0">
         <div class="flex items-center justify-between">
-          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Filtrar por Asesor:</span>
-          <button *ngIf="filtroAsesorId !== 'todos' || searchTerm" (click)="limpiarFiltros()"
-            class="text-[10px] font-bold text-purple-600 hover:text-purple-800 flex items-center gap-1">
-            <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-            Quitar filtros
-          </button>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">
+            {{ filtroOrigen === 'ejecutiva' ? 'Ejecutiva de tu Coordinación:' : (filtroOrigen === 'asesores' ? 'Filtrar
+            por Asesor:' : 'Filtrar por Ejecutiva o Asesor:') }}
+          </span>
         </div>
 
         <div class="flex items-center gap-2 overflow-x-auto pb-1 pt-0.5 no-scrollbar">
@@ -167,16 +216,23 @@
             [class.bg-purple-600]="filtroAsesorId === 'todos'" [class.text-white]="filtroAsesorId === 'todos'"
             [class.shadow-xs]="filtroAsesorId === 'todos'" [class.bg-slate-100]="filtroAsesorId !== 'todos'"
             [class.text-slate-600]="filtroAsesorId !== 'todos'">
-            Todos los Asesores ({{ activeTab === 'grupos' ? grupos.length : clientes.length }})
+            Todos ({{ activeTab === 'grupos' ? gruposFiltrados.length : clientesFiltrados.length }})
           </button>
 
-          <button *ngFor="let asesor of asesoresList" (click)="setFiltroAsesor(asesor._id)"
+          <button *ngFor="let user of usuariosFiltroDisponibles" (click)="setFiltroAsesor(user._id)"
             class="px-3 py-1.5 rounded-xl text-xs font-medium whitespace-nowrap transition-all shrink-0 flex items-center gap-1.5"
-            [class.bg-purple-600]="filtroAsesorId === asesor._id" [class.text-white]="filtroAsesorId === asesor._id"
-            [class.shadow-xs]="filtroAsesorId === asesor._id" [class.bg-slate-100]="filtroAsesorId !== asesor._id"
-            [class.text-slate-600]="filtroAsesorId !== asesor._id">
-            <span class="w-2 h-2 rounded-full" [class.bg-emerald-400]="filtroAsesorId === asesor._id" [class.bg-purple-500]="filtroAsesorId !== asesor._id"></span>
-            {{ asesor.nombre || asesor.username }}
+            [ngClass]="filtroAsesorId === user._id
+              ? (esUsuarioEjecutiva(user) ? 'bg-amber-500 text-white shadow-xs font-bold' : 'bg-purple-600 text-white shadow-xs font-bold')
+              : (esUsuarioEjecutiva(user) ? 'bg-amber-50 text-amber-900 border border-amber-200 hover:bg-amber-100' : 'bg-slate-100 text-slate-600 hover:bg-slate-200')">
+            <span class="w-2 h-2 rounded-full"
+              [ngClass]="esUsuarioEjecutiva(user) ? (filtroAsesorId === user._id ? 'bg-white' : 'bg-amber-500') : (filtroAsesorId === user._id ? 'bg-emerald-400' : 'bg-purple-500')"></span>
+            <span *ngIf="esUsuarioEjecutiva(user)"
+              class="text-[9px] font-black uppercase tracking-wider px-1.5 py-0.2 rounded"
+              [ngClass]="filtroAsesorId === user._id ? 'bg-white/25 text-white' : 'bg-amber-200/80 text-amber-900'">
+              Ejecutiva
+            </span>
+            <span>{{ user.nombre || user.username }}</span>
+            <span class="text-[10px] opacity-75">({{ contarHojasPorUsuario(user._id) }})</span>
           </button>
         </div>
       </div>
@@ -185,35 +241,52 @@
 
     <!-- SPINNER DE CARGA -->
     <div *ngIf="isLoading" class="bg-white rounded-3xl p-12 text-center border border-slate-200/80 shadow-xs">
-      <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-purple-500 border-t-transparent"></div>
-      <p class="text-xs font-bold text-slate-500 mt-3 uppercase tracking-wider">Cargando hojas de control de tu coordinación...</p>
+      <div class="inline-block animate-spin rounded-full h-10 w-10 border-4 border-purple-500 border-t-transparent">
+      </div>
+      <p class="text-xs font-bold text-slate-500 mt-3 uppercase tracking-wider">Cargando hojas de control de tu
+        coordinación...</p>
     </div>
 
     <!-- SECCIÓN: LISTADO DE GRUPOS -->
     <div *ngIf="!isLoading && activeTab === 'grupos'" class="space-y-3">
 
       <!-- MENSAJE SIN RESULTADOS -->
-      <div *ngIf="gruposFiltrados.length === 0" class="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-xs">
+      <div *ngIf="gruposFiltrados.length === 0"
+        class="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-xs">
         <div class="bg-purple-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-purple-600 mb-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 class="font-black text-slate-800 text-sm">No se encontraron grupos</h3>
-        <p class="text-xs text-slate-400 mt-1">Prueba cambiando el asesor seleccionado o el término de búsqueda.</p>
+        <h3 class="font-black text-slate-800 text-sm">No se encontraron hojas grupales</h3>
+        <p class="text-xs text-slate-400 mt-1">
+          {{ filtroOrigen === 'ejecutiva' && clientesEjecutivaCount > 0
+          ? 'Tu ejecutiva tiene ' + clientesEjecutivaCount + ' hoja(s) en la pestaña de Individuales.'
+          : 'Prueba cambiando el filtro seleccionado o el término de búsqueda.' }}
+        </p>
+        <button *ngIf="filtroOrigen === 'ejecutiva' && clientesEjecutivaCount > 0" (click)="setTab('individuales')"
+          class="mt-3 px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-xs shadow-sm hover:bg-amber-600 transition-all">
+          Ver Hojas Individuales de Ejecutiva ({{ clientesEjecutivaCount }})
+        </button>
       </div>
 
-      <!-- LISTA DE TARJETAS DE GRUPOS -->
-      <div *ngFor="let g of gruposFiltrados" (click)="abrirHojaControlGrupo(g)"
-        class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer">
+      <!-- LISTA DE TARJETAS DE GRUPOS (PAGINADOS: MÁX 7 POR PÁGINA) -->
+      <div *ngFor="let g of gruposPaginados" (click)="abrirHojaControlGrupo(g)"
+        class="bg-white rounded-3xl border shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer"
+        [ngClass]="g.esEjecutiva ? 'border-amber-300/90 ring-1 ring-amber-100' : 'border-slate-200/80'">
 
         <!-- CABECERA DE TARJETA GRUPO -->
         <div class="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
-          
+
           <div class="flex items-start space-x-3.5">
             <!-- Icono y Clave -->
-            <div class="bg-purple-50 border border-purple-100 rounded-2xl p-3 shrink-0 flex flex-col items-center justify-center min-w-[64px]">
-              <span class="text-[10px] font-black text-purple-600 uppercase tracking-wider">GRUPO</span>
+            <div class="rounded-2xl p-3 shrink-0 flex flex-col items-center justify-center min-w-[64px] border"
+              [ngClass]="g.esEjecutiva ? 'bg-amber-50 border-amber-200' : 'bg-purple-50 border-purple-100'">
+              <span class="text-[10px] font-black uppercase tracking-wider"
+                [ngClass]="g.esEjecutiva ? 'text-amber-700' : 'text-purple-600'">
+                {{ g.esEjecutiva ? 'EJEC' : 'GRUPO' }}
+              </span>
               <span class="font-mono font-bold text-xs text-slate-800 mt-0.5">{{ g.clave || 'S/C' }}</span>
             </div>
 
@@ -221,8 +294,9 @@
             <div class="space-y-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-black text-slate-900 text-base leading-tight">{{ g.nombre }}</h3>
-                <span *ngIf="g.estadoGrupo" class="px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase"
-                  [ngClass]="{
+
+                <span *ngIf="g.estadoGrupo"
+                  class="px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase" [ngClass]="{
                     'bg-blue-100 text-blue-700': g.estadoGrupo === 'CC',
                     'bg-emerald-100 text-emerald-700': g.estadoGrupo === 'R',
                     'bg-orange-100 text-orange-700': g.estadoGrupo === '8S'
@@ -230,60 +304,57 @@
                   {{ g.estadoGrupo }}
                 </span>
                 <span class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
-                  Ciclo {{ g.cicloActual || 1 }}
+                  Ciclo {{ getCicloActualGrupo(g) }}
                 </span>
               </div>
 
               <div class="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-500 font-medium">
                 <span class="flex items-center gap-1">
-                  <svg class="h-3.5 w-3.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                  Asesor: <strong class="text-slate-700">{{ obtenerNombreAsesor(g) }}</strong>
+                  <svg class="h-3.5 w-3.5" [ngClass]="g.esEjecutiva ? 'text-amber-500' : 'text-purple-500'" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {{ g.esEjecutiva ? 'Ejecutiva:' : 'Asesor:' }}
+                  <strong [ngClass]="g.esEjecutiva ? 'text-amber-800' : 'text-slate-700'">{{ obtenerNombreAsesor(g)
+                    }}</strong>
                 </span>
 
                 <span class="flex items-center gap-1">
-                  <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                  <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
                   Día: <strong class="text-slate-700">{{ g.diaVisita || 'N/A' }}</strong>
                   <span *ngIf="g.horaVisita">({{ g.horaVisita }})</span>
                 </span>
 
                 <span class="flex items-center gap-1">
-                  <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                  <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
                   {{ g.integrantes?.length || 0 }} Integrantes
                 </span>
               </div>
             </div>
           </div>
 
-          <!-- BOTONES DE ACCIÓN: ABRIR HOJA, VISTA PREVIA Y ACORDEÓN -->
+          <!-- BOTONES DE ACCIÓN: VISTA PREVIA Y ACORDEÓN -->
           <div class="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
-            <!-- Botón Abrir Hoja de Control Interactiva -->
-            <!-- <button (click)="abrirHojaControlGrupo(g, $event)"
-              class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-xs shadow-md shadow-purple-200 hover:from-purple-700 hover:to-indigo-700 active:scale-95 transition-all">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Abrir Hoja</span>
-            </button> -->
-
             <!-- Botón de Vista Previa PDF -->
             <button (click)="vistaPreviaGrupo(g, $event)"
               class="flex items-center gap-1 px-3 py-2.5 rounded-2xl border border-purple-200 text-purple-700 hover:bg-purple-50 font-bold text-xs active:scale-95 transition-all"
-              title="Descargar o imprimir PDF">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              title="Ver Hoja de Control en formato PDF">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              <span>PDF</span>
+              <span>Hoja PDF</span>
             </button>
-
-            <!-- Botón Acordeón Desplegable -->
-            <!-- <button (click)="toggleAccordion(g._id, $event)"
-              class="p-2.5 rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 active:scale-95 transition-all"
-              [title]="expandedItems[g._id] ? 'Ocultar detalles' : 'Ver integrantes'">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200"
-                [class.rotate-180]="expandedItems[g._id]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button> -->
           </div>
 
         </div>
@@ -294,13 +365,14 @@
             <h4 class="text-xs font-black uppercase tracking-wider text-slate-700 flex items-center gap-1.5">
               <span>Integrantes del Grupo</span>
             </h4>
-            <span class="text-[11px] text-slate-400 font-medium">Ciclo actual: {{ g.cicloActual || 1 }}</span>
+            <span class="text-[11px] text-slate-400 font-medium">Ciclo actual: {{ getCicloActualGrupo(g) }}</span>
           </div>
 
           <!-- Tabla / Lista de Integrantes -->
           <div class="overflow-x-auto rounded-2xl border border-slate-200 bg-white shadow-xs">
             <table class="w-full text-left text-xs">
-              <thead class="bg-slate-100/90 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
+              <thead
+                class="bg-slate-100/90 text-slate-600 font-bold uppercase tracking-wider text-[10px] border-b border-slate-200">
                 <tr>
                   <th class="px-3.5 py-2.5">Integrante</th>
                   <th class="px-3 py-2.5">Cargo</th>
@@ -316,8 +388,7 @@
                     {{ m.nombre }} {{ m.apellidos }}
                   </td>
                   <td class="px-3 py-2.5">
-                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold"
-                      [ngClass]="{
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-bold" [ngClass]="{
                         'bg-purple-100 text-purple-700': m.rol === 'PRESIDENTA',
                         'bg-blue-100 text-blue-700': m.rol === 'TESORERA',
                         'bg-indigo-100 text-indigo-700': m.rol === 'SECRETARIA',
@@ -354,27 +425,43 @@
     <div *ngIf="!isLoading && activeTab === 'individuales'" class="space-y-3">
 
       <!-- MENSAJE SIN RESULTADOS -->
-      <div *ngIf="clientesFiltrados.length === 0" class="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-xs">
-        <div class="bg-emerald-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-emerald-600 mb-3">
+      <div *ngIf="clientesFiltrados.length === 0"
+        class="bg-white rounded-3xl p-10 text-center border border-slate-200/80 shadow-xs">
+        <div
+          class="bg-emerald-50 w-12 h-12 rounded-full flex items-center justify-center mx-auto text-emerald-600 mb-3">
           <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
         </div>
-        <h3 class="font-black text-slate-800 text-sm">No se encontraron clientes individuales</h3>
-        <p class="text-xs text-slate-400 mt-1">Prueba cambiando el asesor seleccionado o el término de búsqueda.</p>
+        <h3 class="font-black text-slate-800 text-sm">No se encontraron hojas individuales</h3>
+        <p class="text-xs text-slate-400 mt-1">
+          {{ filtroOrigen === 'ejecutiva' && gruposEjecutivaCount > 0
+          ? 'Tu ejecutiva tiene ' + gruposEjecutivaCount + ' hoja(s) en la pestaña de Grupales.'
+          : 'Prueba cambiando el filtro seleccionado o el término de búsqueda.' }}
+        </p>
+        <button *ngIf="filtroOrigen === 'ejecutiva' && gruposEjecutivaCount > 0" (click)="setTab('grupos')"
+          class="mt-3 px-4 py-2 rounded-xl bg-amber-500 text-white font-bold text-xs shadow-sm hover:bg-amber-600 transition-all">
+          Ver Hojas Grupales de Ejecutiva ({{ gruposEjecutivaCount }})
+        </button>
       </div>
 
-      <!-- LISTA DE TARJETAS DE INDIVIDUALES -->
-      <div *ngFor="let c of clientesFiltrados" (click)="abrirHojaControlCliente(c)"
-        class="bg-white rounded-3xl border border-slate-200/80 shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer">
+      <!-- LISTA DE TARJETAS DE INDIVIDUALES (PAGINADOS: MÁX 7 POR PÁGINA) -->
+      <div *ngFor="let c of clientesPaginados" (click)="abrirHojaControlCliente(c)"
+        class="bg-white rounded-3xl border shadow-sm overflow-hidden hover:shadow-md transition-all cursor-pointer"
+        [ngClass]="c.esEjecutiva ? 'border-amber-300/90 ring-1 ring-amber-100' : 'border-slate-200/80'">
 
         <!-- CABECERA DE TARJETA INDIVIDUAL -->
         <div class="p-4 md:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3.5">
-          
+
           <div class="flex items-start space-x-3.5">
             <!-- Icono y Clave -->
-            <div class="bg-emerald-50 border border-emerald-100 rounded-2xl p-3 shrink-0 flex flex-col items-center justify-center min-w-[64px]">
-              <span class="text-[10px] font-black text-emerald-600 uppercase tracking-wider">IND</span>
+            <div class="rounded-2xl p-3 shrink-0 flex flex-col items-center justify-center min-w-[64px] border"
+              [ngClass]="c.esEjecutiva ? 'bg-amber-50 border-amber-200' : 'bg-emerald-50 border-emerald-100'">
+              <span class="text-[10px] font-black uppercase tracking-wider"
+                [ngClass]="c.esEjecutiva ? 'text-amber-700' : 'text-emerald-600'">
+                {{ c.esEjecutiva ? 'EJEC' : 'IND' }}
+              </span>
               <span class="font-mono font-bold text-xs text-slate-800 mt-0.5">{{ c.clave || 'S/C' }}</span>
             </div>
 
@@ -382,63 +469,51 @@
             <div class="space-y-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-black text-slate-900 text-base leading-tight">{{ c.nombre }}</h3>
-                <!-- <span class="px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700">
-                  Individual
-                </span> -->
-                <span *ngIf="c.credito?.ciclo" class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
+
+                <span *ngIf="c.credito?.ciclo"
+                  class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
                   Ciclo {{ c.credito?.ciclo }}
                 </span>
               </div>
 
               <div class="flex flex-wrap items-center gap-y-1 gap-x-3 text-xs text-slate-500 font-medium">
                 <span class="flex items-center gap-1">
-                  <svg class="h-3.5 w-3.5 text-purple-500" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
-                  Asesor: <strong class="text-slate-700">{{ obtenerNombreAsesor(c) }}</strong>
+                  <svg class="h-3.5 w-3.5" [ngClass]="c.esEjecutiva ? 'text-amber-500' : 'text-purple-500'" fill="none"
+                    viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                  {{ c.esEjecutiva ? 'Ejecutiva:' : 'Asesor:' }}
+                  <strong [ngClass]="c.esEjecutiva ? 'text-amber-800' : 'text-slate-700'">{{ obtenerNombreAsesor(c)
+                    }}</strong>
                 </span>
 
                 <span class="flex items-center gap-1">
-                  <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/></svg>
+                  <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                      d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
                   Día Pago: <strong class="text-slate-700">{{ c.diaPago || 'N/A' }}</strong>
                 </span>
-
-                <!-- <span *ngIf="c.credito?.pagoPactado" class="flex items-center gap-1">
-                  <span class="text-slate-400">Pactado:</span>
-                  <strong class="text-emerald-700 font-mono">{{ c.credito.pagoPactado | currency:'MXN' }}</strong>
-                </span> -->
               </div>
             </div>
           </div>
 
-          <!-- BOTONES DE ACCIÓN: ABRIR HOJA, VISTA PREVIA Y ACORDEÓN -->
+          <!-- BOTONES DE ACCIÓN: VISTA PREVIA -->
           <div class="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
-            <!-- Botón Abrir Hoja de Control Interactiva -->
-            <!-- <button (click)="abrirHojaControlCliente(c, $event)"
-              class="flex items-center gap-1.5 px-3.5 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 text-white font-bold text-xs shadow-md shadow-emerald-200 hover:from-emerald-700 hover:to-teal-700 active:scale-95 transition-all">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-              </svg>
-              <span>Abrir Hoja</span>
-            </button> -->
-
             <!-- Botón de Vista Previa PDF -->
             <button (click)="vistaPreviaIndividual(c, $event)"
               class="flex items-center gap-1 px-3 py-2.5 rounded-2xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold text-xs active:scale-95 transition-all"
-              title="Descargar o imprimir PDF">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              title="Ver Hoja de Control en formato PDF">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
-              <span>PDF</span>
+              <span>Hoja PDF</span>
             </button>
-
-            <!-- Botón Acordeón Desplegable -->
-            <!-- <button (click)="toggleAccordion(c._id, $event)"
-              class="p-2.5 rounded-2xl border border-slate-200 text-slate-500 hover:bg-slate-50 active:scale-95 transition-all"
-              [title]="expandedItems[c._id] ? 'Ocultar detalles' : 'Ver crédito'">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 transition-transform duration-200"
-                [class.rotate-180]="expandedItems[c._id]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7" />
-              </svg>
-            </button> -->
           </div>
 
         </div>
@@ -462,11 +537,13 @@
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-400">Pago Pactado</span>
-              <p class="font-mono font-bold text-emerald-600 text-sm mt-0.5">{{ (c.credito?.pagoPactado || 0) | currency:'MXN' }}</p>
+              <p class="font-mono font-bold text-emerald-600 text-sm mt-0.5">{{ (c.credito?.pagoPactado || 0) |
+                currency:'MXN' }}</p>
             </div>
             <div>
               <span class="text-[10px] uppercase font-bold text-slate-400">Saldo Total</span>
-              <p class="font-mono font-bold text-slate-900 text-sm mt-0.5">{{ (c.credito?.saldoTotal || 0) | currency:'MXN' }}</p>
+              <p class="font-mono font-bold text-slate-900 text-sm mt-0.5">{{ (c.credito?.saldoTotal || 0) |
+                currency:'MXN' }}</p>
             </div>
           </div>
         </div>
@@ -474,38 +551,187 @@
       </div>
     </div>
 
+    <!-- CONTROLES DE PAGINACIÓN (MÁX 7 POR PÁGINA) -->
+    <div *ngIf="!isLoading && totalPages > 1"
+      class="bg-white rounded-3xl px-4 py-3.5 md:px-6 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="text-xs text-slate-500 font-medium text-center sm:text-left">
+        Mostrando <span class="font-black text-slate-800">{{ rangoInicioPagina }}–{{ rangoFinPagina }}</span>
+        de <span class="font-black text-slate-800">{{ totalRegistrosActivos }}</span>
+        {{ activeTab === 'grupos' ? 'grupos' : 'individuales' }}
+        <span class="text-slate-400 mx-1">&bull;</span>
+        Pág. <span class="font-bold text-purple-700">{{ paginaActualSegura }}</span> / {{ totalPages }}
+      </div>
+
+      <div class="flex items-center gap-1.5 flex-wrap justify-center">
+        <!-- Botón Anterior -->
+        <button (click)="cambiarPagina(paginaActualSegura - 1)" [disabled]="paginaActualSegura === 1"
+          class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M15 19l-7-7 7-7" />
+          </svg>
+          <span>Anterior</span>
+        </button>
+
+        <!-- Primera página si está fuera de ventana -->
+        <ng-container *ngIf="paginasVisibles.length > 0 && paginasVisibles[0] > 1">
+          <button (click)="cambiarPagina(1)"
+            class="w-8 h-8 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center">
+            1
+          </button>
+          <span *ngIf="paginasVisibles[0] > 2" class="text-slate-400 text-xs px-0.5">…</span>
+        </ng-container>
+
+        <!-- Números de página visibles -->
+        <button *ngFor="let p of paginasVisibles" (click)="cambiarPagina(p)" [ngClass]="paginaActualSegura === p
+            ? 'bg-purple-600 text-white border-purple-600 shadow-xs'
+            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
+          class="w-8 h-8 rounded-xl border text-xs font-bold transition-all flex items-center justify-center">
+          {{ p }}
+        </button>
+
+        <!-- Última página si está fuera de ventana -->
+        <ng-container *ngIf="paginasVisibles.length > 0 && paginasVisibles[paginasVisibles.length - 1] < totalPages">
+          <span *ngIf="paginasVisibles[paginasVisibles.length - 1] < totalPages - 1"
+            class="text-slate-400 text-xs px-0.5">…</span>
+          <button (click)="cambiarPagina(totalPages)"
+            class="w-8 h-8 rounded-xl border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-bold transition-all flex items-center justify-center">
+            {{ totalPages }}
+          </button>
+        </ng-container>
+
+        <!-- Botón Siguiente -->
+        <button (click)="cambiarPagina(paginaActualSegura + 1)" [disabled]="paginaActualSegura === totalPages"
+          class="px-3 py-1.5 rounded-xl border border-slate-200 bg-white text-xs font-bold text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed transition-all flex items-center gap-1">
+          <span>Siguiente</span>
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24"
+            stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 5l7 7-7 7" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
   </main>
 
+  <!-- MODAL DE VISTA PREVIA (SOLO LECTURA) -->
+  <div *ngIf="previewUrl"
+    class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 backdrop-blur-xs p-2 sm:p-4 animate-in fade-in duration-200">
+    <div
+      class="bg-white w-full h-[94vh] max-w-5xl rounded-3xl shadow-2xl flex flex-col overflow-hidden border border-slate-200">
+
+      <!-- Encabezado del Modal -->
+      <div
+        class="px-5 py-3.5 bg-gradient-to-r from-purple-700 via-indigo-700 to-blue-600 text-white flex items-center justify-between shrink-0 shadow-sm">
+        <div class="flex items-center space-x-3">
+          <div class="bg-white/20 p-2 rounded-xl backdrop-blur-md">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-black text-sm md:text-base tracking-tight leading-tight">Hoja de Control</h3>
+            <p class="text-[11px] text-purple-100 font-medium mt-0.5">{{ previewGrupoNombre }}</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button (click)="abrirEnNuevaPestana()" type="button"
+            class="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 active:scale-95 text-white rounded-xl text-xs font-bold transition-all border border-white/20"
+            title="Abrir en pestaña nueva">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+            <span>Pantalla Completa</span>
+          </button>
+
+          <button (click)="cerrarPreview()" type="button"
+            class="px-3.5 py-1.5 bg-white text-purple-700 hover:bg-purple-50 active:scale-95 rounded-xl text-xs font-black transition-all shadow-sm flex items-center gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+              stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <!-- Contenedor del Visor (iframe seguro) -->
+      <div class="flex-1 bg-slate-200 relative overflow-hidden">
+        <iframe [src]="previewSafeUrl" class="w-full h-full border-0" title="Vista Previa de Hoja de Control"></iframe>
+      </div>
+
+      <!-- Pie informativo -->
+      <div
+        class="px-4 py-2 bg-slate-50 border-t border-slate-200 flex items-center justify-between text-slate-500 text-[11px] shrink-0">
+        <div class="flex items-center gap-1.5 font-medium">
+          <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 text-purple-600 shrink-0" fill="none"
+            viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <span>Vista de supervisión de coordinación.</span>
+        </div>
+        <button (click)="cerrarPreview()" type="button" class="text-xs font-bold text-slate-600 hover:text-purple-600">
+          Cerrar
+        </button>
+      </div>
+
+    </div>
+  </div>
+
   <!-- BARRA DE NAVEGACIÓN INFERIOR (PWA MOBILE OPTIMIZED) -->
-  <nav class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-4 py-2 flex justify-around items-center rounded-t-3xl shadow-2xl z-50 max-w-lg mx-auto">
-    
+  <nav
+    class="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-xl border-t border-slate-200/80 px-4 py-2 flex justify-around items-center rounded-t-3xl shadow-2xl z-40 max-w-lg mx-auto">
+
     <!-- Tab Grupos -->
-    <button (click)="setTab('grupos')"
-      class="flex flex-col items-center pt-1 px-3 transition-all relative"
+    <button (click)="setTab('grupos')" class="flex flex-col items-center pt-1 px-3 transition-all relative"
       [ngClass]="activeTab === 'grupos' ? 'text-purple-600 scale-110' : 'text-slate-400'">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" [attr.fill]="activeTab === 'grupos' ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+        [attr.fill]="activeTab === 'grupos' ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
       </svg>
       <span class="text-[9px] font-black uppercase mt-0.5 tracking-widest">Grupales</span>
       <span *ngIf="activeTab === 'grupos'" class="absolute -top-1 w-8 h-1 bg-purple-600 rounded-full"></span>
     </button>
 
     <!-- Tab Individuales -->
-    <button (click)="setTab('individuales')"
-      class="flex flex-col items-center pt-1 px-3 transition-all relative"
+    <button (click)="setTab('individuales')" class="flex flex-col items-center pt-1 px-3 transition-all relative"
       [ngClass]="activeTab === 'individuales' ? 'text-emerald-600 scale-110' : 'text-slate-400'">
-      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" [attr.fill]="activeTab === 'individuales' ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+        [attr.fill]="activeTab === 'individuales' ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
       </svg>
       <span class="text-[9px] font-black uppercase mt-0.5 tracking-widest">Individuales</span>
       <span *ngIf="activeTab === 'individuales'" class="absolute -top-1 w-8 h-1 bg-emerald-600 rounded-full"></span>
+    </button>
+
+    <!-- Tab Ejecutiva -->
+    <button (click)="setFiltroOrigen(filtroOrigen === 'ejecutiva' ? 'todos' : 'ejecutiva')"
+      class="flex flex-col items-center pt-1 px-3 transition-all relative"
+      [ngClass]="filtroOrigen === 'ejecutiva' ? 'text-amber-600 scale-110' : 'text-slate-400'">
+      <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6"
+        [attr.fill]="filtroOrigen === 'ejecutiva' ? 'currentColor' : 'none'" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+      </svg>
+      <span class="text-[9px] font-black uppercase mt-0.5 tracking-widest">Ejecutiva</span>
+      <span *ngIf="filtroOrigen === 'ejecutiva'" class="absolute -top-1 w-8 h-1 bg-amber-500 rounded-full"></span>
     </button>
 
     <!-- Botón Regresar a Vista Asesor -->
     <button (click)="irAAsesorHome()"
       class="flex flex-col items-center pt-1 px-3 text-indigo-600 active:scale-90 transition-transform">
       <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+          d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
       </svg>
       <span class="text-[9px] font-black uppercase mt-0.5 tracking-widest text-indigo-700">Mi Asesor</span>
     </button>

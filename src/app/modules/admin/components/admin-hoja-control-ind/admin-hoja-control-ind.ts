@@ -312,7 +312,7 @@ export class AdminHojaControlInd implements OnInit {
     if (userStr) {
       try {
         const u = JSON.parse(userStr);
-        userCoordinacion = u.coordinacion || '';
+        userCoordinacion = (u.coordinacion && typeof u.coordinacion === 'object') ? String(u.coordinacion._id || u.coordinacion.id || '') : String(u.coordinacion || '');
       } catch (e) {}
     }
 
