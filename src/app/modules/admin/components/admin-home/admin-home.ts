@@ -560,6 +560,35 @@ export class AdminHome implements OnInit {
     return maxCiclo > 0 ? maxCiclo : 1;
   }
 
+  getCiclosDisponiblesGrupo(grupo: any): number[] {
+    const ciclos = new Set<number>();
+    const miembros: any[] = Array.isArray(grupo?.integrantes) ? grupo.integrantes : [];
+    const miembrosIds = new Set(miembros.map(m => String(typeof m === 'object' ? (m._id || m) : m)));
+
+    if (this.creditos && this.creditos.length > 0) {
+      for (const c of this.creditos) {
+        const mId = c.miembro ? String(typeof c.miembro === 'object' ? (c.miembro._id || c.miembro) : c.miembro) : null;
+        if (mId && miembrosIds.has(mId) && c.ciclo) {
+          const cNum = Number(c.ciclo);
+          if (cNum > 0) ciclos.add(cNum);
+        }
+      }
+    }
+    if (grupo?.cicloActual) {
+      const cNum = Number(grupo.cicloActual);
+      if (cNum > 0) ciclos.add(cNum);
+    }
+    const arr = Array.from(ciclos).sort((a, b) => b - a);
+    return arr.length > 0 ? arr : [1];
+  }
+
+  vistaPreviaGrupoConCiclo(grupo: any, ciclo: any, event: Event) {
+    event.stopPropagation();
+    const cicloNum = Number(ciclo) || 1;
+    const url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${cicloNum}?preview=true&llena=true`;
+    window.open(url, '_blank');
+  }
+
   getCicloActualCliente(cliente: any): number {
     if (!cliente) return 1;
     const cred = this.getCreditoDeCliente(cliente._id);
@@ -660,32 +689,56 @@ export class AdminHome implements OnInit {
   async descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
 
-    const ciclo = this.getCicloActualGrupo(grupo);
-    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const ciclos = this.getCiclosDisponiblesGrupo(grupo);
+    const cicloActual = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, cicloActual);
     const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+    const ciclosHtml = ciclos.map(c => 
+      `<option value="${c}" ${c === cicloActual ? 'selected' : ''}>Ciclo ${c}${c === cicloActual ? ' (Actual)' : ''}</option>`
+    ).join('');
 
-    const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
-      title: 'Hoja de Control',
-      text: `Selecciona cómo deseas imprimir la hoja (${totalSemanas} semanas):`,
-      input: 'select',
-      inputOptions: opciones,
-      inputPlaceholder: 'Selecciona una opción',
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Hoja de Control (Vacía)',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Ciclo del Crédito</label>
+            <select id="swal-desc-ciclo" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${ciclosHtml}
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-desc-rango" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
       confirmButtonText: 'Generar',
       cancelButtonText: 'Cancelar',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debes seleccionar una opción';
-        }
-        return null;
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const cicloEl = document.getElementById('swal-desc-ciclo') as HTMLSelectElement;
+        const rangoEl = document.getElementById('swal-desc-rango') as HTMLSelectElement;
+        return {
+          ciclo: cicloEl ? Number(cicloEl.value) || cicloActual : cicloActual,
+          rango: rangoEl ? rangoEl.value : 'completa'
+        };
       }
     });
 
-    if (isConfirmed && opcionSeleccionada) {
+    if (isConfirmed && formValues) {
+      const ciclo = formValues.ciclo;
+      const totalSem = this.getSemanasGrupo(grupo, ciclo);
       const estadoGrupo = grupo.estadoGrupo ? `&estadoGrupo=${grupo.estadoGrupo}` : '';
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}`;
-      if (opcionSeleccionada !== 'completa') {
-        const { inicio, fin } = this.obtenerRangoSemanas(opcionSeleccionada, totalSemanas);
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSem);
         url += `?semanaInicio=${inicio}&semanaFin=${fin}${estadoGrupo}`;
       } else if (estadoGrupo) {
         url += `?${estadoGrupo.slice(1)}`;
@@ -697,33 +750,57 @@ export class AdminHome implements OnInit {
   async descargarInfoGrupoLlena(grupo: any, event: Event) {
     event.stopPropagation();
 
-    const ciclo = this.getCicloActualGrupo(grupo);
-    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const ciclos = this.getCiclosDisponiblesGrupo(grupo);
+    const cicloActual = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, cicloActual);
     const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+    const ciclosHtml = ciclos.map(c => 
+      `<option value="${c}" ${c === cicloActual ? 'selected' : ''}>Ciclo ${c}${c === cicloActual ? ' (Actual)' : ''}</option>`
+    ).join('');
 
-    const { value: opcionSeleccionada, isConfirmed } = await Swal.fire({
+    const { value: formValues, isConfirmed } = await Swal.fire({
       title: 'Hoja de Control (Llena)',
-      text: `Selecciona cómo deseas imprimir la hoja (${totalSemanas} semanas):`,
-      input: 'select',
-      inputOptions: opciones,
-      inputPlaceholder: 'Selecciona una opción',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Ciclo del Crédito</label>
+            <select id="swal-desc-llena-ciclo" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${ciclosHtml}
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-desc-llena-rango" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+        </div>
+      `,
       showCancelButton: true,
       confirmButtonText: 'Generar',
       cancelButtonText: 'Cancelar',
-      inputValidator: (value) => {
-        if (!value) {
-          return 'Debes seleccionar una opción';
-        }
-        return null;
+      confirmButtonColor: '#4f46e5',
+      preConfirm: () => {
+        const cicloEl = document.getElementById('swal-desc-llena-ciclo') as HTMLSelectElement;
+        const rangoEl = document.getElementById('swal-desc-llena-rango') as HTMLSelectElement;
+        return {
+          ciclo: cicloEl ? Number(cicloEl.value) || cicloActual : cicloActual,
+          rango: rangoEl ? rangoEl.value : 'completa'
+        };
       }
     });
 
-    if (isConfirmed && opcionSeleccionada) {
+    if (isConfirmed && formValues) {
+      const ciclo = formValues.ciclo;
+      const totalSem = this.getSemanasGrupo(grupo, ciclo);
       const estadoGrupo = grupo.estadoGrupo ? `&estadoGrupo=${grupo.estadoGrupo}` : '';
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?llena=true`;
       url += estadoGrupo;
-      if (opcionSeleccionada !== 'completa') {
-        const { inicio, fin } = this.obtenerRangoSemanas(opcionSeleccionada, totalSemanas);
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSem);
         url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
       window.open(url, '_blank');
@@ -803,17 +880,27 @@ export class AdminHome implements OnInit {
   async vistaPreviaGrupo(grupo: any, event: Event) {
     event.stopPropagation();
 
-    const ciclo = this.getCicloActualGrupo(grupo);
-    const totalSemanas = this.getSemanasGrupo(grupo, ciclo);
+    const ciclos = this.getCiclosDisponiblesGrupo(grupo);
+    const cicloActual = this.getCicloActualGrupo(grupo);
+    const totalSemanas = this.getSemanasGrupo(grupo, cicloActual);
     const opciones = this.generarOpcionesSemanas(totalSemanas);
     const optionsHtml = Object.entries(opciones)
       .map(([val, label]) => `<option value="${val}">${label}</option>`)
       .join('');
+    const ciclosHtml = ciclos.map(c => 
+      `<option value="${c}" ${c === cicloActual ? 'selected' : ''}>Ciclo ${c}${c === cicloActual ? ' (Actual)' : ''}</option>`
+    ).join('');
 
     const { value: formValues, isConfirmed } = await Swal.fire({
       title: 'Vista Previa del PDF',
       html: `
         <div style="text-align: left; padding-top: 8px;">
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Ciclo del Crédito</label>
+            <select id="swal-ciclo" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${ciclosHtml}
+            </select>
+          </div>
           <div style="margin-bottom: 16px;">
             <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
             <select id="swal-tipo-hoja" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
@@ -835,9 +922,11 @@ export class AdminHome implements OnInit {
       cancelButtonText: 'Cancelar',
       confirmButtonColor: '#9333ea',
       preConfirm: () => {
+        const cicloElem = document.getElementById('swal-ciclo') as HTMLSelectElement;
         const tipoElem = document.getElementById('swal-tipo-hoja') as HTMLSelectElement;
         const rangoElem = document.getElementById('swal-rango-semanas') as HTMLSelectElement;
         return {
+          ciclo: cicloElem ? Number(cicloElem.value) || cicloActual : cicloActual,
           tipo: tipoElem ? tipoElem.value : 'llena',
           rango: rangoElem ? rangoElem.value : 'completa'
         };
@@ -845,12 +934,14 @@ export class AdminHome implements OnInit {
     });
 
     if (isConfirmed && formValues) {
+      const ciclo = formValues.ciclo;
+      const totalSem = this.getSemanasGrupo(grupo, ciclo);
       let url = `${environment.apiUrl}/creditos/hoja-control/${grupo._id}/${ciclo}?preview=true`;
       if (formValues.tipo === 'llena') {
         url += `&llena=true`;
       }
       if (formValues.rango !== 'completa') {
-        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSem);
         url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
       }
       window.open(url, '_blank');

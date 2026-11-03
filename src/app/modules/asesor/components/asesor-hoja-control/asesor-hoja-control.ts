@@ -154,7 +154,29 @@ export class AsesorHojaControl implements OnInit {
       this.miembrosFiltradosList = [];
       return;
     }
+
+    // HEAD - commit 03/11
     this.miembrosFiltradosList = this.miembrosParaMostrar;
+
+    /*
+     const targetTipos = this.currentTab === 'COMUNAL_REFIL' ? ['CC', '8S', 'R'] : ['MAGICO'];
+ 
+     this.miembrosFiltradosList = this.miembros
+       .map(m => {
+         const creditosMiembro = this.todosLosCreditos
+           .filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id))
+           .sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0));
+         const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') ||
+           creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito));
+ 
+         if (credito) {
+           const mCopy = { ...m };
+           this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
+           return mCopy;
+         }
+         return null;
+       })
+       .filter(m => m !== null); */
   }
 
   // --- UI CONTROLS ---
@@ -374,6 +396,7 @@ export class AsesorHojaControl implements OnInit {
       m.tipoCredito = credito.tipoCredito || 'CC';
       m.semanaActual = credito.semanaActual || 1;
       m.semanas = credito.semanas || 16;
+      m.ciclo = credito.ciclo;
       m.estadoCredito = credito.estado;
       m.liquidadoConGarantia = credito.liquidadoConGarantia;
 
