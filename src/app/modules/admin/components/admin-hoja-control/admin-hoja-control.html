@@ -130,51 +130,51 @@
                 Visita <span class="text-red-500">*</span></label>
               <input type="time" formControlName="horaVisita"
                 class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
-              </iv>
-              <!-- Día de Visita-->
-              <div class="space-y-1 w-48">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span
-                    class="text-red-500">*</span></label>
-                <select formControlName="diaVisita"
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
-                  <option value="Lunes">Lunes</option>
-                  <option value="Martes">Martes</option>
-                  <option value="Miércoles">Miércoles</option>
-                  <option value="Jueves">Jueves</option>
-                  <option value="Viernes">Viernes</option>
-                  <option value="Sábado">Sábado</option>
-                  <option value="Domingo">Domingo</option>
-                </select>
-              </div>
+            </div>
+            <!-- Día de Visita-->
+            <div class="space-y-1 w-48">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1">Día de Visita <span
+                  class="text-red-500">*</span></label>
+              <select formControlName="diaVisita"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm outline-none cursor-pointer focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 transition-all appearance-none">
+                <option value="Lunes">Lunes</option>
+                <option value="Martes">Martes</option>
+                <option value="Miércoles">Miércoles</option>
+                <option value="Jueves">Jueves</option>
+                <option value="Viernes">Viernes</option>
+                <option value="Sábado">Sábado</option>
+                <option value="Domingo">Domingo</option>
+              </select>
+            </div>
 
-              <!-- Estado Crédito -->
-              <div class="lg:col-span-1 space-y-2">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">
-                  Estado Crédito <span class="text-red-500">*</span>
-                </label>
-                <div class="relative">
-                  <select formControlName="estadoGrupo"
-                    class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-bold text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-8 hover:border-blue-400">
-                    <option value="CC">C.C</option>
-                    <option value="R">R</option>
-                    <option value="8S">8S</option>
-                  </select>
-                  <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-                    </svg>
-                  </div>
+            <!-- Estado Crédito -->
+            <div class="lg:col-span-1 space-y-2">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">
+                Estado Crédito <span class="text-red-500">*</span>
+              </label>
+              <div class="relative">
+                <select formControlName="estadoGrupo"
+                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm font-bold text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all appearance-none cursor-pointer pr-8 hover:border-blue-400">
+                  <option value="CC">C.C</option>
+                  <option value="R">R</option>
+                  <option value="8S">8S</option>
+                </select>
+                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
                 </div>
               </div>
-
-              <div class="flex-1"></div>
-              <div class="space-y-1 w-24">
-                <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">%
-                  Garantía <span class="text-red-500">*</span></label>
-                <input type="number" formControlName="porcentajeGarantia"
-                  class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
-              </div>
             </div>
+
+            <div class="flex-1"></div>
+            <div class="space-y-1 w-24">
+              <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest ml-1 text-center">%
+                Garantía <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="porcentajeGarantia"
+                class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-3 text-sm text-center focus:border-blue-700 focus:ring-2 focus:ring-blue-700/20 outline-none transition-all">
+            </div>
+          </div>
         </section>
 
         <!-- SECCIÓN: Integrantes -->

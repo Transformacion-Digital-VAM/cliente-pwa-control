@@ -254,6 +254,16 @@ export class GrupoService {
     getPagosConUbicacion(): Observable<any> {
         return this.http.get(`${this.apiUrlCredito}/pagos-con-ubicacion`);
     }
+    validarGrupo(grupoId: string, validada?: boolean): Observable<any> {
+        const body = validada !== undefined ? { validada } : {};
+        return this.http.put(`${this.apiUrlGrupo}/validar/${grupoId}`, body).pipe(
+            map((res: any) => {
+                this.limpiarCache();
+                return res;
+            })
+        );
+    }
+
     actualizarCredito(creditoId: string, payload: any): Observable<any> {
         return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload);
     }

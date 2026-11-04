@@ -2,6 +2,9 @@ import { Component, OnInit, ChangeDetectorRef, Inject, PLATFORM_ID, Injector, Ch
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import Swal from 'sweetalert2';
+import { environment } from '../../../../../environments/environment';
 import { forkJoin } from 'rxjs';
 import { ClienteService } from '../../../../core/services/cliente.service';
 import { GrupoService } from '../../../../core/services/grupo.service';
@@ -27,6 +30,11 @@ export class AsesorListaClientes implements OnInit {
 
   paginaActual: number = 1;
   itemsPorPagina: number = 6;
+
+  // Modal de Vista Previa (Solo Lectura)
+  previewUrl: string | null = null;
+  previewSafeUrl: SafeResourceUrl | null = null;
+  previewClienteNombre: string = '';
 
   get totalPaginas(): number {
     return Math.ceil(this.clientesFiltrados.length / this.itemsPorPagina) || 1;
@@ -61,7 +69,8 @@ export class AsesorListaClientes implements OnInit {
     private cdr: ChangeDetectorRef,
     private injector: Injector,
     private clienteService: ClienteService,
-    private authService: AuthService
+    private authService: AuthService,
+    private sanitizer: DomSanitizer
   ) { }
 
   ngOnInit(): void {
@@ -187,6 +196,132 @@ export class AsesorListaClientes implements OnInit {
       (c.diaPago && c.diaPago.toLowerCase().includes(term)) ||
       (c.clave && c.clave.toLowerCase().includes(term))
     );
+  }
+
+  getCicloActualCliente(cliente: any): number {
+    if (!cliente) return 1;
+    const cred = cliente.creditoActivo;
+    if (cred && Number(cred.ciclo) > 0) return Number(cred.ciclo);
+    return Number(cliente.cicloActual) || 1;
+  }
+
+  getSemanasCliente(cliente: any): number {
+    if (!cliente) return 16;
+    const cred = cliente.creditoActivo;
+    if (cred && Number(cred.semanas) > 0) return Number(cred.semanas);
+    return Number(cliente.plazoSemanas) || 16;
+  }
+
+  generarOpcionesSemanas(totalSemanas: number): { [key: string]: string } {
+    const opciones: { [key: string]: string } = {};
+    opciones['completa'] = `Hoja Completa (1 - ${totalSemanas})`;
+
+    if (totalSemanas > 8) {
+      const mitad = Math.ceil(totalSemanas / 2);
+      opciones['1-8'] = `Parte 1: Semanas 1 a ${mitad}`;
+      opciones['9-16'] = `Parte 2: Semanas ${mitad + 1} a ${totalSemanas}`;
+    }
+    return opciones;
+  }
+
+  obtenerRangoSemanas(opcion: string, totalSemanas: number): { inicio: number, fin: number } {
+    if (opcion === 'completa') {
+      return { inicio: 1, fin: totalSemanas };
+    }
+    const mitad = Math.ceil(totalSemanas / 2);
+    if (opcion === '1-8') {
+      return { inicio: 1, fin: mitad };
+    }
+    if (opcion === '9-16') {
+      return { inicio: mitad + 1, fin: totalSemanas };
+    }
+    return { inicio: 1, fin: totalSemanas };
+  }
+
+  async vistaPreviaIndividual(cliente: any, event?: Event): Promise<void> {
+    if (event) event.stopPropagation();
+
+    const ciclo = this.getCicloActualCliente(cliente);
+    const totalSemanas = this.getSemanasCliente(cliente);
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa Individual (Solo Lectura)',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+            Cliente: <strong style="color: #1e293b;">${cliente.nombre || 'Sin Nombre'} ${cliente.apellidos || ''}</strong>
+          </p>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja-ind-list" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-rango-semanas-ind-list" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+          <div style="margin-top: 14px; padding: 8px 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="font-size: 11px; color: #1e40af; margin: 0; font-weight: 600;">
+              Esta vista es únicamente para visualizar información en campo, sin descargas.
+            </p>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Abrir Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja-ind-list') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas-ind-list') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
+      }
+    });
+
+    if (isConfirmed && formValues) {
+      const estadoGrupo = cliente.estadoGrupo ? `&estadoGrupo=${cliente.estadoGrupo}` : '';
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${cliente._id}/${ciclo}?preview=true${estadoGrupo}`;
+      if (formValues.tipo === 'llena') {
+        url += '&llena=true';
+      }
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
+      }
+      this.abrirModalPreview(url, `${cliente.nombre || 'Cliente'} (Ciclo ${ciclo})`);
+    }
+  }
+
+  abrirModalPreview(url: string, nombre: string): void {
+    this.previewClienteNombre = nombre;
+    this.previewUrl = url;
+    this.previewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${url}#toolbar=0`);
+    this.cdr.markForCheck();
+  }
+
+  cerrarPreview(): void {
+    this.previewUrl = null;
+    this.previewSafeUrl = null;
+    this.previewClienteNombre = '';
+    this.cdr.markForCheck();
+  }
+
+  abrirEnNuevaPestana(): void {
+    if (this.previewUrl) {
+      window.open(`${this.previewUrl}#toolbar=0`, '_blank');
+    }
   }
 
   verDetalleCliente(clienteId: string): void {

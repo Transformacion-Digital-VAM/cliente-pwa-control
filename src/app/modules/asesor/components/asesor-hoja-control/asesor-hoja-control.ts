@@ -25,6 +25,7 @@ type TabTipo = 'COMUNAL_REFIL' | 'MAGICO';
 export class AsesorHojaControl implements OnInit {
   // --- PROPERTIES ---
   asesorName: string = 'Asesor';
+  esCoordinador: boolean = false;
   hoyStr: string = '';
   grupoId: string | null = null;
   grupo: any = null;
@@ -80,6 +81,8 @@ export class AsesorHojaControl implements OnInit {
         try {
           const userObj = JSON.parse(userStr);
           this.asesorName = userObj.username || 'Asesor';
+          const role = (userObj.role || '').toString().toLowerCase().trim();
+          this.esCoordinador = ['coordinador', 'admin', 'master', 'superadmin'].includes(role);
         } catch (e) {
           this.asesorName = 'Asesor';
         }
@@ -90,6 +93,23 @@ export class AsesorHojaControl implements OnInit {
 
   // filtrar tipo de credito
   // Dentro de la clase AsesorHojaControl
+
+  toggleValidacionGrupo(): void {
+    if (!this.grupo || !this.grupo._id) return;
+    const nuevoEstado = !this.grupo.validada;
+    this.grupoService.validarGrupo(this.grupo._id, nuevoEstado).subscribe({
+      next: (res: any) => {
+        this.grupo.validada = res?.validada ?? nuevoEstado;
+        this.grupo.validadaPor = res?.validadaPor ?? (nuevoEstado ? this.asesorName : null);
+        this.grupo.fechaValidacion = res?.fechaValidacion ?? (nuevoEstado ? new Date() : null);
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        console.error('Error al validar hoja grupal:', err);
+        Swal.fire('Error', 'No se pudo actualizar la validación de la hoja.', 'error');
+      }
+    });
+  }
 
   // Define un mapeo para normalizar los nombres de los tabs con tus datos en MongoDB
   private readonly MAP_TABS = {
@@ -1107,8 +1127,8 @@ export class AsesorHojaControl implements OnInit {
           <div style="margin-bottom: 16px;">
             <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
             <select id="swal-tipo-hoja-hc" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-              <option value="llena">Hoja Llena (con datos de crédito)</option>
-              <option value="vacia">Hoja Vacía (en blanco)</option>
+              <option value="llena">Hoja Llena</option>
+              <option value="vacia">Hoja Vacía</option>
             </select>
           </div>
           <div>

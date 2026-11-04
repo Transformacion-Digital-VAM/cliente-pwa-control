@@ -90,45 +90,6 @@
         <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ clientesFiltrados.length }}</p>
         <p class="text-[10px] text-slate-400 font-semibold mt-0.5">de {{ clientes.length }} individuales</p>
       </div>
-
-      <!-- Total Asesores -->
-      <div (click)="setFiltroOrigen(filtroOrigen === 'asesores' ? 'todos' : 'asesores')"
-        class="bg-white rounded-2xl p-3.5 md:p-4 border border-slate-200/80 shadow-xs cursor-pointer hover:border-purple-300 transition-all"
-        [class.ring-2]="filtroOrigen === 'asesores'" [class.ring-purple-500]="filtroOrigen === 'asesores'">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] md:text-xs font-black uppercase tracking-wider text-slate-400">Asesores</span>
-          <div class="bg-purple-100 text-purple-700 p-1.5 rounded-xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
-          </div>
-        </div>
-        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ asesoresSoloList.length }}</p>
-        <p class="text-[10px] text-slate-400 font-semibold mt-0.5">En tu coordinación</p>
-      </div>
-
-      <!-- Hojas de Ejecutiva (Rol Master) -->
-      <div (click)="setFiltroOrigen(filtroOrigen === 'ejecutiva' ? 'todos' : 'ejecutiva')"
-        class="bg-white rounded-2xl p-3.5 md:p-4 border border-slate-200/80 shadow-xs cursor-pointer hover:border-amber-400 transition-all"
-        [class.ring-2]="filtroOrigen === 'ejecutiva'" [class.ring-amber-500]="filtroOrigen === 'ejecutiva'"
-        [class.bg-amber-50/40]="filtroOrigen === 'ejecutiva'">
-        <div class="flex items-center justify-between">
-          <span class="text-[10px] md:text-xs font-black uppercase tracking-wider text-amber-600">Ejecutiva</span>
-          <div class="bg-amber-100 text-amber-700 p-1.5 rounded-xl">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
-              stroke="currentColor">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-            </svg>
-          </div>
-        </div>
-        <p class="text-xl md:text-2xl font-black text-slate-900 mt-2">{{ totalHojasEjecutiva }}</p>
-        <p class="text-[10px] text-slate-500 font-semibold mt-0.5 truncate" [title]="nombreEjecutivaCoordinacion">
-          {{ ejecutivasList.length > 0 ? nombreEjecutivaCoordinacion : 'Hojas de ejecutiva' }}
-        </p>
-      </div>
     </div>
 
     <!-- PANEL DE CONTROL & FILTROS -->
@@ -295,6 +256,14 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-black text-slate-900 text-base leading-tight">{{ g.nombre }}</h3>
 
+                <span *ngIf="g.validada"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Validado por COP
+                </span>
+
                 <span *ngIf="g.estadoGrupo"
                   class="px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase" [ngClass]="{
                     'bg-blue-100 text-blue-700': g.estadoGrupo === 'CC',
@@ -343,6 +312,19 @@
           <!-- BOTONES DE ACCIÓN: VISTA PREVIA Y ACORDEÓN -->
           <div class="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
             <!-- Botón de Vista Previa PDF -->
+            <!-- Botón Validar Hoja Grupal (COP) -->
+            <button (click)="toggleValidarGrupo(g, $event)"
+              class="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl border font-bold text-xs active:scale-95 transition-all"
+              [ngClass]="g.validada
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs hover:bg-emerald-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'"
+              [title]="g.validada ? 'Hoja validada por COP (clic para quitar validación)' : 'Validar hoja de control'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{{ g.validada ? 'Validado' : 'Validar' }}</span>
+            </button>
+
             <button (click)="vistaPreviaGrupo(g, $event)"
               class="flex items-center gap-1 px-3 py-2.5 rounded-2xl border border-purple-200 text-purple-700 hover:bg-purple-50 font-bold text-xs active:scale-95 transition-all"
               title="Ver Hoja de Control en formato PDF">
@@ -470,6 +452,14 @@
               <div class="flex items-center gap-2 flex-wrap">
                 <h3 class="font-black text-slate-900 text-base leading-tight">{{ c.nombre }}</h3>
 
+                <span *ngIf="c.validada"
+                  class="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                  Validado por COP
+                </span>
+
                 <span *ngIf="c.credito?.ciclo"
                   class="px-2 py-0.5 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-600">
                   Ciclo {{ c.credito?.ciclo }}
@@ -502,6 +492,19 @@
           <!-- BOTONES DE ACCIÓN: VISTA PREVIA -->
           <div class="flex items-center gap-2 self-end md:self-center shrink-0 flex-wrap">
             <!-- Botón de Vista Previa PDF -->
+            <!-- Botón Validar Hoja Individual (COP) -->
+            <button (click)="toggleValidarCliente(c, $event)"
+              class="flex items-center gap-1.5 px-3 py-2.5 rounded-2xl border font-bold text-xs active:scale-95 transition-all"
+              [ngClass]="c.validada
+                ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs hover:bg-emerald-700'
+                : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'"
+              [title]="c.validada ? 'Hoja validada por COP (clic para quitar validación)' : 'Validar hoja de control'">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+              <span>{{ c.validada ? 'Validado' : 'Validar' }}</span>
+            </button>
+
             <button (click)="vistaPreviaIndividual(c, $event)"
               class="flex items-center gap-1 px-3 py-2.5 rounded-2xl border border-emerald-200 text-emerald-700 hover:bg-emerald-50 font-bold text-xs active:scale-95 transition-all"
               title="Ver Hoja de Control en formato PDF">

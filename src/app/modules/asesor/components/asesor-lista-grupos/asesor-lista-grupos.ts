@@ -226,23 +226,38 @@ export class AsesorListaGrupos implements OnInit {
 
     getCicloActualGrupo(grupo: any): number {
         if (!grupo) return 1;
-        let maxCiclo = Number(grupo.cicloActual) || 0;
+        let maxCicloActivo = 0;
+        let maxCicloTotal = Number(grupo.cicloActual) || 0;
         const gId = String(grupo._id);
         const miembrosGrupo = this.miembrosAll.filter((m: any) => {
             const mgId = m.grupo?._id || m.grupo;
             return mgId && String(mgId) === gId;
         });
         const mIds = new Set(miembrosGrupo.map((m: any) => String(m._id)));
+        for (const m of (grupo.integrantes || [])) {
+            const id = String(m._id || m);
+            if (id) mIds.add(id);
+            if (m.ciclo) {
+                const mC = Number(m.ciclo) || 0;
+                if (mC > maxCicloTotal) maxCicloTotal = mC;
+            }
+        }
 
         for (const c of this.creditosAll) {
             const mId = c.miembro?._id || c.miembro;
             if (mId && mIds.has(String(mId))) {
                 const cCiclo = Number(c.ciclo) || 0;
-                if (c.estado === 'Activo' && cCiclo > 0) return cCiclo;
-                if (cCiclo > maxCiclo) maxCiclo = cCiclo;
+                if (cCiclo > 0) {
+                    if (c.estado === 'Activo' && cCiclo > maxCicloActivo) {
+                        maxCicloActivo = cCiclo;
+                    }
+                    if (cCiclo > maxCicloTotal) {
+                        maxCicloTotal = cCiclo;
+                    }
+                }
             }
         }
-        return maxCiclo > 0 ? maxCiclo : 1;
+        return maxCicloActivo > 0 ? maxCicloActivo : (maxCicloTotal > 0 ? maxCicloTotal : 1);
     }
 
     getSemanasGrupo(grupo: any, ciclo?: number): number {
@@ -319,8 +334,8 @@ export class AsesorListaGrupos implements OnInit {
                     <div style="margin-bottom: 16px;">
                         <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
                         <select id="swal-tipo-hoja" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-                            <option value="llena">Hoja Llena (con datos de crédito)</option>
-                            <option value="vacia">Hoja Vacía (en blanco)</option>
+                            <option value="llena">Hoja Llena </option>
+                            <option value="vacia">Hoja Vacía </option>
                         </select>
                     </div>
                     <div>

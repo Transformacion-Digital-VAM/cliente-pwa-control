@@ -69,7 +69,7 @@ export class CoordinadorHojasControl implements OnInit {
     private router: Router,
     private cdr: ChangeDetectorRef,
     private sanitizer: DomSanitizer
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     if (isPlatformBrowser(this.platformId)) {
@@ -559,6 +559,40 @@ export class CoordinadorHojasControl implements OnInit {
     await this.authService.logout();
   }
 
+  toggleValidarGrupo(grupo: any, event: Event): void {
+    event.stopPropagation();
+    const nuevoEstado = !grupo.validada;
+    this.grupoService.validarGrupo(grupo._id, nuevoEstado).subscribe({
+      next: (res: any) => {
+        grupo.validada = res?.validada ?? nuevoEstado;
+        grupo.validadaPor = res?.validadaPor ?? (nuevoEstado ? this.coordinadorName : null);
+        grupo.fechaValidacion = res?.fechaValidacion ?? (nuevoEstado ? new Date() : null);
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        console.error('Error al validar grupo:', err);
+        Swal.fire('Error', 'No se pudo actualizar la validación de la hoja.', 'error');
+      }
+    });
+  }
+
+  toggleValidarCliente(cliente: any, event: Event): void {
+    event.stopPropagation();
+    const nuevoEstado = !cliente.validada;
+    this.clienteService.validarCliente(cliente._id, nuevoEstado).subscribe({
+      next: (res: any) => {
+        cliente.validada = res?.validada ?? nuevoEstado;
+        cliente.validadaPor = res?.validadaPor ?? (nuevoEstado ? this.coordinadorName : null);
+        cliente.fechaValidacion = res?.fechaValidacion ?? (nuevoEstado ? new Date() : null);
+        this.cdr.markForCheck();
+      },
+      error: (err: any) => {
+        console.error('Error al validar cliente:', err);
+        Swal.fire('Error', 'No se pudo actualizar la validación de la hoja.', 'error');
+      }
+    });
+  }
+
   abrirHojaControlGrupo(grupo: any, event?: Event): void {
     if (event) event.stopPropagation();
     this.router.navigate(['/hoja-control-asesor', grupo._id]);
@@ -591,8 +625,8 @@ export class CoordinadorHojasControl implements OnInit {
           <div style="margin-bottom: 16px;">
             <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
             <select id="swal-tipo-hoja" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-              <option value="llena">Hoja Llena (con datos de crédito)</option>
-              <option value="vacia">Hoja Vacía (en blanco)</option>
+              <option value="llena">Hoja Llena </option>
+              <option value="vacia">Hoja Vacía </option>
             </select>
           </div>
           <div>
@@ -651,8 +685,8 @@ export class CoordinadorHojasControl implements OnInit {
           <div style="margin-bottom: 16px;">
             <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
             <select id="swal-tipo-hoja-ind" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-              <option value="llena">Hoja Llena (con datos de crédito)</option>
-              <option value="vacia">Hoja Vacía (en blanco)</option>
+              <option value="llena">Hoja Llena </option>
+              <option value="vacia">Hoja Vacía </option>
             </select>
           </div>
           <div>
@@ -716,18 +750,29 @@ export class CoordinadorHojasControl implements OnInit {
 
   getCicloActualGrupo(grupo: any): number {
     if (!grupo) return 1;
-    let maxCiclo = Number(grupo.cicloActual) || 0;
+    let maxCicloActivo = 0;
+    let maxCicloTotal = Number(grupo.cicloActual) || 0;
     if (grupo.integrantes && Array.isArray(grupo.integrantes)) {
       for (const m of grupo.integrantes) {
-        const cred = m.credito;
+        const cred = m.credito || this.creditoMiembroMap?.get(this.extraerId(m));
         if (cred) {
           const cCiclo = Number(cred.ciclo) || 0;
-          if (cred.estado === 'Activo' && cCiclo > 0) return cCiclo;
-          if (cCiclo > maxCiclo) maxCiclo = cCiclo;
+          if (cCiclo > 0) {
+            if (cred.estado === 'Activo' && cCiclo > maxCicloActivo) {
+              maxCicloActivo = cCiclo;
+            }
+            if (cCiclo > maxCicloTotal) {
+              maxCicloTotal = cCiclo;
+            }
+          }
+        }
+        if (m.ciclo) {
+          const mCiclo = Number(m.ciclo) || 0;
+          if (mCiclo > maxCicloTotal) maxCicloTotal = mCiclo;
         }
       }
     }
-    return maxCiclo > 0 ? maxCiclo : 1;
+    return maxCicloActivo > 0 ? maxCicloActivo : (maxCicloTotal > 0 ? maxCicloTotal : 1);
   }
 
   getSemanasGrupo(grupo: any, ciclo?: number): number {

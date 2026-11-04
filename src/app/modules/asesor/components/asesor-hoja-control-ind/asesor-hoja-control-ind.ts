@@ -1,6 +1,8 @@
 import { Component, OnInit, ChangeDetectorRef, Inject, PLATFORM_ID } from '@angular/core';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { environment } from '../../../../../environments/environment';
 import { forkJoin } from 'rxjs';
 import Swal from 'sweetalert2';
 import { ClienteService } from '../../../../core/services/cliente.service';
@@ -23,7 +25,13 @@ export class AsesorHojaControlInd implements OnInit {
   hoy: Date = new Date();
 
   asesorName: string = '';
+  esCoordinador: boolean = false;
   hoyStr: string = '';
+
+  // Modal de Vista Previa (Solo Lectura)
+  previewUrl: string | null = null;
+  previewSafeUrl: SafeResourceUrl | null = null;
+  previewClienteNombre: string = '';
 
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
@@ -32,7 +40,8 @@ export class AsesorHojaControlInd implements OnInit {
     private clienteService: ClienteService,
     private cdr: ChangeDetectorRef,
     private authService: AuthService,
-    private locationService: LocationService
+    private locationService: LocationService,
+    private sanitizer: DomSanitizer
   ) { }
 
   ngOnInit(): void {
@@ -45,6 +54,8 @@ export class AsesorHojaControlInd implements OnInit {
         try {
           const userObj = JSON.parse(userStr);
           this.asesorName = userObj.nombre || userObj.username || 'Asesor';
+          const role = (userObj.role || '').toString().toLowerCase().trim();
+          this.esCoordinador = ['coordinador', 'admin', 'master', 'superadmin'].includes(role);
         } catch (e) {
           this.asesorName = 'Asesor';
         }
@@ -696,6 +707,135 @@ export class AsesorHojaControlInd implements OnInit {
         });
       }
     });
+  }
+
+  toggleValidacionCliente(): void {
+    if (!this.cliente || !this.cliente._id) return;
+    const nuevoEstado = !this.cliente.validada;
+    this.clienteService.validarCliente(this.cliente._id, nuevoEstado).subscribe({
+      next: (res: any) => {
+        this.cliente.validada = res?.validada ?? nuevoEstado;
+        this.cliente.validadaPor = res?.validadaPor ?? (nuevoEstado ? this.asesorName : null);
+        this.cliente.fechaValidacion = res?.fechaValidacion ?? (nuevoEstado ? new Date() : null);
+        this.cdr.detectChanges();
+      },
+      error: (err: any) => {
+        console.error('Error al validar hoja individual:', err);
+        Swal.fire('Error', 'No se pudo actualizar la validación de la hoja.', 'error');
+      }
+    });
+  }
+
+  generarOpcionesSemanas(totalSemanas: number): { [key: string]: string } {
+    const opciones: { [key: string]: string } = {};
+    opciones['completa'] = `Hoja Completa (1 - ${totalSemanas})`;
+
+    if (totalSemanas > 8) {
+      const mitad = Math.ceil(totalSemanas / 2);
+      opciones['1-8'] = `Parte 1: Semanas 1 a ${mitad}`;
+      opciones['9-16'] = `Parte 2: Semanas ${mitad + 1} a ${totalSemanas}`;
+    }
+    return opciones;
+  }
+
+  obtenerRangoSemanas(opcion: string, totalSemanas: number): { inicio: number, fin: number } {
+    if (opcion === 'completa') {
+      return { inicio: 1, fin: totalSemanas };
+    }
+    const mitad = Math.ceil(totalSemanas / 2);
+    if (opcion === '1-8') {
+      return { inicio: 1, fin: mitad };
+    }
+    if (opcion === '9-16') {
+      return { inicio: mitad + 1, fin: totalSemanas };
+    }
+    return { inicio: 1, fin: totalSemanas };
+  }
+
+  async vistaPreviaIndividual(): Promise<void> {
+    if (!this.cliente) return;
+
+    const ciclo = Number(this.creditoActivo?.ciclo) || Number(this.cliente.cicloActual) || 1;
+    const totalSemanas = Number(this.creditoActivo?.semanas) || Number(this.cliente.plazoSemanas) || 16;
+    const opciones = this.generarOpcionesSemanas(totalSemanas);
+    const optionsHtml = Object.entries(opciones)
+      .map(([val, label]) => `<option value="${val}">${label}</option>`)
+      .join('');
+
+    const { value: formValues, isConfirmed } = await Swal.fire({
+      title: 'Vista Previa Individual (Solo Lectura)',
+      html: `
+        <div style="text-align: left; padding-top: 8px;">
+          <p style="font-size: 13px; color: #64748b; margin-bottom: 14px;">
+            Cliente: <strong style="color: #1e293b;">${this.cliente.nombre || 'Sin Nombre'} ${this.cliente.apellidos || ''}</strong>
+          </p>
+          <div style="margin-bottom: 16px;">
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
+            <select id="swal-tipo-hoja-ind-det" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              <option value="llena">Hoja Llena (con datos)</option>
+              <option value="vacia">Hoja Vacía (en blanco)</option>
+            </select>
+          </div>
+          <div>
+            <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Rango de Semanas (${totalSemanas} semanas)</label>
+            <select id="swal-rango-semanas-ind-det" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
+              ${optionsHtml}
+            </select>
+          </div>
+          <div style="margin-top: 14px; padding: 8px 12px; background-color: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+            <p style="font-size: 11px; color: #1e40af; margin: 0; font-weight: 600;">
+              Esta vista es únicamente para visualizar información en campo, sin descargas.
+            </p>
+          </div>
+        </div>
+      `,
+      focusConfirm: false,
+      showCancelButton: true,
+      confirmButtonText: 'Abrir Vista Previa',
+      cancelButtonText: 'Cancelar',
+      confirmButtonColor: '#2563eb',
+      preConfirm: () => {
+        const tipoElem = document.getElementById('swal-tipo-hoja-ind-det') as HTMLSelectElement;
+        const rangoElem = document.getElementById('swal-rango-semanas-ind-det') as HTMLSelectElement;
+        return {
+          tipo: tipoElem ? tipoElem.value : 'llena',
+          rango: rangoElem ? rangoElem.value : 'completa'
+        };
+      }
+    });
+
+    if (isConfirmed && formValues) {
+      const estadoGrupo = this.cliente.estadoGrupo ? `&estadoGrupo=${this.cliente.estadoGrupo}` : '';
+      let url = `${environment.apiUrl}/creditos/hoja-control-individual/${this.cliente._id}/${ciclo}?preview=true${estadoGrupo}`;
+      if (formValues.tipo === 'llena') {
+        url += '&llena=true';
+      }
+      if (formValues.rango !== 'completa') {
+        const { inicio, fin } = this.obtenerRangoSemanas(formValues.rango, totalSemanas);
+        url += `&semanaInicio=${inicio}&semanaFin=${fin}`;
+      }
+      this.abrirModalPreview(url, `${this.cliente.nombre || 'Cliente'} (Ciclo ${ciclo})`);
+    }
+  }
+
+  abrirModalPreview(url: string, nombre: string): void {
+    this.previewClienteNombre = nombre;
+    this.previewUrl = url;
+    this.previewSafeUrl = this.sanitizer.bypassSecurityTrustResourceUrl(`${url}#toolbar=0`);
+    this.cdr.detectChanges();
+  }
+
+  cerrarPreview(): void {
+    this.previewUrl = null;
+    this.previewSafeUrl = null;
+    this.previewClienteNombre = '';
+    this.cdr.detectChanges();
+  }
+
+  abrirEnNuevaPestana(): void {
+    if (this.previewUrl) {
+      window.open(`${this.previewUrl}#toolbar=0`, '_blank');
+    }
   }
 
   volver(): void {

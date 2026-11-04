@@ -29,6 +29,10 @@ export class AdminHome implements OnInit {
 
   grupos: any[] = [];
   creditos: any[] = [];
+  miembrosAll: any[] = [];
+  miembrosPorGrupoMap: Map<string, any[]> = new Map();
+  creditosCargadosPromise: Promise<void> | null = null;
+  private creditosResolver: (() => void) | null = null;
   asesoresList: any[] = [];
   coordinacionesList: any[] = [];
   expandedGroups: { [key: string]: boolean } = {};
@@ -153,6 +157,9 @@ export class AdminHome implements OnInit {
 
   cargarDatos(forceRefresh = false) {
     this.isLoading = true;
+    this.creditosCargadosPromise = new Promise((resolve) => {
+      this.creditosResolver = resolve;
+    });
     this.cdr.markForCheck();
 
     // 1. CARGA: Coordinaciones, Asesores, Grupos, Clientes e Individuales en Grupo
@@ -285,6 +292,18 @@ export class AdminHome implements OnInit {
         const rawCreditos = res.creditos?.creditos || res.creditos || [];
         this.creditos = Array.isArray(rawCreditos) ? rawCreditos : [];
         const allMiembrosRaw = res.miembros || [];
+        this.miembrosAll = allMiembrosRaw;
+
+        this.miembrosPorGrupoMap.clear();
+        for (const m of allMiembrosRaw) {
+          const gId = m.grupo ? String(typeof m.grupo === 'object' ? (m.grupo._id || m.grupo) : m.grupo) : null;
+          if (gId) {
+            if (!this.miembrosPorGrupoMap.has(gId)) {
+              this.miembrosPorGrupoMap.set(gId, []);
+            }
+            this.miembrosPorGrupoMap.get(gId)!.push(m);
+          }
+        }
 
         this.creditoMiembroMap.clear();
         this.creditoClienteMap.clear();
@@ -385,33 +404,56 @@ export class AdminHome implements OnInit {
 
         this.aplicarFiltros();
         this.cdr.detectChanges();
+        this.creditosResolver?.();
       },
-      error: (err) => console.error('Error enriqueciendo créditos en segundo plano', err)
+      error: (err) => {
+        console.error('Error enriqueciendo créditos en segundo plano', err);
+        this.creditosResolver?.();
+      }
     });
+  }
+
+  private extraerIdAsesor(item: any): string {
+    if (!item?.asesor) return '';
+    if (typeof item.asesor === 'object') {
+      return String(item.asesor._id || item.asesor.id || '');
+    }
+    return String(item.asesor);
+  }
+
+  private extraerIdCoordinacion(item: any): string {
+    if (!item) return '';
+    let coordId = (item.coordinacion && typeof item.coordinacion === 'object')
+      ? (item.coordinacion._id || item.coordinacion.id)
+      : item.coordinacion;
+    if (!coordId && item.asesor) {
+      const asId = this.extraerIdAsesor(item);
+      const asInfo = this.asesoresMap.get(asId);
+      if (asInfo) {
+        coordId = (asInfo.coordinacion && typeof asInfo.coordinacion === 'object')
+          ? (asInfo.coordinacion._id || asInfo.coordinacion.id)
+          : asInfo.coordinacion;
+      } else if (typeof item.asesor === 'object' && item.asesor.coordinacion) {
+        coordId = (item.asesor.coordinacion && typeof item.asesor.coordinacion === 'object')
+          ? (item.asesor.coordinacion._id || item.asesor.coordinacion.id)
+          : item.asesor.coordinacion;
+      }
+    }
+    return coordId ? String(coordId) : '';
   }
 
   private perteneceACoordinacion(item: any, coordId: string): boolean {
     if (!coordId) return true;
-    let itemCoordId = item.coordinacion?._id || item.coordinacion;
-    if (!itemCoordId && item.asesor) {
-      const asId = item.asesor?._id || item.asesor;
-      const asInfo = this.asesoresMap.get(String(asId));
-      if (asInfo) itemCoordId = asInfo.coordinacion?._id || asInfo.coordinacion;
-    }
-    return itemCoordId && String(itemCoordId) === String(coordId);
+    const itemCoordId = this.extraerIdCoordinacion(item);
+    return !!itemCoordId && String(itemCoordId) === String(coordId);
   }
 
   private resolverNombreCoordinacion(item: any): string {
     if (!item) return 'Sin Coor.';
-    let idStr = item.coordinacion?._id || item.coordinacion;
-    if (!idStr && item.asesor) {
-      const asId = item.asesor?._id || item.asesor;
-      const asInfo = this.asesoresMap.get(String(asId));
-      if (asInfo) idStr = asInfo.coordinacion?._id || asInfo.coordinacion;
-    }
+    const idStr = this.extraerIdCoordinacion(item);
     if (!idStr) return 'Sin Coor.';
 
-    const coordObj = this.coordinacionesMap.get(idStr);
+    const coordObj = this.coordinacionesMap.get(String(idStr));
     if (coordObj && coordObj.nombre) {
       return coordObj.nombre;
     }
@@ -501,12 +543,7 @@ export class AdminHome implements OnInit {
       if (item.tipo !== targetTipo) continue;
 
       // Calcular contadores
-      let coordId = item.coordinacion?._id || item.coordinacion;
-      if (!coordId && item.asesor) {
-        const asId = item.asesor?._id || item.asesor;
-        const asInfo = this.asesoresMap.get(String(asId));
-        if (asInfo) coordId = asInfo.coordinacion?._id || asInfo.coordinacion;
-      }
+      const coordId = this.extraerIdCoordinacion(item);
       if (coordId) {
         cCounts[coordId] = (cCounts[coordId] || 0) + 1;
       }
@@ -658,31 +695,81 @@ export class AdminHome implements OnInit {
 
   getCicloActualGrupo(grupo: any): number {
     if (!grupo) return 1;
-    let maxCiclo = Number(grupo.cicloActual) || 0;
+    let maxCicloActivo = 0;
+    let maxCicloTotal = Number(grupo.cicloActual) || 0;
 
-    if (grupo.integrantes && Array.isArray(grupo.integrantes)) {
-      for (const m of grupo.integrantes) {
-        const mId = m._id || m;
-        const cred = this.getCreditoDeMiembro(mId);
-        if (cred) {
-          const cCiclo = Number(cred.ciclo) || 0;
-          if (cred.estado === 'Activo' && cCiclo > 0) {
-            return cCiclo;
+    const miembrosDirectos: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+    const gId = String(grupo._id || '');
+    const miembrosGlobales = this.miembrosPorGrupoMap.get(gId) || [];
+    const todosMiembros = [...miembrosDirectos, ...miembrosGlobales];
+    const miembrosIds = new Set<string>();
+
+    for (const m of todosMiembros) {
+      const mId = String(typeof m === 'object' ? (m._id || m) : m);
+      if (mId && mId !== 'undefined' && mId !== 'null') miembrosIds.add(mId);
+
+      const mCiclo = Number(m?.ciclo || m?.credito?.ciclo) || 0;
+      if (mCiclo > maxCicloTotal) {
+        maxCicloTotal = mCiclo;
+      }
+
+      const cred = m?.credito || this.getCreditoDeMiembro(mId);
+      if (cred) {
+        const cCiclo = Number(cred.ciclo) || 0;
+        if (cCiclo > 0) {
+          if (cred.estado === 'Activo' && cCiclo > maxCicloActivo) {
+            maxCicloActivo = cCiclo;
           }
-          if (cCiclo > maxCiclo) {
-            maxCiclo = cCiclo;
+          if (cCiclo > maxCicloTotal) {
+            maxCicloTotal = cCiclo;
           }
         }
       }
     }
 
-    return maxCiclo > 0 ? maxCiclo : 1;
+    if (this.creditos && this.creditos.length > 0) {
+      for (const c of this.creditos) {
+        const mId = c.miembro ? String(typeof c.miembro === 'object' ? (c.miembro._id || c.miembro) : c.miembro) : null;
+        if (mId && miembrosIds.has(mId)) {
+          const cCiclo = Number(c.ciclo) || 0;
+          if (cCiclo > 0) {
+            if (c.estado === 'Activo' && cCiclo > maxCicloActivo) {
+              maxCicloActivo = cCiclo;
+            }
+            if (cCiclo > maxCicloTotal) {
+              maxCicloTotal = cCiclo;
+            }
+          }
+        }
+      }
+    }
+
+    return maxCicloActivo > 0 ? maxCicloActivo : (maxCicloTotal > 0 ? maxCicloTotal : 1);
   }
 
   getCiclosDisponiblesGrupo(grupo: any): number[] {
     const ciclos = new Set<number>();
-    const miembros: any[] = Array.isArray(grupo?.integrantes) ? grupo.integrantes : [];
-    const miembrosIds = new Set(miembros.map(m => String(typeof m === 'object' ? (m._id || m) : m)));
+    const miembrosDirectos: any[] = Array.isArray(grupo?.integrantes) ? grupo.integrantes : [];
+    const gId = String(grupo?._id || '');
+    const miembrosGlobales = this.miembrosPorGrupoMap.get(gId) || [];
+    const todosMiembros = [...miembrosDirectos, ...miembrosGlobales];
+    const miembrosIds = new Set<string>();
+
+    for (const m of todosMiembros) {
+      const id = String(typeof m === 'object' ? (m._id || m) : m);
+      if (id && id !== 'undefined' && id !== 'null') miembrosIds.add(id);
+
+      const mCiclo = Number(m?.ciclo || m?.credito?.ciclo);
+      if (mCiclo > 0) ciclos.add(mCiclo);
+    }
+
+    for (const mId of miembrosIds) {
+      const cred = this.creditoMiembroMap.get(mId);
+      if (cred?.ciclo) {
+        const cNum = Number(cred.ciclo);
+        if (cNum > 0) ciclos.add(cNum);
+      }
+    }
 
     if (this.creditos && this.creditos.length > 0) {
       for (const c of this.creditos) {
@@ -693,10 +780,17 @@ export class AdminHome implements OnInit {
         }
       }
     }
+
     if (grupo?.cicloActual) {
       const cNum = Number(grupo.cicloActual);
       if (cNum > 0) ciclos.add(cNum);
     }
+
+    const cicloActual = this.getCicloActualGrupo(grupo);
+    if (cicloActual > 0) {
+      ciclos.add(cicloActual);
+    }
+
     const arr = Array.from(ciclos).sort((a, b) => b - a);
     return arr.length > 0 ? arr : [1];
   }
@@ -807,6 +901,13 @@ export class AdminHome implements OnInit {
 
   async descargarInfoGrupo(grupo: any, event: Event) {
     event.stopPropagation();
+    if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
+      await Promise.race([
+        this.creditosCargadosPromise,
+        new Promise(res => setTimeout(res, 2000))
+      ]);
+    }
+
 
     const ciclos = this.getCiclosDisponiblesGrupo(grupo);
     const cicloActual = this.getCicloActualGrupo(grupo);
@@ -868,6 +969,13 @@ export class AdminHome implements OnInit {
 
   async descargarInfoGrupoLlena(grupo: any, event: Event) {
     event.stopPropagation();
+    if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
+      await Promise.race([
+        this.creditosCargadosPromise,
+        new Promise(res => setTimeout(res, 2000))
+      ]);
+    }
+
 
     const ciclos = this.getCiclosDisponiblesGrupo(grupo);
     const cicloActual = this.getCicloActualGrupo(grupo);
@@ -998,6 +1106,13 @@ export class AdminHome implements OnInit {
 
   async vistaPreviaGrupo(grupo: any, event: Event) {
     event.stopPropagation();
+    if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
+      await Promise.race([
+        this.creditosCargadosPromise,
+        new Promise(res => setTimeout(res, 2000))
+      ]);
+    }
+
 
     const ciclos = this.getCiclosDisponiblesGrupo(grupo);
     const cicloActual = this.getCicloActualGrupo(grupo);

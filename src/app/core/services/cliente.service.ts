@@ -88,6 +88,16 @@ export class ClienteService {
   private cacheClientes = new Map<string, { data: any, timestamp: number }>();
   private readonly CACHE_TTL = 30000; // 30 segundos
 
+  validarCliente(clienteId: string, validada?: boolean): Observable<any> {
+    const body = validada !== undefined ? { validada } : {};
+    return this.http.put(`${this.apiUrlCliente}/validar/${clienteId}`, body).pipe(
+      map((res: any) => {
+        this.clearCache();
+        return res;
+      })
+    );
+  }
+
   clearCache(): void {
     this.cacheClientes.clear();
   }

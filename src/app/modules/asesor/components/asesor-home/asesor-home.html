@@ -154,7 +154,14 @@
               </svg>
             </div>
             <div>
-              <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+                @if (grupo.validada) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  ✓ Validado por COP
+                </span>
+                }
+              </div>
               <div class="flex items-center flex-wrap gap-2 mt-1">
                 <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-0.5 rounded-full">{{
                   grupo.horaVisita }}</span>
@@ -269,7 +276,14 @@
               </svg>
             </div>
             <div>
-              <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+                @if (grupo.validada) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  ✓ Validado por COP
+                </span>
+                }
+              </div>
               <div class="flex items-center flex-wrap gap-2 mt-1">
                 <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-full tracking-wider uppercase">
                   ATRASO · {{ grupo.diaAtraso }}
@@ -365,7 +379,14 @@
               <span class="text-2xl font-bold">{{ cliente.nombre?.charAt(0) | uppercase }}</span>
             </div>
             <div>
-              <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ cliente.nombre }}</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ cliente.nombre }}</h3>
+                @if (cliente.validada) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  ✓ Validado por COP
+                </span>
+                }
+              </div>
               <div class="flex items-center flex-wrap gap-2 mt-1">
                 <span
                   class="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-full tracking-wider">Individual</span>

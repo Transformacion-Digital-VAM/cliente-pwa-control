@@ -561,18 +561,29 @@ export class AsesorHome implements OnInit, OnDestroy {
 
   getCicloActualGrupo(grupo: any): number {
     if (!grupo) return 1;
-    let maxCiclo = Number(grupo.cicloActual) || 0;
+    let maxCicloActivo = 0;
+    let maxCicloTotal = Number(grupo.cicloActual) || 0;
     const integrantes = grupo.integrantes || [];
     for (const m of integrantes) {
       const mId = String(m._id || m);
       const creds = this.creditosPorMiembro.get(mId) || [];
       for (const cred of creds) {
         const cCiclo = Number(cred.ciclo) || 0;
-        if (cred.estado === 'Activo' && cCiclo > 0) return cCiclo;
-        if (cCiclo > maxCiclo) maxCiclo = cCiclo;
+        if (cCiclo > 0) {
+          if (cred.estado === 'Activo' && cCiclo > maxCicloActivo) {
+            maxCicloActivo = cCiclo;
+          }
+          if (cCiclo > maxCicloTotal) {
+            maxCicloTotal = cCiclo;
+          }
+        }
+      }
+      if (m.ciclo) {
+        const mCiclo = Number(m.ciclo) || 0;
+        if (mCiclo > maxCicloTotal) maxCicloTotal = mCiclo;
       }
     }
-    return maxCiclo > 0 ? maxCiclo : 1;
+    return maxCicloActivo > 0 ? maxCicloActivo : (maxCicloTotal > 0 ? maxCicloTotal : 1);
   }
 
   getSemanasGrupo(grupo: any, ciclo?: number): number {
@@ -673,8 +684,8 @@ export class AsesorHome implements OnInit, OnDestroy {
           <div style="margin-bottom: 16px;">
             <label style="display: block; font-size: 11px; font-weight: 700; color: #475569; text-transform: uppercase; margin-bottom: 4px;">Tipo de Hoja</label>
             <select id="swal-tipo-hoja-home" style="width: 100%; padding: 8px 12px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; background-color: #fff;">
-              <option value="llena">Hoja Llena (con datos de crédito)</option>
-              <option value="vacia">Hoja Vacía (en blanco)</option>
+              <option value="llena">Hoja Llena</option>
+              <option value="vacia">Hoja Vacía</option>
             </select>
           </div>
           <div>

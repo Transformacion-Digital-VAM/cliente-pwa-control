@@ -78,7 +78,14 @@
             </div>
 
             <div>
-              <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+              <div class="flex items-center gap-2 flex-wrap">
+                <h3 class="font-black text-slate-800 text-base uppercase tracking-tight">{{ grupo.nombre }}</h3>
+                @if (grupo.validada) {
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[9px] font-black tracking-wider uppercase bg-emerald-100 text-emerald-700 border border-emerald-200">
+                  ✓ Validado por COP
+                </span>
+                }
+              </div>
               <div class="flex items-center gap-2 mt-0.5">
                 <span
                   class="bg-blue-50 text-blue-600 text-[9px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider">Ciclo
