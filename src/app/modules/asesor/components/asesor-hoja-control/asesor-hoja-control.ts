@@ -389,18 +389,20 @@ export class AsesorHojaControl implements OnInit {
     });
 
     // Establecer ciclo y semana actual a partir del primer crédito activo que encontremos del grupo
-    const primerCreditoActivo = creditosAll.find((c: any) => {
+    const creditosGrupo = creditosAll.filter((c: any) => {
       const miembroId = c.miembro?._id || c.miembro;
-      const miembroPertenece = this.miembros.some(m => m._id === miembroId);
-      return miembroPertenece && c.estado === 'Activo';
+      return this.miembros.some(m => m._id === miembroId);
     });
 
-    if (primerCreditoActivo) {
-      if (primerCreditoActivo.ciclo) {
-        this.cicloGrupo = primerCreditoActivo.ciclo.toString();
+    const creditoReferencia = creditosGrupo.find((c: any) => c.estado === 'Activo')
+      || creditosGrupo.slice().sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0))[0];
+
+    if (creditoReferencia) {
+      if (creditoReferencia.ciclo) {
+        this.cicloGrupo = creditoReferencia.ciclo.toString();
       }
-      if (primerCreditoActivo.semanaActual) {
-        this.semanaActualGrupo = primerCreditoActivo.semanaActual.toString();
+      if (creditoReferencia.semanaActual) {
+        this.semanaActualGrupo = creditoReferencia.semanaActual.toString();
       }
     }
 
