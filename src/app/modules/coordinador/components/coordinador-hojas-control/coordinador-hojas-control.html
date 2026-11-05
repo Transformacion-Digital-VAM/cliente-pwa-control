@@ -319,7 +319,8 @@
                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs hover:bg-emerald-700'
                 : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'"
               [title]="g.validada ? 'Hoja validada por COP (clic para quitar validación)' : 'Validar hoja de control'">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               <span>{{ g.validada ? 'Validado' : 'Validar' }}</span>
@@ -499,7 +500,8 @@
                 ? 'bg-emerald-600 border-emerald-600 text-white shadow-xs hover:bg-emerald-700'
                 : 'bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100'"
               [title]="c.validada ? 'Hoja validada por COP (clic para quitar validación)' : 'Validar hoja de control'">
-              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24"
+                stroke="currentColor" stroke-width="2.5">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
               </svg>
               <span>{{ c.validada ? 'Validado' : 'Validar' }}</span>
@@ -558,8 +560,8 @@
     <div *ngIf="!isLoading && totalPages > 1"
       class="bg-white rounded-3xl px-4 py-3.5 md:px-6 border border-slate-200/80 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
       <div class="text-xs text-slate-500 font-medium text-center sm:text-left">
-        Mostrando <span class="font-black text-slate-800">{{ rangoInicioPagina }}–{{ rangoFinPagina }}</span>
-        de <span class="font-black text-slate-800">{{ totalRegistrosActivos }}</span>
+        <span class="font-black text-slate-800">{{ rangoInicioPagina }}–{{ rangoFinPagina }}</span>
+        /<span class="font-black text-slate-800">{{ totalRegistrosActivos }}</span>
         {{ activeTab === 'grupos' ? 'grupos' : 'individuales' }}
         <span class="text-slate-400 mx-1">&bull;</span>
         Pág. <span class="font-bold text-purple-700">{{ paginaActualSegura }}</span> / {{ totalPages }}
@@ -678,7 +680,7 @@
             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
               d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <span>Vista de supervisión de coordinación.</span>
+          <span>Vista de supervisión por coordinador.</span>
         </div>
         <button (click)="cerrarPreview()" type="button" class="text-xs font-bold text-slate-600 hover:text-purple-600">
           Cerrar
