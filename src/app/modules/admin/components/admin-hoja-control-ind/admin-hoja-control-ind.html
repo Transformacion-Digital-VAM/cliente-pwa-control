@@ -54,7 +54,8 @@
                     class="px-5 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer text-sm text-slate-700 transition-colors last:border-0">
                     <div class="font-bold">{{ m.nombre }} {{ m.apellidos }}</div>
                     <span class="text-[10px] text-slate-400 font-semibold uppercase">
-                      Ciclo {{ getCicloCliente(m) }} • Asesor: {{ m.asesor?.nombre || m.asesor?.username || 'Sin asignar' }}
+                      Ciclo {{ getCicloCliente(m) }} • Asesor: {{ m.asesor?.nombre || m.asesor?.username || 'Sin
+                      asignar' }}
                     </span>
                   </li>
                 </ul>
@@ -119,7 +120,7 @@
                   class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-8">
                   <option value="">-- Sin Grupo / Independiente --</option>
                   @for (grupo of gruposFiltradosPorAsesor; track grupo._id) {
-                    <option [value]="grupo._id">{{ grupo.nombre }}</option>
+                  <option [value]="grupo._id">{{ grupo.nombre }}</option>
                   }
                 </select>
                 <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
@@ -132,76 +133,82 @@
           </div>
         </section>
 
-<section class="space-y-6">
-  <div class="flex items-center space-x-3 border-b border-slate-200 pb-3">
-    <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
-    <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Configuración del Crédito</h3>
-  </div>
+        <section class="space-y-6">
+          <div class="flex items-center space-x-3 border-b border-slate-200 pb-3">
+            <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
+            <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Configuración del Crédito</h3>
+          </div>
 
-  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-    <div class="space-y-1">
-      <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Frecuencia de Pago <span
-          class="text-red-500">*</span></label>
-      <div class="relative">
-        <select formControlName="tipoPago"
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
-          <option value="Semanal">Semanal</option>
-          <option value="Bisemanal">Bisemanal</option>
-          <option value="Quincenal">Quincenal</option>
-          <option value="Catorcenal">Catorcenal</option>
-          <option value="Mensual">Mensual</option>
-        </select>
-        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </div>
-      </div>
-    </div>
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Frecuencia de Pago <span
+                  class="text-red-500">*</span></label>
+              <div class="relative">
+                <select formControlName="tipoPago"
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm appearance-none cursor-pointer focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
+                  <option value="Semanal">Semanal</option>
+                  <option value="Bisemanal">Bisemanal</option>
+                  <option value="Quincenal">Quincenal</option>
+                  <option value="Catorcenal">Catorcenal</option>
+                  <option value="Mensual">Mensual</option>
+                </select>
+                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
 
-    <div class="space-y-1"> <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Número de Pagos <span
-          class="text-red-500">*</span></label>
-      <input type="number" formControlName="noPagos"
-        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
-        placeholder="16">
-    </div>
+            <div class="space-y-1"> <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Número
+                de Pagos <span class="text-red-500">*</span></label>
+              <input type="number" formControlName="noPagos"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"
+                placeholder="16">
+            </div>
+            <div class="space-y-1"> <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Fecha
+                primer pago <span class="text-red-500">*</span></label>
+              <input type="date" formControlName="fechaPrimerPago"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
+            </div>
 
-    <div class="space-y-1">
-      <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Día de Cobro <span
-          class="text-red-500">*</span></label>
-      <div class="relative">
-        <input type="text" list="diasCobro" formControlName="diaPago" placeholder="Ej. Lunes, 15 de cada mes..."
-          class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm cursor-text focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
-        <datalist id="diasCobro">
-          <option value="Lunes"></option>
-          <option value="Martes"></option>
-          <option value="Miércoles"></option>
-          <option value="Jueves"></option>
-          <option value="Viernes"></option>
-          <option value="Sábado"></option>
-          <option value="15 de cada mes"></option>
-        </datalist>
-        <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
-          </svg>
-        </div>
-      </div>
-    </div>
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Día de Visita<span
+                  class="text-red-500">*</span></label>
+              <div class="relative">
+                <input type="text" list="diasCobro" formControlName="diaPago" placeholder="Ej. Lunes, 15 de cada mes..."
+                  class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm cursor-text focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm pr-10">
+                <datalist id="diasCobro">
+                  <option value="Lunes"></option>
+                  <option value="Martes"></option>
+                  <option value="Miércoles"></option>
+                  <option value="Jueves"></option>
+                  <option value="Viernes"></option>
+                  <option value="Sábado"></option>
+                  <option value="15 de cada mes"></option>
+                </datalist>
+                <div class="absolute inset-y-0 right-3 flex items-center pointer-events-none text-slate-400">
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </div>
+              </div>
+            </div>
 
-    <div class="space-y-1">
-      <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Hora de Visita <span
-          class="text-red-500">*</span></label>
-      <input type="time" formControlName="horaVisita"
-        class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm"> </div>
+            <div class="space-y-1">
+              <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Hora de Visita <span
+                  class="text-red-500">*</span></label>
+              <input type="time" formControlName="horaVisita"
+                class="w-full bg-slate-50 border border-slate-200 rounded-xl px-5 py-3.5 text-sm placeholder:text-slate-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
+            </div>
 
-    <div class="space-y-1"> <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Fecha primer pago <span
+            <!-- <div class="space-y-1"> <label class="block text-xs font-bold text-slate-600 uppercase tracking-wide">Fecha primer pago <span
           class="text-red-500">*</span></label>
       <input type="date" formControlName="fechaPrimerPago"
         class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3.5 text-sm focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all shadow-sm">
-    </div>
-  </div>
-</section>
+    </div> -->
+          </div>
+        </section>
         <!-- SECCIÓN: Montos -->
         <section class="space-y-6">
           <div class="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-3 gap-3">
@@ -209,12 +216,13 @@
               <span class="h-4 w-1.5 bg-blue-600 rounded-full"></span>
               <h3 class="text-slate-800 font-bold text-sm uppercase tracking-widest">Montos y Garantía</h3>
             </div>
-            
-            <button *ngIf="ultimoCredito && ultimoCredito.estado === 'Activo' && ultimoCredito.saldoPendiente > 0" 
+
+            <button *ngIf="ultimoCredito && ultimoCredito.estado === 'Activo' && ultimoCredito.saldoPendiente > 0"
               type="button" (click)="abrirModalCancelarCredito()" title="Liquidar por Refill o Cambio de Ciclo"
               class="w-full sm:w-auto px-5 py-2 bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 rounded-lg transition-all text-xs font-bold uppercase tracking-wide shadow-sm active:scale-[0.98] flex items-center justify-center">
               <svg class="w-4 h-4 mr-2 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                  d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
               </svg>
               Liquidar CC / R
             </button>
@@ -325,4 +333,3 @@
     </div>
   </div>
 </div>
-

@@ -27,3 +27,5 @@ export interface GrupoPayload {
     porcentajeGarantia?: number;
     integrantes: Integrante[];
 }
+
+
