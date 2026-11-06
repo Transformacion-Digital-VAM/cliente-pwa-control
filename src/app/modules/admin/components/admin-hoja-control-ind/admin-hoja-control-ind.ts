@@ -267,6 +267,9 @@ export class AdminHojaControlInd implements OnInit {
       }
     }
 
+    const diaDetectado = fechaLimpia ? this.obtenerDiaSemanaDeFecha(fechaLimpia) : null;
+    const diaFinal = diaDetectado || cliente.diaPago || cliente.diaVisita || 'Lunes';
+
     // 2. PARCHEAR VALORES
     this.hojaControlIndForm.patchValue({
       idCliente: cliente._id,
@@ -280,7 +283,7 @@ export class AdminHojaControlInd implements OnInit {
       porcentajeGarantia: porcentajeGarantia,
       garantiaPredial: garantiaPredial,
       fechaPrimerPago: fechaLimpia,
-      diaPago: cliente.diaPago || (fechaLimpia ? this.obtenerDiaSemanaDeFecha(fechaLimpia) : 'Lunes'),
+      diaPago: diaFinal,
       tipoPago: tipoPago,
       horaVisita: cliente.horaVisita || '',
       nombreGrupo: grupoVal,
@@ -398,6 +401,15 @@ export class AdminHojaControlInd implements OnInit {
 
   guardar() {
     if (this.hojaControlIndForm.valid) {
+      const val = { ...this.hojaControlIndForm.value };
+      if (val.fechaPrimerPago) {
+        const diaDetectado = this.obtenerDiaSemanaDeFecha(val.fechaPrimerPago);
+        if (diaDetectado && (!val.diaPago || val.diaPago === 'Lunes')) {
+          val.diaPago = diaDetectado;
+        }
+      }
+      val.diaVisita = val.diaPago;
+
       Swal.fire({
         title: 'Guardando...',
         text: 'Por favor espera.',
@@ -405,7 +417,7 @@ export class AdminHojaControlInd implements OnInit {
         didOpen: () => Swal.showLoading()
       });
 
-      this.clienteService.crearClienteIndividual(this.hojaControlIndForm.value).subscribe({
+      this.clienteService.crearClienteIndividual(val).subscribe({
         next: () => {
           Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Registro guardado.' });
           this.cargarClientes();

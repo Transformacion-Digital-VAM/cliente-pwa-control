@@ -196,7 +196,7 @@
                       </div>
                       <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'GRUPO'">{{
                         item.integrantes?.length || 0 }} Integrantes | {{ item.coordinacionNombre }}</p>
-                      <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'INDIVIDUAL'">{{ item.diaPago ||
+                      <p class="text-xs text-slate-400 font-bold" *ngIf="item.tipo === 'INDIVIDUAL'">{{ item.diaPago || item.diaVisita ||
                         'N/A' }} | {{ item.coordinacionNombre }}</p>
                     </td>
                     <td class="px-6 py-5 flex items-center justify-center space-x-3">
@@ -486,7 +486,7 @@
                   <!-- Nombre del cliente -->
                   <td class="px-6 py-3">
                     <p class="font-bold text-slate-800 text-sm">{{ item.nombre }}</p>
-                    <p class="text-xs text-slate-400 font-bold">{{ item.diaPago }} · {{ item.tipoPago }}</p>
+                    <p class="text-xs text-slate-400 font-bold">{{ item.diaPago || item.diaVisita }} · {{ item.tipoPago }}</p>
                   </td>
                   <!-- Grupo al que pertenece -->
                   <td class="px-6 py-3">

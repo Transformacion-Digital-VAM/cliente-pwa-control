@@ -243,20 +243,31 @@ export class CoordinadorHojasControl implements OnInit {
 
         const asesorIdsEnCoord = new Set(this.asesoresList.map((a: any) => this.extraerId(a)));
 
-        // 3. Crear mapa de créditos
+        // 3. Crear mapa de créditos ordenados por ciclo más reciente y último crédito
         this.creditoMiembroMap.clear();
         this.creditoClienteMap.clear();
 
-        for (const c of allCreditos) {
+        const allCreditosOrdenados = [...allCreditos].sort((a: any, b: any) => {
+          const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+          if (diffCiclo !== 0) return diffCiclo;
+          if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+          if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+          const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+          const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+          return timeB - timeA; // Último crédito primero
+        });
+
+        for (const c of allCreditosOrdenados) {
+          if (c.estado === 'Cancelado') continue;
           if (c.miembro) {
             const mId = this.extraerId(c.miembro);
-            if (!this.creditoMiembroMap.has(mId) || c.estado === 'Activo') {
+            if (!this.creditoMiembroMap.has(mId)) {
               this.creditoMiembroMap.set(mId, c);
             }
           }
           if (c.cliente) {
             const clId = this.extraerId(c.cliente);
-            if (!this.creditoClienteMap.has(clId) || c.estado === 'Activo') {
+            if (!this.creditoClienteMap.has(clId)) {
               this.creditoClienteMap.set(clId, c);
             }
           }
@@ -274,9 +285,24 @@ export class CoordinadorHojasControl implements OnInit {
         }
 
         this.grupos = gruposAProcesar.map((g: any) => {
+          const cicloActual = this.getCicloActualGrupo(g);
           const integrantesConCredito = (g.integrantes || []).map((m: any) => {
             const mId = this.extraerId(m);
-            const cred = this.creditoMiembroMap.get(mId) || null;
+            // Buscar créditos del miembro específicamente para el ciclo actual del grupo
+            const credsEnCiclo = allCreditos.filter((c: any) => {
+              const cMId = this.extraerId(c.miembro);
+              if (cMId !== mId) return false;
+              if (c.estado === 'Cancelado') return false;
+              return Number(c.ciclo) === cicloActual;
+            }).sort((a: any, b: any) => {
+              if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+              if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+              const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+              const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+              return timeB - timeA; // Traer el último crédito
+            });
+
+            const cred = credsEnCiclo[0] || this.creditoMiembroMap.get(mId) || null;
             return {
               ...m,
               credito: cred
@@ -301,8 +327,22 @@ export class CoordinadorHojasControl implements OnInit {
         }
 
         this.clientes = clientesAProcesar.map((c: any) => {
-          const clId = String(c._id);
-          const cred = c.credito || c.creditoActivo || this.creditoClienteMap.get(clId) || null;
+          const clId = this.extraerId(c);
+          const cicloActual = this.getCicloActualCliente(c);
+          const credsEnCiclo = allCreditos.filter((cred: any) => {
+            const credClId = this.extraerId(cred.cliente) || this.extraerId(cred.miembro);
+            if (credClId !== clId) return false;
+            if (cred.estado === 'Cancelado') return false;
+            return Number(cred.ciclo) === cicloActual;
+          }).sort((a: any, b: any) => {
+            if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+            if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+            const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+            const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+            return timeB - timeA;
+          });
+
+          const cred = credsEnCiclo[0] || this.creditoClienteMap.get(clId) || c.credito || null;
           return {
             ...c,
             esEjecutiva: this.esHojaDeEjecutiva(c),

@@ -335,11 +335,9 @@ export class AdminHojaControl implements OnInit {
 
     if (fechaFuenteISO) {
       this.hojaControlForm.get('fechaPrimerPago')?.setValue(fechaFuenteISO, { emitEvent: false });
-      if (!grupo.diaVisita) {
-        const diaDetectado = this.obtenerDiaSemanaDeFecha(fechaFuenteISO);
-        if (diaDetectado) {
-          this.hojaControlForm.get('diaVisita')?.setValue(diaDetectado, { emitEvent: false });
-        }
+      const diaDetectado = this.obtenerDiaSemanaDeFecha(fechaFuenteISO);
+      if (diaDetectado) {
+        this.hojaControlForm.get('diaVisita')?.setValue(diaDetectado, { emitEvent: false });
       }
     }
 
@@ -681,7 +679,14 @@ export class AdminHojaControl implements OnInit {
 
   guardarCambios() {
     if (this.hojaControlForm.valid) {
-      const payload = this.hojaControlForm.value;
+      const payload = { ...this.hojaControlForm.value };
+      if (payload.fechaPrimerPago) {
+        const diaDetectado = this.obtenerDiaSemanaDeFecha(payload.fechaPrimerPago);
+        if (diaDetectado && (!payload.diaVisita || payload.diaVisita === 'Lunes')) {
+          payload.diaVisita = diaDetectado;
+        }
+      }
+      payload.diaPago = payload.diaVisita;
 
       Swal.fire({
         title: 'Guardando...',

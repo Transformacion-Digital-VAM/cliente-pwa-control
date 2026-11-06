@@ -91,12 +91,21 @@ export class AsesorHojaControlInd implements OnInit {
         const arrCreditos = res.creditosData?.creditos || res.creditosData || [];
         const todosCreditos = Array.isArray(arrCreditos) ? arrCreditos : [];
         const creditosCliente = todosCreditos.filter((cred: any) => {
+          if (cred.estado === 'Cancelado') return false;
           const cId = cred.cliente ? (cred.cliente._id ? cred.cliente._id.toString() : cred.cliente.toString()) : null;
           const mId = cred.miembro ? (cred.miembro._id ? cred.miembro._id.toString() : cred.miembro.toString()) : null;
           return cId === this.clienteId || mId === this.clienteId || cred._id === this.clienteId;
+        }).sort((a: any, b: any) => {
+          const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+          if (diffCiclo !== 0) return diffCiclo;
+          if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+          if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+          const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+          const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+          return timeB - timeA;
         });
 
-        this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
+        this.creditoActivo = creditosCliente[0] || null;
 
         this.cargando = false;
         this.cdr.detectChanges();
@@ -117,11 +126,20 @@ export class AsesorHojaControlInd implements OnInit {
               next: (creditosData) => {
                 const arrCreditos = creditosData?.creditos || creditosData || [];
                 const creditosCliente = (Array.isArray(arrCreditos) ? arrCreditos : []).filter((cred: any) => {
+                  if (cred.estado === 'Cancelado') return false;
                   const cId = cred.cliente ? (cred.cliente._id ? cred.cliente._id.toString() : cred.cliente.toString()) : null;
                   const mId = cred.miembro ? (cred.miembro._id ? cred.miembro._id.toString() : cred.miembro.toString()) : null;
                   return cId === this.clienteId || mId === this.clienteId || cred._id === this.clienteId;
+                }).sort((a: any, b: any) => {
+                  const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+                  if (diffCiclo !== 0) return diffCiclo;
+                  if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+                  if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+                  const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+                  const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+                  return timeB - timeA;
                 });
-                this.creditoActivo = creditosCliente.find((cred: any) => cred.estado === 'Activo') || creditosCliente[creditosCliente.length - 1];
+                this.creditoActivo = creditosCliente[0] || null;
                 this.cargando = false;
                 this.cdr.detectChanges();
               },

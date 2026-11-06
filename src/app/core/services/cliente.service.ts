@@ -30,13 +30,16 @@ export class ClienteService {
     }
 
     // 1. Separar datos del cliente de los datos del credito
+    const diaFinal = payload.diaPago || payload.diaVisita;
     const bodyCliente = {
       nombre: payload.nombreCliente,
-      diaPago: payload.diaPago,
+      diaPago: diaFinal,
+      diaVisita: diaFinal,
       tipoPago: payload.tipoPago,
       grupo: payload.nombreGrupo || '',
       asesor: payload.asesor,
-      horaVisita: payload.horaVisita
+      horaVisita: payload.horaVisita,
+      fechaPrimerPago: payload.fechaPrimerPago
     };
 
     // 2. Determinar si se crea o se actualiza el cliente
@@ -122,7 +125,7 @@ export class ClienteService {
     }
 
     return this.http.get(`${this.apiUrlCliente}${queryStr}`).pipe(
-      timeout(3500),
+      timeout(350000),
       map((clientes: any) => {
         this.cacheClientes.set(cacheKey, { data: clientes, timestamp: Date.now() });
         // Guardar en Dexie para uso offline
@@ -133,8 +136,29 @@ export class ClienteService {
         }
         return clientes;
       }),
+      // catchError(error => {
+      //   console.warn('[ClienteService] Falló getClientes en red, recurriendo a Dexie local:', error?.message);
+      //   return from(this.dexie.table('clientes').toArray());
+      // })
       catchError(error => {
-        console.warn('[ClienteService] Falló getClientes en red, recurriendo a Dexie local:', error?.message);
+        const esTimeout = error?.name === 'TimeoutError';
+
+        const esErrorDeRed =
+          !navigator.onLine ||
+          esTimeout ||
+          error?.status === 0 ||
+          error?.status === 503 ||
+          error?.status === 504;
+
+        console.error('[ClienteService] Error al consultar clientes:', {
+          status: error?.status,
+          message: error?.message
+        });
+
+        if (!esErrorDeRed) {
+          return throwError(() => error);
+        }
+
         return from(this.dexie.table('clientes').toArray());
       })
     );
@@ -153,7 +177,7 @@ export class ClienteService {
    */
   getClientePorId(id: string): Observable<any> {
     return this.http.get(`${this.apiUrlCliente}/${id}`).pipe(
-      timeout(3500),
+      timeout(3500000),
       catchError(error => {
         console.warn('[ClienteService] Falló getClientePorId en red, recurriendo a Dexie local:', error?.message);
         return from(this.dexie.table('clientes').where('_id').equals(id).first());
@@ -166,7 +190,7 @@ export class ClienteService {
    */
   getCreditosCliente(clienteId: string): Observable<any> {
     return this.http.get(`${this.apiUrlCredito}/?cliente=${clienteId}`).pipe(
-      timeout(3500),
+      timeout(3500000),
       catchError(error => {
         console.warn('[ClienteService] Falló getCreditosCliente en red, recurriendo a Dexie local:', error?.message);
         return from(this.dexie.table('creditos').where('cliente').equals(clienteId).toArray()).pipe(
@@ -194,7 +218,7 @@ export class ClienteService {
    */
   getCreditos(): Observable<any> {
     return this.http.get(`${this.apiUrlCredito}/`).pipe(
-      timeout(3500),
+      timeout(3500000),
       map((res: any) => {
         const creditos = res.creditos || res || [];
         if (Array.isArray(creditos)) {
@@ -224,7 +248,7 @@ export class ClienteService {
 
     this.clearCache();
     return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
-      timeout(3500),
+      timeout(3500000),
       map((res) => {
         this.clearCache();
         return res;
@@ -247,7 +271,7 @@ export class ClienteService {
 
     this.clearCache();
     return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload).pipe(
-      timeout(3500),
+      timeout(3500000),
       map((res) => {
         this.clearCache();
         return res;

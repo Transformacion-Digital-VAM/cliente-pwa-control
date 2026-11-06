@@ -376,7 +376,7 @@ export class AsesorHome implements OnInit, OnDestroy {
           return normalizado === diaHoyNorm;
         };
 
-        const gruposDelDia = gruposFiltrados.filter((g: any) => esDiaCobro(g.diaVisita));
+        const gruposDelDia = gruposFiltrados.filter((g: any) => esDiaCobro(g.diaVisita || g.diaPago));
 
         this.gruposHoy = gruposDelDia.filter((g: any) => {
           const { totalEsperado, totalPagado } = calcPagosGrupo(g, hoyIsoPrefix);
@@ -458,7 +458,7 @@ export class AsesorHome implements OnInit, OnDestroy {
           const fechaPrefix = toLocalPrefix(fecha);
 
           const gruposDiaPasado = gruposFiltrados.filter(
-            (g: any) => normalize(g.diaVisita || '') === diaNomNorm
+            (g: any) => normalize(g.diaVisita || g.diaPago || '') === diaNomNorm
           );
 
           for (const g of gruposDiaPasado) {
@@ -492,7 +492,7 @@ export class AsesorHome implements OnInit, OnDestroy {
           clientesFiltrados = clientesFiltrados.filter(matchAsesor);
         }
 
-        const clientesDelDia = clientesFiltrados.filter((c: any) => esDiaCobro(c.diaPago));
+        const clientesDelDia = clientesFiltrados.filter((c: any) => esDiaCobro(c.diaPago || c.diaVisita));
 
         this.clientesHoy = clientesDelDia.filter((c: any) => {
           let totalPagadoHoy = 0;

@@ -43,7 +43,7 @@
 
         <button (click)="irAAsesorHome()"
           class="flex items-center gap-2 px-4 py-2.5 bg-white text-indigo-900 hover:bg-purple-50 active:scale-95 rounded-2xl font-bold text-xs shadow-md transition-all">
-          <span>Vista Asesor</span>
+          <span>Volver</span>
         </button>
       </div>
 
@@ -294,7 +294,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
-                  Día: <strong class="text-slate-700">{{ g.diaVisita || 'N/A' }}</strong>
+                  Día: <strong class="text-slate-700">{{ g.diaVisita || g.diaPago || 'N/A' }}</strong>
                   <span *ngIf="g.horaVisita">({{ g.horaVisita }})</span>
                 </span>
 
@@ -484,7 +484,7 @@
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                       d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
                   </svg>
-                  Día Pago: <strong class="text-slate-700">{{ c.diaPago || 'N/A' }}</strong>
+                  Día Pago: <strong class="text-slate-700">{{ c.diaPago || c.diaVisita || 'N/A' }}</strong>
                 </span>
               </div>
             </div>

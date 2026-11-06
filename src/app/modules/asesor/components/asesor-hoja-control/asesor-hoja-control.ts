@@ -126,18 +126,61 @@ export class AsesorHojaControl implements OnInit {
       return [];
     }
 
+    const cicloSel = Number(this.cicloGrupo);
+
     if (this.currentTab === 'COMUNAL_REFIL') {
       const isCC = this.accordionState === 'CC';
-      const targetTipos = isCC ? ['CC', '8S'] : ['R'];
 
       return this.miembros
         .map(m => {
-          const creditosMiembro = this.todosLosCreditos
-            .filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id))
-            .sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0));
+          const mIdStr = String(m._id);
+          // Filtrar créditos no cancelados que pertenezcan a este miembro y ciclo seleccionado
+          let creditosMiembro = this.todosLosCreditos
+            .filter((c: any) => {
+              const cMId = c.miembro?._id || c.miembro;
+              if (String(cMId) !== mIdStr) return false;
+              if (c.estado === 'Cancelado') return false;
+              if (cicloSel > 0) {
+                return Number(c.ciclo) === cicloSel;
+              }
+              return true;
+            })
+            .sort((a: any, b: any) => {
+              const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+              if (diffCiclo !== 0) return diffCiclo;
+              const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+              const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+              return timeA - timeB; // Cronológico: 0 = primer crédito, length-1 = último crédito
+            });
 
-          const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') ||
-            creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado !== 'Cancelado');
+          // Si no hubo créditos para el ciclo seleccionado, buscar en cualquier ciclo activo o reciente
+          if (creditosMiembro.length === 0) {
+            creditosMiembro = this.todosLosCreditos
+              .filter((c: any) => {
+                const cMId = c.miembro?._id || c.miembro;
+                return String(cMId) === mIdStr && c.estado !== 'Cancelado';
+              })
+              .sort((a: any, b: any) => {
+                const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+                if (diffCiclo !== 0) return diffCiclo;
+                const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+                const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+                return timeA - timeB;
+              });
+          }
+
+          let credito = null;
+          if (isCC) {
+            // Periodo 1: Comunal (CC o primer crédito de 8 semanas)
+            credito = creditosMiembro.find((c: any) => (c.tipoCredito === 'CC' || c.tipoCredito === '8S') && c.estado === 'Activo')
+              || creditosMiembro.find((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S')
+              || creditosMiembro[0];
+          } else {
+            // Periodo 2: Refill (R o segundo crédito activo/último en el ciclo)
+            credito = creditosMiembro.find((c: any) => (c.tipoCredito === 'R' || c.esRefill) && c.estado === 'Activo')
+              || creditosMiembro.find((c: any) => c.tipoCredito === 'R' || c.esRefill)
+              || (creditosMiembro.length > 1 ? creditosMiembro[creditosMiembro.length - 1] : null);
+          }
 
           if (credito) {
             const mCopy = { ...m };
@@ -151,12 +194,26 @@ export class AsesorHojaControl implements OnInit {
       // MAGICO
       return this.miembros
         .map(m => {
+          const mIdStr = String(m._id);
           const creditosMiembro = this.todosLosCreditos
-            .filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id))
-            .sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0));
+            .filter((c: any) => {
+              const cMId = c.miembro?._id || c.miembro;
+              if (String(cMId) !== mIdStr) return false;
+              if (c.estado === 'Cancelado') return false;
+              if (cicloSel > 0) return Number(c.ciclo) === cicloSel;
+              return true;
+            })
+            .sort((a: any, b: any) => {
+              if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+              if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+              const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+              const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+              return timeB - timeA; // Último primero
+            });
 
           const credito = creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' && c.estado === 'Activo') ||
-            creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' && c.estado !== 'Cancelado');
+            creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO') ||
+            creditosMiembro[0];
 
           if (credito) {
             const mCopy = { ...m };

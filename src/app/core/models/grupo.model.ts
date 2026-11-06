@@ -19,6 +19,7 @@ export interface GrupoPayload {
     cicloActual: number;
     tasa: number;
     diaVisita: string;
+    diaPago?: string;
     fechaPrimerPago: string;
     horaVisita: string;
     plazoSemanas?: number;
