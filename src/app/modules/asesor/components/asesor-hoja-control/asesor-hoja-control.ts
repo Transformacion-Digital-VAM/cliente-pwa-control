@@ -121,6 +121,16 @@ export class AsesorHojaControl implements OnInit {
     return this.miembrosParaMostrar;
   }
 
+  private esCreditoActivoYConSaldo(c: any): boolean {
+    if (!c) return false;
+    if (c.estado === 'Liquidado' || c.estado === 'Cancelado') return false;
+    if (c.estado && c.estado !== 'Activo') return false;
+    if (c.saldoPendiente !== undefined && c.saldoPendiente !== null && Number(c.saldoPendiente) <= 0) {
+      return false;
+    }
+    return true;
+  }
+
   get miembrosParaMostrar(): any[] {
     if (!this.miembros || !this.todosLosCreditos) {
       return [];
@@ -128,102 +138,46 @@ export class AsesorHojaControl implements OnInit {
 
     const cicloSel = Number(this.cicloGrupo);
 
-    if (this.currentTab === 'COMUNAL_REFIL') {
-      const isCC = this.accordionState === 'CC';
+    return this.miembros
+      .map(m => {
+        const mIdStr = String(m._id);
+        // Filtrar únicamente créditos activos y con saldo pendiente del miembro en el ciclo vigente del grupo
+        const creditosMiembro = this.todosLosCreditos
+          .filter((c: any) => {
+            const cMId = c.miembro?._id || c.miembro;
+            if (String(cMId) !== mIdStr) return false;
+            if (!this.esCreditoActivoYConSaldo(c)) return false;
+            if (cicloSel > 0 && Number(c.ciclo) !== cicloSel) return false;
+            return true;
+          })
+          .sort((a: any, b: any) => {
+            const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+            if (diffCiclo !== 0) return diffCiclo;
+            const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
+            const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
+            return timeB - timeA;
+          });
 
-      return this.miembros
-        .map(m => {
-          const mIdStr = String(m._id);
-          // Filtrar créditos no cancelados que pertenezcan a este miembro y ciclo seleccionado
-          let creditosMiembro = this.todosLosCreditos
-            .filter((c: any) => {
-              const cMId = c.miembro?._id || c.miembro;
-              if (String(cMId) !== mIdStr) return false;
-              if (c.estado === 'Cancelado') return false;
-              if (cicloSel > 0) {
-                return Number(c.ciclo) === cicloSel;
-              }
-              return true;
-            })
-            .sort((a: any, b: any) => {
-              const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
-              if (diffCiclo !== 0) return diffCiclo;
-              const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
-              const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
-              return timeA - timeB; // Cronológico: 0 = primer crédito, length-1 = último crédito
-            });
-
-          // Si no hubo créditos para el ciclo seleccionado, buscar en cualquier ciclo activo o reciente
-          if (creditosMiembro.length === 0) {
-            creditosMiembro = this.todosLosCreditos
-              .filter((c: any) => {
-                const cMId = c.miembro?._id || c.miembro;
-                return String(cMId) === mIdStr && c.estado !== 'Cancelado';
-              })
-              .sort((a: any, b: any) => {
-                const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
-                if (diffCiclo !== 0) return diffCiclo;
-                const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
-                const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
-                return timeA - timeB;
-              });
-          }
-
-          let credito = null;
-          if (isCC) {
-            // Periodo 1: Comunal (CC o primer crédito de 8 semanas)
-            credito = creditosMiembro.find((c: any) => (c.tipoCredito === 'CC' || c.tipoCredito === '8S') && c.estado === 'Activo')
-              || creditosMiembro.find((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S')
-              || creditosMiembro[0];
+        let credito = null;
+        if (this.currentTab === 'COMUNAL_REFIL') {
+          if (this.accordionState === 'CC') {
+            credito = creditosMiembro.find((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S') || null;
           } else {
-            // Periodo 2: Refill (R o segundo crédito activo/último en el ciclo)
-            credito = creditosMiembro.find((c: any) => (c.tipoCredito === 'R' || c.esRefill) && c.estado === 'Activo')
-              || creditosMiembro.find((c: any) => c.tipoCredito === 'R' || c.esRefill)
-              || (creditosMiembro.length > 1 ? creditosMiembro[creditosMiembro.length - 1] : null);
+            credito = creditosMiembro.find((c: any) => c.tipoCredito === 'R' || c.esRefill === true || c.esRefill === 'true') || null;
           }
+        } else {
+          // MAGICO
+          credito = creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M') || null;
+        }
 
-          if (credito) {
-            const mCopy = { ...m };
-            this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
-            return mCopy;
-          }
-          return null;
-        })
-        .filter(m => m !== null);
-    } else {
-      // MAGICO
-      return this.miembros
-        .map(m => {
-          const mIdStr = String(m._id);
-          const creditosMiembro = this.todosLosCreditos
-            .filter((c: any) => {
-              const cMId = c.miembro?._id || c.miembro;
-              if (String(cMId) !== mIdStr) return false;
-              if (c.estado === 'Cancelado') return false;
-              if (cicloSel > 0) return Number(c.ciclo) === cicloSel;
-              return true;
-            })
-            .sort((a: any, b: any) => {
-              if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
-              if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
-              const timeA = new Date(a.createdAt || a.fechaPrimerPago || 0).getTime();
-              const timeB = new Date(b.createdAt || b.fechaPrimerPago || 0).getTime();
-              return timeB - timeA; // Último primero
-            });
-
-          const credito = creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' && c.estado === 'Activo') ||
-            creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO') ||
-            creditosMiembro[0];
-
-          if (credito) {
-            const mCopy = { ...m };
-            this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
-            return mCopy;
-          }
-          return null;
-        })
-        .filter(m => m !== null);
-    }
+        if (credito) {
+          const mCopy = { ...m };
+          this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
+          return mCopy;
+        }
+        return null;
+      })
+      .filter(m => m !== null);
   }
 
   filtrarYAsociarMiembros(): void {
@@ -232,28 +186,7 @@ export class AsesorHojaControl implements OnInit {
       return;
     }
 
-    // HEAD - commit 03/11
     this.miembrosFiltradosList = this.miembrosParaMostrar;
-
-    /*
-     const targetTipos = this.currentTab === 'COMUNAL_REFIL' ? ['CC', '8S', 'R'] : ['MAGICO'];
- 
-     this.miembrosFiltradosList = this.miembros
-       .map(m => {
-         const creditosMiembro = this.todosLosCreditos
-           .filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id))
-           .sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0));
-         const credito = creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito) && c.estado === 'Activo') ||
-           creditosMiembro.find((c: any) => targetTipos.includes(c.tipoCredito));
- 
-         if (credito) {
-           const mCopy = { ...m };
-           this.asociarCreditoAMiembro(mCopy, credito, this.todosLosMiembros);
-           return mCopy;
-         }
-         return null;
-       })
-       .filter(m => m !== null); */
   }
 
   // --- UI CONTROLS ---
@@ -382,7 +315,7 @@ export class AsesorHojaControl implements OnInit {
   cargarDatosGrupo(id: string): void {
     this.grupoService.getGrupos().subscribe({
       next: (grupos: any[]) => {
-        this.grupo = grupos.find(g => g._id === id);
+        this.grupo = (grupos || []).find(g => String(g._id) === String(id));
         this.cdr.detectChanges();
       },
       error: (err) => console.error('Error al obtener grupos:', err)
@@ -401,7 +334,7 @@ export class AsesorHojaControl implements OnInit {
 
   private processGrupoData(id: string, res: any): void {
     const miembrosAll = res.miembrosAll || [];
-    const creditosAll = res.creditosAll.creditos || res.creditosAll || [];
+    const creditosAll = res.creditosAll?.creditos || res.creditosAll || [];
 
     this.todosLosMiembros = miembrosAll;
     this.todosLosCreditos = creditosAll;
@@ -409,10 +342,16 @@ export class AsesorHojaControl implements OnInit {
     this.cicloGrupo = '-';
     this.semanaActualGrupo = '-';
 
-    this.miembros = miembrosAll.filter((m: any) => (m.grupo?._id === id) || (m.grupo === id));
+    this.miembros = miembrosAll.filter((m: any) => {
+      const gId = m.grupo ? (m.grupo._id ? String(m.grupo._id) : String(m.grupo)) : null;
+      return gId === String(id) || String(m.grupo) === String(id);
+    });
     this.miembros.forEach(m => {
       // Asociar pagos históricos de todos los créditos del miembro para la vista de historial del grupo
-      const creditosMiembro = creditosAll.filter((c: any) => (c.miembro?._id === m._id) || (c.miembro === m._id));
+      const creditosMiembro = creditosAll.filter((c: any) => {
+        const mId = c.miembro ? (c.miembro._id ? String(c.miembro._id) : String(c.miembro)) : null;
+        return mId === String(m._id) || String(c.miembro) === String(m._id);
+      });
       const pagosHistoricos: any[] = [];
       creditosMiembro.forEach((c: any) => {
         if (c.pagos) {
@@ -445,14 +384,22 @@ export class AsesorHojaControl implements OnInit {
       this.pagos[m._id].montoRecuperacion = 0;
     });
 
-    // Establecer ciclo y semana actual a partir del primer crédito activo que encontremos del grupo
-    const creditosGrupo = creditosAll.filter((c: any) => {
-      const miembroId = c.miembro?._id || c.miembro;
-      return this.miembros.some(m => m._id === miembroId);
-    });
+    // Establecer ciclo y semana actual a partir del crédito activo de mayor ciclo que encontremos del grupo
+    const creditosGrupo = creditosAll
+      .filter((c: any) => {
+        const miembroId = c.miembro ? (c.miembro._id ? String(c.miembro._id) : String(c.miembro)) : null;
+        return this.miembros.some(m => String(m._id) === String(miembroId));
+      })
+      .sort((a: any, b: any) => {
+        const diffCiclo = (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0);
+        if (diffCiclo !== 0) return diffCiclo;
+        if (a.estado === 'Activo' && b.estado !== 'Activo') return -1;
+        if (b.estado === 'Activo' && a.estado !== 'Activo') return 1;
+        return 0;
+      });
 
-    const creditoReferencia = creditosGrupo.find((c: any) => c.estado === 'Activo')
-      || creditosGrupo.slice().sort((a: any, b: any) => (Number(b.ciclo) || 0) - (Number(a.ciclo) || 0))[0];
+    const creditoReferencia = creditosGrupo.find((c: any) => this.esCreditoActivoYConSaldo(c))
+      || creditosGrupo[0];
 
     if (creditoReferencia) {
       if (creditoReferencia.ciclo) {
@@ -460,6 +407,24 @@ export class AsesorHojaControl implements OnInit {
       }
       if (creditoReferencia.semanaActual) {
         this.semanaActualGrupo = creditoReferencia.semanaActual.toString();
+      }
+    }
+
+    // Si en el ciclo vigente la sección por defecto (Comunal CC) no tiene créditos activos, posicionar en la pestaña activa
+    const cicloActualNum = Number(this.cicloGrupo);
+    const activosCiclo = creditosGrupo.filter((c: any) =>
+      this.esCreditoActivoYConSaldo(c) && (cicloActualNum <= 0 || Number(c.ciclo) === cicloActualNum)
+    );
+    const tieneCC = activosCiclo.some((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S');
+    const tieneR = activosCiclo.some((c: any) => c.tipoCredito === 'R' || c.esRefill === true || c.esRefill === 'true');
+    const tieneMagico = activosCiclo.some((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M');
+
+    if (!tieneCC) {
+      if (tieneR) {
+        this.currentTab = 'COMUNAL_REFIL';
+        this.accordionState = 'R';
+      } else if (tieneMagico) {
+        this.currentTab = 'MAGICO';
       }
     }
 
@@ -882,7 +847,8 @@ export class AsesorHojaControl implements OnInit {
       return;
     }
 
-    const pagosFilterIds = Object.keys(this.pagos);
+    const visibleIds = new Set(this.miembrosParaMostrar.map(m => String(m._id)));
+    const pagosFilterIds = Object.keys(this.pagos).filter(id => visibleIds.has(String(id)));
 
     // Primero validamos
     let hasData = false;
@@ -1009,7 +975,7 @@ export class AsesorHojaControl implements OnInit {
       const peticiones: any[] = [];
       for (const miembroId of pagosFilterIds) {
         const p = this.pagos[miembroId];
-        const miembroActual = this.miembrosFiltradosList.find(m => m._id === miembroId);
+        const miembroActual = this.miembrosParaMostrar.find(m => String(m._id) === String(miembroId));
 
         if (!miembroActual || !miembroActual.creditoId) continue;
 

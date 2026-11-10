@@ -152,12 +152,12 @@
     @if (currentTab === 'COMUNAL_REFIL') {
     <div class="px-1 mt-2 mb-4">
       <div class="flex space-x-2 bg-indigo-50/50 p-1 rounded-xl">
-        <button (click)="accordionState = 'CC'; expandedMiembroId = null;"
+        <button (click)="accordionState = 'CC'; expandedMiembroId = null; filtrarYAsociarMiembros();"
           [class]="accordionState === 'CC' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-transparent text-indigo-600 hover:bg-indigo-100'"
           class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200">
           Comunal (CC)
         </button>
-        <button (click)="accordionState = 'R'; expandedMiembroId = null;"
+        <button (click)="accordionState = 'R'; expandedMiembroId = null; filtrarYAsociarMiembros();"
           [class]="accordionState === 'R' ? 'bg-indigo-600 text-white shadow-sm' : 'bg-transparent text-indigo-600 hover:bg-indigo-100'"
           class="flex-1 py-2 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all duration-200">
           Refil (R)
@@ -466,7 +466,7 @@
         }
       </div>
       } @empty {
-      <p class="text-center text-slate-400 text-xs font-bold pt-4">No hay integrantes registrados.</p>
+      <p class="text-center text-slate-400 text-xs font-bold pt-4">No hay integrantes con créditos activos en esta categoría.</p>
       }
     </div> <!-- end of cards -->
 
