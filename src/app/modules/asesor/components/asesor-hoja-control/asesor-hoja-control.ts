@@ -161,7 +161,7 @@ export class AsesorHojaControl implements OnInit {
         let credito = null;
         if (this.currentTab === 'COMUNAL_REFIL') {
           if (this.accordionState === 'CC') {
-            credito = creditosMiembro.find((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S') || null;
+            credito = creditosMiembro.find((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S' || c.tipoCredito === '16S') || null;
           } else {
             credito = creditosMiembro.find((c: any) => c.tipoCredito === 'R' || c.esRefill === true || c.esRefill === 'true') || null;
           }
@@ -415,7 +415,7 @@ export class AsesorHojaControl implements OnInit {
     const activosCiclo = creditosGrupo.filter((c: any) =>
       this.esCreditoActivoYConSaldo(c) && (cicloActualNum <= 0 || Number(c.ciclo) === cicloActualNum)
     );
-    const tieneCC = activosCiclo.some((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S');
+    const tieneCC = activosCiclo.some((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S' || c.tipoCredito === '16S');
     const tieneR = activosCiclo.some((c: any) => c.tipoCredito === 'R' || c.esRefill === true || c.esRefill === 'true');
     const tieneMagico = activosCiclo.some((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M');
 
@@ -570,7 +570,7 @@ export class AsesorHojaControl implements OnInit {
         m.folioHoy = ultimoPago.numeroRecibo || 'Sin Folio';
 
         const tipo = m.tipoCredito?.toUpperCase();
-        if ((tipo === 'CC' || tipo === 'R' || tipo === '8S') && !this.numeroRecibos['COMUNAL_REFIL']) this.numeroRecibos['COMUNAL_REFIL'] = ultimoPago.numeroRecibo || '';
+        if ((tipo === 'CC' || tipo === 'R' || tipo === '8S' || tipo === '16S') && !this.numeroRecibos['COMUNAL_REFIL']) this.numeroRecibos['COMUNAL_REFIL'] = ultimoPago.numeroRecibo || '';
         if (tipo === 'MAGICO' && !this.numeroRecibos['MAGICO']) this.numeroRecibos['MAGICO'] = ultimoPago.numeroRecibo || '';
       } else {
         m.folioHoy = null;
@@ -829,7 +829,7 @@ export class AsesorHojaControl implements OnInit {
           if (pago.numeroRecibo === numRecibo) {
             const esMismoDia = pago.fechaPago && pago.fechaPago.startsWith(todayStr);
             let esMismoTipo = false;
-            if (this.currentTab === 'COMUNAL_REFIL' && (m.tipoCredito === 'CC' || m.tipoCredito === '8S' || m.tipoCredito === 'R')) esMismoTipo = true;
+            if (this.currentTab === 'COMUNAL_REFIL' && (m.tipoCredito === 'CC' || m.tipoCredito === '8S' || m.tipoCredito === 'R' || m.tipoCredito === '16S')) esMismoTipo = true;
             if (this.currentTab === 'MAGICO' && m.tipoCredito === 'MAGICO') esMismoTipo = true;
 
             if (!esMismoDia || !esMismoTipo) {
@@ -1087,6 +1087,23 @@ export class AsesorHojaControl implements OnInit {
 
   // --- VISTA PREVIA (SOLO LECTURA) ---
 
+  // getSemanasGrupoActual(): number {
+  //   if (!this.grupo) return 16;
+  //   const semanasEncontradas: number[] = [];
+  //   for (const c of this.todosLosCreditos) {
+  //     const miembroId = c.miembro?._id || c.miembro;
+  //     const pertenece = this.miembros.some(m => m._id === miembroId);
+  //     if (pertenece) {
+  //       // const sem = Number(c.semanas) || (c.tipoCredito === '8S' ? 8 : 0);
+  //       // if (sem > 0) semanasEncontradas.push(sem);
+  //       const sem = Number(c.semanas) || (c.tipoCredito === '8S' ? 8 : (c.tipoCredito === '16S' || c.tipoCredito === 'CC' ? 16 : 0));
+  //     }
+  //   }
+  //   if (semanasEncontradas.length > 0) {
+  //     return Math.max(...semanasEncontradas);
+  //   }
+  //   return Number(this.grupo.plazoSemanas) || 16;
+  // }
   getSemanasGrupoActual(): number {
     if (!this.grupo) return 16;
     const semanasEncontradas: number[] = [];
@@ -1094,7 +1111,7 @@ export class AsesorHojaControl implements OnInit {
       const miembroId = c.miembro?._id || c.miembro;
       const pertenece = this.miembros.some(m => m._id === miembroId);
       if (pertenece) {
-        const sem = Number(c.semanas) || (c.tipoCredito === '8S' ? 8 : 0);
+        const sem = Number(c.semanas) || (c.tipoCredito === '8S' ? 8 : (c.tipoCredito === '16S' || c.tipoCredito === 'CC' ? 16 : 0));
         if (sem > 0) semanasEncontradas.push(sem);
       }
     }

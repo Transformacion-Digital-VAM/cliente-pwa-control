@@ -416,16 +416,36 @@ export class AsesorHome implements OnInit, OnDestroy {
           for (const mId of integrantes) {
             const creditosM = creditosPorMiembro.get(mId) || [];
             for (const c of creditosM) {
-              totalEsperado += (Number(c.pagoPactado) || 0);
-              for (const p of (c.pagos || [])) {
-                if (p.fechaPago && p.fechaPago.startsWith(fechaPrefix) && !p.recuperacionSolidario) {
-                  totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+              if (c.estado === 'Activo') {
+                totalEsperado += (Number(c.pagoPactado) || 0);
+                for (const p of (c.pagos || [])) {
+                  if (p.fechaPago && p.fechaPago.startsWith(fechaPrefix) && !p.recuperacionSolidario) {
+                    totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+                  }
                 }
               }
             }
           }
           return { totalEsperado, totalPagado };
         };
+        // const calcPagosEnFecha = (g: any, fechaPrefix: string) => {
+        //   const integrantes = g.integrantes ? g.integrantes.map((i: any) => String(i._id || i)) : [];
+        //   let totalEsperado = 0;
+        //   let totalPagado = 0;
+        //   for (const mId of integrantes) {
+        //     const creditosM = creditosPorMiembro.get(mId) || [];
+        //     for (const c of creditosM) {
+        //       totalEsperado += (Number(c.pagoPactado) || 0);
+        //       for (const p of (c.pagos || [])) {
+        //         if (p.fechaPago && p.fechaPago.startsWith(fechaPrefix) && !p.recuperacionSolidario) {
+        //           totalPagado += (Number(p.montoPagado) || Number(p.montoSolidario) || 0);
+        //         }
+        //       }
+        //     }
+        //   }
+        //   return { totalEsperado, totalPagado };
+        // };
+
 
         const calcPagosDesde = (g: any, fechaDesde: string) => {
           const integrantes = g.integrantes ? g.integrantes.map((i: any) => String(i._id || i)) : [];
@@ -586,6 +606,31 @@ export class AsesorHome implements OnInit, OnDestroy {
     return maxCicloActivo > 0 ? maxCicloActivo : (maxCicloTotal > 0 ? maxCicloTotal : 1);
   }
 
+  // getSemanasGrupo(grupo: any, ciclo?: number): number {
+  //   if (!grupo) return 16;
+  //   const cicloABuscar = ciclo || this.getCicloActualGrupo(grupo);
+  //   const integrantes = grupo.integrantes || [];
+  //   const semanasEncontradas: number[] = [];
+
+  //   for (const m of integrantes) {
+  //     const mId = String(m._id || m);
+  //     const creds = this.creditosPorMiembro.get(mId) || [];
+  //     for (const cred of creds) {
+  //       const cCiclo = Number(cred.ciclo) || 0;
+  //       if (cCiclo === cicloABuscar || cred.estado === 'Activo') {
+  //         // const sem = Number(cred.semanas) || (cred.tipoCredito === '8S' ? 8 : 0);
+  //         // if (sem > 0) semanasEncontradas.push(sem);
+  //         const sem = Number(cred.semanas) || (cred.tipoCredito === '8S' ? 8 : (cred.tipoCredito === '16S' || cred.tipoCredito === 'CC' ? 16 : 0));
+  //     if (sem > 0) semanasEncontradas.push(sem);
+  //       }
+  //     }
+  //   }
+
+  //   if (semanasEncontradas.length > 0) {
+  //     return Math.max(...semanasEncontradas);
+  //   }
+  //   return Number(grupo.plazoSemanas) || 16;
+  // }
   getSemanasGrupo(grupo: any, ciclo?: number): number {
     if (!grupo) return 16;
     const cicloABuscar = ciclo || this.getCicloActualGrupo(grupo);
@@ -598,7 +643,8 @@ export class AsesorHome implements OnInit, OnDestroy {
       for (const cred of creds) {
         const cCiclo = Number(cred.ciclo) || 0;
         if (cCiclo === cicloABuscar || cred.estado === 'Activo') {
-          const sem = Number(cred.semanas) || (cred.tipoCredito === '8S' ? 8 : 0);
+          // Asignar 16 por defecto si es 16S o CC cuando cred.semanas venga vacío
+          const sem = Number(cred.semanas) || (cred.tipoCredito === '8S' ? 8 : (cred.tipoCredito === '16S' || cred.tipoCredito === 'CC' ? 16 : 0));
           if (sem > 0) semanasEncontradas.push(sem);
         }
       }

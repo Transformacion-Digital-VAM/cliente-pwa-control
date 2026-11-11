@@ -287,7 +287,7 @@ export class AdminHojaControlInd implements OnInit {
       tipoPago: tipoPago,
       horaVisita: cliente.horaVisita || '',
       nombreGrupo: grupoVal,
-      estadoGrupo: ultimoCredito?.estadoGrupo || (ultimoCredito?.tipoCredito && ['CC', 'R', '8S'].includes(ultimoCredito.tipoCredito) ? ultimoCredito.tipoCredito : 'CC')
+      estadoGrupo: ultimoCredito?.estadoGrupo || (ultimoCredito?.tipoCredito && ['CC', 'R', '8S', '16S'].includes(ultimoCredito.tipoCredito) ? ultimoCredito.tipoCredito : 'CC')
     });
 
     this.calcularPagoYTotal();
@@ -338,7 +338,7 @@ export class AdminHojaControlInd implements OnInit {
       try {
         const u = JSON.parse(userStr);
         userCoordinacion = (u.coordinacion && typeof u.coordinacion === 'object') ? String(u.coordinacion._id || u.coordinacion.id || '') : String(u.coordinacion || '');
-      } catch (e) {}
+      } catch (e) { }
     }
 
     this.grupoService.getAsesores().subscribe({
