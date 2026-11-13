@@ -1,0 +1,154 @@
+<div class="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-violet-700 via-purple-700 to-indigo-700 rounded-3xl p-6 sm:p-8 text-white shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <h1 class="text-2xl font-black tracking-tight">Clientes con Crédito Mágico</h1>
+        <p class="text-xs text-purple-100 mt-1">Directorio independiente de integrantes con Crédito Mágico (16 semanas, sin garantía)</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        @if (esAdmin) {
+          <a routerLink="/magicos-registro" class="px-4 py-2.5 bg-white text-purple-700 hover:bg-purple-50 rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition">
+            + Nuevo Mágico
+          </a>
+        }
+        <a routerLink="/magicos-hoja" class="px-4 py-2.5 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition">
+          Ver Hojas por Grupo
+        </a>
+      </div>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider block">Créditos Mostrados</span>
+        <span class="text-2xl font-black text-slate-800 mt-1 block">{{ creditosFiltrados.length }}</span>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider block">Monto Otorgado</span>
+        <span class="text-2xl font-black text-purple-700 font-mono mt-1 block">$ {{ totalSolicitado | number:'1.2-2' }}</span>
+      </div>
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm">
+        <span class="text-[11px] font-black text-slate-400 uppercase tracking-wider block">Saldo Pendiente</span>
+        <span class="text-2xl font-black text-rose-600 font-mono mt-1 block">$ {{ totalSaldoPendiente | number:'1.2-2' }}</span>
+      </div>
+    </div>
+
+    <!-- Filtros -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div>
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Buscar</label>
+        <input type="text" [(ngModel)]="terminoBusqueda" placeholder="Integrante, grupo o clave..."
+          class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-purple-600">
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Asesor</label>
+        <select [(ngModel)]="filtroAsesor"
+          class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-purple-600">
+          <option value="todos">Todos los asesores</option>
+          @for (a of asesores; track a._id) {
+            <option [value]="a._id">{{ a.nombre || a.username }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Campaña</label>
+        <select [(ngModel)]="filtroCampana"
+          class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-purple-600">
+          <option value="">Todas las campañas</option>
+          @for (camp of campanasDisponibles; track camp) {
+            <option [value]="camp">{{ camp }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Estado</label>
+        <select [(ngModel)]="filtroEstado"
+          class="w-full bg-slate-50 border border-slate-300 rounded-xl px-3.5 py-2.5 text-sm font-semibold outline-none focus:border-purple-600">
+          <option value="Activo">Activos</option>
+          <option value="Liquidado">Liquidados</option>
+          <option value="Cancelado">Cancelados</option>
+          <option value="todos">Todos</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Tabla -->
+    <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-x-auto">
+      @if (cargando) {
+        <div class="p-10 text-center text-xs font-bold text-slate-400 uppercase tracking-wider">Cargando créditos mágicos...</div>
+      } @else {
+        <table class="w-full text-left border-collapse">
+          <thead class="bg-slate-100 border-b border-slate-200 text-[11px] font-black text-slate-600 uppercase tracking-wider">
+            <tr>
+              <th class="px-4 py-3.5">Integrante</th>
+              <th class="px-4 py-3.5">Grupo / Día Pago</th>
+              <th class="px-4 py-3.5">Campaña</th>
+              <th class="px-4 py-3.5 text-center">Avance</th>
+              <th class="px-4 py-3.5 text-right">Monto</th>
+              <th class="px-4 py-3.5 text-right">Pactado</th>
+              <th class="px-4 py-3.5 text-right">Saldo Pendiente</th>
+              <th class="px-4 py-3.5 text-center">Estado</th>
+              <th class="px-4 py-3.5 text-center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-slate-200 text-sm">
+            @for (c of creditosFiltrados; track c._id) {
+              <tr class="hover:bg-slate-50">
+                <td class="px-4 py-3">
+                  <p class="font-bold text-slate-800">{{ c.miembro?.nombre }} {{ c.miembro?.apellidos }}</p>
+                  <span class="text-[10px] font-bold uppercase text-slate-400">{{ c.miembro?.rol || 'INTEGRANTE' }}</span>
+                </td>
+                <td class="px-4 py-3">
+                  <p class="font-bold text-slate-700">{{ c.grupo?.nombre || '-' }}</p>
+                  <p class="text-[11px] text-slate-500">{{ c.diaPago }} · {{ c.horaVisita || '-' }}</p>
+                </td>
+                <td class="px-4 py-3">
+                  <span class="px-2 py-0.5 rounded-md bg-purple-100 text-purple-800 text-xs font-bold">{{ c.campanaClave }}</span>
+                </td>
+                <td class="px-4 py-3 text-center font-bold text-slate-700">
+                  Sem {{ c.semanaActual || 1 }} / {{ c.semanas || 16 }}
+                </td>
+                <td class="px-4 py-3 text-right font-mono font-bold text-slate-800">$ {{ c.montoSolicitado | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right font-mono font-bold text-purple-700">$ {{ c.pagoPactado | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-right font-mono font-black text-rose-600">$ {{ c.saldoPendiente | number:'1.2-2' }}</td>
+                <td class="px-4 py-3 text-center">
+                  <span class="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase"
+                    [ngClass]="{
+                      'bg-emerald-100 text-emerald-700': c.estado === 'Activo',
+                      'bg-blue-100 text-blue-700': c.estado === 'Liquidado',
+                      'bg-slate-200 text-slate-600': c.estado === 'Cancelado'
+                    }">
+                    {{ c.estado }}
+                  </span>
+                </td>
+                <td class="px-4 py-3 text-center">
+                  <div class="flex items-center justify-center gap-2">
+                    <button type="button" (click)="verHojaGrupo(c)"
+                      class="px-2.5 py-1 bg-purple-50 hover:bg-purple-100 text-purple-700 rounded-lg text-xs font-bold border border-purple-200 transition">
+                      Hoja
+                    </button>
+                    @if (esAdmin && c.estado === 'Activo') {
+                      <button type="button" (click)="cancelarCredito(c)"
+                        class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-lg text-xs font-bold border border-rose-200 transition">
+                        Cancelar
+                      </button>
+                    }
+                  </div>
+                </td>
+              </tr>
+            } @empty {
+              <tr>
+                <td colspan="9" class="px-4 py-10 text-center text-xs font-bold text-slate-400 uppercase">
+                  No se encontraron Créditos Mágicos con los filtros seleccionados.
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      }
+    </div>
+  </div>
+</div>
+

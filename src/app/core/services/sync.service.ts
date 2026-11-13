@@ -12,6 +12,7 @@ export class SyncService {
     private apiUrlGrupo = `${environment.apiUrl}/grupos`;
     private apiUrlMiembro = `${environment.apiUrl}/miembros`;
     private apiUrlCredito = `${environment.apiUrl}/creditos`;
+    private apiUrlMagico = `${environment.apiUrl}/magicos`;
     private isSyncing = false;
 
     constructor(
@@ -157,6 +158,21 @@ export class SyncService {
                     } catch (error: any) {
                         console.error(`Error al sincronizar actualización de Crédito ${item.id}:`, error);
                         if (error.status === 400 || error.status === 404 || error.status === 409) {
+                            await this.dexie.syncQueue.delete(item.id!);
+                        } else if (error.status === 0 || !navigator.onLine) {
+                            break;
+                        }
+                    }
+                } else if (item.type === 'POST_PAGO_MAGICO') {
+                    try {
+                        const { creditoId, pagoParams } = item.data;
+                        await firstValueFrom(this.http.post(`${this.apiUrlMagico}/${creditoId}/pagos`, pagoParams));
+                        await this.dexie.syncQueue.delete(item.id!);
+                        console.log(`[SyncService] Pago Mágico sincronizado exitosamente (ID: ${item.id})`);
+                    } catch (error: any) {
+                        console.error(`Error al sincronizar Pago Mágico ${item.id}:`, error);
+                        if (error.status === 400 || error.status === 404 || error.status === 409) {
+                            console.warn(`[SyncService] Descartando pago mágico ${item.id} por error ${error.status}:`, error.error?.msg || error.message);
                             await this.dexie.syncQueue.delete(item.id!);
                         } else if (error.status === 0 || !navigator.onLine) {
                             break;

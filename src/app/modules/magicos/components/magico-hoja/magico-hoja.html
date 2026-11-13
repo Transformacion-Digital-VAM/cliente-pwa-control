@@ -1,0 +1,175 @@
+<div class="min-h-screen bg-slate-50 py-8 px-4 sm:px-6 lg:px-8">
+  <div class="max-w-7xl mx-auto space-y-6">
+
+    <!-- Header -->
+    <div class="bg-gradient-to-r from-violet-700 via-purple-700 to-indigo-700 rounded-3xl p-6 sm:p-8 text-white shadow-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+      <div>
+        <span class="px-2.5 py-0.5 rounded-full bg-white/20 text-[10px] font-black uppercase tracking-widest">Hoja de Control Independiente</span>
+        <h1 class="text-2xl font-black tracking-tight mt-2">Hoja de Créditos Mágicos</h1>
+        <p class="text-xs text-purple-100 mt-0.5">Consulta de integrantes con mágico, avance semanal desfasado e historial con recibo único</p>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <a routerLink="/magicos-clientes" class="px-4 py-2 bg-white/15 hover:bg-white/25 text-white rounded-xl text-xs font-bold uppercase tracking-wider transition">
+          Listado Mágicos
+        </a>
+        <a routerLink="/magicos-registro" class="px-4 py-2 bg-white text-purple-700 hover:bg-purple-50 rounded-xl text-xs font-black uppercase tracking-wider transition shadow-sm">
+          + Registrar Mágicos
+        </a>
+      </div>
+    </div>
+
+    <!-- Selector de Grupo y Opciones -->
+    <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-end justify-between gap-4">
+      <div class="flex-1 max-w-md">
+        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Seleccionar Grupo</label>
+        <select [(ngModel)]="grupoId" (change)="onGrupoChange()"
+          class="w-full bg-slate-50 border border-slate-300 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-800 outline-none focus:border-purple-600">
+          <option value="">-- Selecciona un grupo --</option>
+          @for (g of grupos; track g._id) {
+            <option [value]="g._id">{{ g.nombre }} ({{ g.clave || 'S/C' }})</option>
+          }
+        </select>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-4">
+        <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+          <input type="checkbox" [(ngModel)]="incluirLiquidados" (change)="grupoId && cargarHoja(grupoId)" class="h-4 w-4 accent-purple-600 rounded">
+          <span>Incluir liquidados</span>
+        </label>
+
+        @if (grupo) {
+          <button type="button" (click)="abrirFormatoPdf()"
+            class="px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-xl text-xs font-black uppercase tracking-wider shadow-sm transition">
+            Formato PDF Mágicos
+          </button>
+        }
+      </div>
+    </div>
+
+    @if (cargando) {
+      <div class="bg-white rounded-2xl p-10 text-center border border-slate-200">
+        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Cargando hoja de créditos mágicos...</p>
+      </div>
+    } @else if (grupo) {
+      <!-- Resumen del Grupo -->
+      <div class="bg-white rounded-2xl p-5 border border-slate-200 shadow-sm grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+        <div>
+          <span class="text-[10px] font-black text-slate-400 uppercase">Grupo</span>
+          <p class="font-black text-slate-800">{{ grupo.nombre }} <span class="text-purple-700">({{ grupo.clave || 'S/C' }})</span></p>
+        </div>
+        <div>
+          <span class="text-[10px] font-black text-slate-400 uppercase">Día / Hora de Visita</span>
+          <p class="font-bold text-slate-700">{{ grupo.diaPago || grupo.diaVisita || '-' }} · {{ grupo.horaVisita || '-' }}</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-black text-slate-400 uppercase">Asesor / Coordinación</span>
+          <p class="font-bold text-slate-700">
+            {{ grupo.asesor?.nombre || grupo.asesor?.username || '-' }}
+            <span class="text-xs text-slate-500 block">{{ grupo.coordinacion?.nombre || '' }}</span>
+          </p>
+        </div>
+        <div>
+          <span class="text-[10px] font-black text-slate-400 uppercase">Suma Pactado</span>
+          <p class="font-mono font-black text-purple-700 text-lg">$ {{ sumaPactado | number:'1.2-2' }}</p>
+        </div>
+        <div>
+          <span class="text-[10px] font-black text-slate-400 uppercase">Saldo Pendiente Grupo</span>
+          <p class="font-mono font-black text-rose-600 text-lg">$ {{ sumaSaldoPendiente | number:'1.2-2' }}</p>
+        </div>
+      </div>
+
+      <!-- Listado de Integrantes en Hoja -->
+      <div class="space-y-3">
+        @for (c of creditos; track c._id; let idx = $index) {
+          <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+            <div class="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 cursor-pointer hover:bg-slate-50 transition"
+              (click)="toggleExpandir(c._id)">
+              <div class="flex items-center gap-3">
+                <span class="h-8 w-8 rounded-lg bg-purple-700 text-white font-black text-xs flex items-center justify-center">
+                  {{ idx + 1 }}
+                </span>
+                <div>
+                  <p class="font-black text-slate-800 text-sm uppercase">{{ c.miembro?.nombre }} {{ c.miembro?.apellidos }}</p>
+                  <div class="flex flex-wrap items-center gap-2 mt-0.5 text-[11px]">
+                    <span class="px-2 py-0.5 rounded bg-slate-100 text-slate-600 font-bold uppercase">{{ c.miembro?.rol || 'INTEGRANTE' }}</span>
+                    <span class="px-2 py-0.5 rounded bg-purple-100 text-purple-800 font-bold">Campaña {{ c.campanaClave }}</span>
+                    <span class="px-2 py-0.5 rounded bg-indigo-100 text-indigo-800 font-black">Sem {{ c.semanaActual || 1 }} / {{ c.semanas || 16 }}</span>
+                    <span class="text-slate-500">Inicio: {{ c.fechaPrimerPago | date:'dd/MM/yyyy':'UTC' }}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="flex items-center gap-5 text-right">
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase block">Monto / Tasa</span>
+                  <span class="font-mono font-bold text-slate-700 text-xs">$ {{ c.montoSolicitado | number:'1.0-0' }} ({{ c.tasaInteres }}%)</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase block">Pactado</span>
+                  <span class="font-mono font-black text-purple-700 text-sm">$ {{ c.pagoPactado | number:'1.2-2' }}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase block">Pagado</span>
+                  <span class="font-mono font-bold text-emerald-600 text-sm">$ {{ totalPagadoCredito(c) | number:'1.2-2' }}</span>
+                </div>
+                <div>
+                  <span class="text-[10px] font-bold text-slate-400 uppercase block">Restante</span>
+                  <span class="font-mono font-black text-rose-600 text-sm">$ {{ c.saldoPendiente | number:'1.2-2' }}</span>
+                </div>
+              </div>
+            </div>
+
+            @if (expandidoId === c._id) {
+              <div class="border-t border-slate-200 bg-slate-50 p-4">
+                <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-wider mb-2">Historial de Pagos ({{ (c.pagos || []).length }})</h4>
+                @if ((c.pagos || []).length > 0) {
+                  <div class="overflow-x-auto bg-white rounded-xl border border-slate-200">
+                    <table class="w-full text-left text-xs">
+                      <thead class="bg-slate-100 text-slate-600 font-black uppercase">
+                        <tr>
+                          <th class="px-3 py-2">Sem.</th>
+                          <th class="px-3 py-2">Fecha</th>
+                          <th class="px-3 py-2">Recibo</th>
+                          <th class="px-3 py-2">Método</th>
+                          <th class="px-3 py-2 text-right">Monto</th>
+                          <th class="px-3 py-2 text-center">Estado Cuota</th>
+                        </tr>
+                      </thead>
+                      <tbody class="divide-y divide-slate-100">
+                        @for (p of c.pagos; track $index) {
+                          <tr>
+                            <td class="px-3 py-2 font-bold">Sem {{ p.numeroPago }}</td>
+                            <td class="px-3 py-2 text-slate-600">{{ p.fechaPago | date:'dd/MM/yyyy HH:mm' }}</td>
+                            <td class="px-3 py-2 font-bold text-purple-700">#{{ p.numeroRecibo || 'S/F' }}</td>
+                            <td class="px-3 py-2">{{ p.metodoPago }}</td>
+                            <td class="px-3 py-2 text-right font-mono font-bold text-slate-800">$ {{ p.montoPagado | number:'1.2-2' }}</td>
+                            <td class="px-3 py-2 text-center">
+                              @if (p.esAdelanto) {
+                                <span class="px-2 py-0.5 rounded bg-blue-100 text-blue-700 font-bold text-[10px]">Adelanto</span>
+                              } @else if (p.esAtraso) {
+                                <span class="px-2 py-0.5 rounded bg-amber-100 text-amber-700 font-bold text-[10px]">Atraso</span>
+                              } @else {
+                                <span class="px-2 py-0.5 rounded bg-emerald-100 text-emerald-700 font-bold text-[10px]">Corriente</span>
+                              }
+                            </td>
+                          </tr>
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                } @else {
+                  <p class="text-xs text-slate-400 font-semibold">Aún no hay pagos registrados para este crédito mágico.</p>
+                }
+              </div>
+            }
+          </div>
+        } @empty {
+          <div class="bg-white rounded-2xl p-10 text-center border border-slate-200">
+            <p class="text-xs font-bold text-slate-400 uppercase">Este grupo no tiene créditos mágicos registrados con los filtros actuales.</p>
+          </div>
+        }
+      </div>
+    }
+  </div>
+</div>
+

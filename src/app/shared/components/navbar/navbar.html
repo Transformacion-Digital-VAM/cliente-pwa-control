@@ -14,6 +14,8 @@
         <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
         <a routerLink="/hoja-control-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Grupal</a>
         <a routerLink="/hoja-control-admin-ind" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Individual</a>
+        <a routerLink="/magicos-registro" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">Registro Mágicos</a>
+        <a routerLink="/magicos-clientes" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-slate-600 hover:text-purple-700 transition-colors">Mágicos</a>
         <a routerLink="/mapa-asesores" routerLinkActive="text-blue-600 font-bold"
           class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors flex items-center gap-1">
           Mapa & Ubicaciones
@@ -25,11 +27,14 @@
         <a routerLink="/home-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
         <a routerLink="/hoja-control-admin" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Grupal</a>
         <a routerLink="/hoja-control-admin-ind" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Registro Individual</a>
+        <a routerLink="/magicos-registro" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">Registro Mágicos</a>
+        <a routerLink="/magicos-clientes" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-slate-600 hover:text-purple-700 transition-colors">Mágicos</a>
       </ng-container>
 
       <!-- LECTOR: solo lectura de inicio / hojas de control -->
       <ng-container *ngIf="isLector">
         <a routerLink="/home-admin" routerLinkActive="text-blue-600 font-bold" [routerLinkActiveOptions]="{exact: true}" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio</a>
+        <a routerLink="/magicos-clientes" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-slate-600 hover:text-purple-700 transition-colors">Mágicos</a>
       </ng-container>
 
       <!-- MASTER: pantallas de Ejecutiva -->
@@ -38,12 +43,14 @@
         <a routerLink="/home-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Grupos/Clientes del día</a>
         <a routerLink="/grupos-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Grupos</a>
         <a routerLink="/clientes-asesor" routerLinkActive="text-blue-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Clientes</a>
+        <a routerLink="/magicos-registro" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">Mágicos</a>
       </ng-container>
 
       <!-- COORDINADOR -->
       <ng-container *ngIf="isCoordinador">
         <a routerLink="/home-asesor" class="text-sm font-medium text-slate-600 hover:text-blue-600 transition-colors">Inicio Asesor</a>
         <a routerLink="/coordinador-hojas-control" routerLinkActive="text-purple-600 font-bold" class="text-sm font-medium text-slate-600 hover:text-purple-600 transition-colors">Supervisión Hojas</a>
+        <a routerLink="/magicos-registro" routerLinkActive="text-purple-700 font-bold" class="text-sm font-medium text-purple-600 hover:text-purple-800 transition-colors">Mágicos</a>
       </ng-container>
 
       <!-- ASESOR / USER -->

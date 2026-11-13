@@ -13,6 +13,9 @@ import { AdminActualizarTipoCredito } from './modules/admin/components/admin-act
 import { roleGuard, noAuthGuard } from './core/guards/auth.guard';
 import { HomeGerencia } from './modules/gerencia/home-gerencia/home-gerencia';
 import { CoordinadorHojasControl } from './modules/coordinador/components/coordinador-hojas-control/coordinador-hojas-control';
+import { MagicoRegistro } from './modules/magicos/components/magico-registro/magico-registro';
+import { MagicoLista } from './modules/magicos/components/magico-lista/magico-lista';
+import { MagicoHoja } from './modules/magicos/components/magico-hoja/magico-hoja';
 
 
 export const routes: Routes = [
@@ -30,5 +33,9 @@ export const routes: Routes = [
     { path: 'clientes-asesor', component: AsesorListaClientes, canActivate: [roleGuard(['user', 'asesor', 'master', 'coordinador'])] },
     { path: 'hoja-control-individual/:id', component: AsesorHojaControlInd, canActivate: [roleGuard(['user', 'asesor', 'master', 'coordinador'])] },
     { path: 'coordinador-hojas-control', component: CoordinadorHojasControl, canActivate: [roleGuard(['coordinador', 'master', 'superadmin'])] },
+    { path: 'magicos-registro', component: MagicoRegistro, canActivate: [roleGuard(['admin', 'master', 'superadmin', 'coordinador'])] },
+    { path: 'magicos-clientes', component: MagicoLista, canActivate: [roleGuard(['admin', 'master', 'superadmin', 'coordinador', 'lector'])] },
+    { path: 'magicos-hoja/:grupoId', component: MagicoHoja, canActivate: [roleGuard(['admin', 'master', 'superadmin', 'coordinador', 'lector'])] },
+    { path: 'magicos-hoja', component: MagicoHoja, canActivate: [roleGuard(['admin', 'master', 'superadmin', 'coordinador', 'lector'])] },
     { path: '**', redirectTo: 'login' }
 ];

@@ -6,8 +6,10 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { AuthService } from '../../../../core/services/auth.service';
 import { NotificationService } from '../../../../core/services/notification.service';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { ClienteService } from '../../../../core/services/cliente.service';
+import { MagicoService } from '../../../../core/services/magico.service';
 import { environment } from '../../../../../environments/environment';
 import Swal from 'sweetalert2';
 
@@ -149,6 +151,7 @@ export class AsesorHome implements OnInit, OnDestroy {
     private cdr: ChangeDetectorRef,
     private injector: Injector,
     private clienteService: ClienteService,
+    private magicoService: MagicoService,
     private sanitizer: DomSanitizer
   ) { }
 
@@ -234,7 +237,8 @@ export class AsesorHome implements OnInit, OnDestroy {
     forkJoin({
       gruposAll: this.grupoService.getGrupos(),
       creditosAll: this.grupoService.getCreditos(),
-      clientesAll: this.clienteService.getClientes()
+      clientesAll: this.clienteService.getClientes(),
+      magicosAll: this.magicoService.getCreditosMagicos().pipe(catchError(() => of({ creditos: [] })))
     }).subscribe({
       next: (res: any) => {
         const grupos = res.gruposAll || [];

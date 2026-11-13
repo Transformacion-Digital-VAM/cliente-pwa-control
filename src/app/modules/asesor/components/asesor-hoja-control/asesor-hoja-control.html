@@ -195,6 +195,10 @@
                       'Integrante' }}</p>
                     <span class="bg-indigo-100 text-indigo-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">{{
                       miembro.tipoCredito || 'N/A' }}</span>
+                    @if(miembro.esCreditoMagicoModulo) {
+                    <span class="bg-purple-100 text-purple-700 text-[8px] font-black px-1.5 py-0.5 rounded uppercase">Sem
+                      {{ miembro.semanaActual || 1 }}/16</span>
+                    }
                     @if(miembro.estadoCredito === 'Liquidado' || (miembro.creditoPendiente !== undefined && miembro.creditoPendiente <= 0)) {
                       <span class="bg-emerald-100 text-emerald-800 text-[8px] font-black px-1.5 py-0.5 rounded uppercase flex items-center gap-1">
                         Liquidado (Ciclo {{ miembro.ciclo || '-' }})

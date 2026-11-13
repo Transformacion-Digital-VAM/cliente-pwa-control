@@ -18,6 +18,7 @@ export class DexieService extends Dexie {
     miembros!: Table<any, number>;
     clientes!: Table<any, number>;
     creditos!: Table<any, number>;
+    creditos_magicos!: Table<any, number>;
 
     constructor() {
         super('pwa-hcontrol');
@@ -37,6 +38,16 @@ export class DexieService extends Dexie {
                 miembros: '++id, _id, grupo, nombre',
                 clientes: '++id, _id, nombre, apellidos',
                 creditos: '++id, _id, miembro, cliente'
+            });
+
+            this.version(6).stores({
+                syncQueue: '++id, type, timestamp',
+                user_session: 'user, token, role, lastLogin',
+                grupos: '++id, _id, clave, nombre',
+                miembros: '++id, _id, grupo, nombre',
+                clientes: '++id, _id, nombre, apellidos',
+                creditos: '++id, _id, miembro, cliente',
+                creditos_magicos: '++id, _id, grupo, miembro, campanaClave, estado'
             });
         }
 

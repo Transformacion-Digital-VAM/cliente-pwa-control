@@ -3,8 +3,10 @@ import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GrupoService } from '../../../../core/services/grupo.service';
+import { MagicoService } from '../../../../core/services/magico.service';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LocationService } from '../../../../core/services/location.service';
@@ -41,6 +43,7 @@ export class AsesorHojaControl implements OnInit {
   currentTab: TabTipo = 'COMUNAL_REFIL';
   numeroRecibos: any = { COMUNAL_REFIL: '', MAGICO: '' };
   todosLosCreditos: any[] = [];
+  creditosMagicosGrupo: any[] = [];
   miembrosFiltradosList: any[] = [];
 
   // Modal Vista Previa (Solo Lectura)
@@ -53,6 +56,7 @@ export class AsesorHojaControl implements OnInit {
     private route: ActivatedRoute,
     private router: Router,
     private grupoService: GrupoService,
+    private magicoService: MagicoService,
     private authService: AuthService,
     private locationService: LocationService,
     private cdr: ChangeDetectorRef,
@@ -166,8 +170,12 @@ export class AsesorHojaControl implements OnInit {
             credito = creditosMiembro.find((c: any) => c.tipoCredito === 'R' || c.esRefill === true || c.esRefill === 'true') || null;
           }
         } else {
-          // MAGICO
-          credito = creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M') || null;
+          // MAGICO: priorizar créditos del módulo independiente (/api/magicos) y mantener compatibilidad con legacy
+          const creditoMagicoModulo = (this.creditosMagicosGrupo || []).find((cm: any) => {
+            const cmId = cm.miembro?._id || cm.miembro;
+            return String(cmId) === mIdStr && this.esCreditoActivoYConSaldo(cm);
+          });
+          credito = creditoMagicoModulo || creditosMiembro.find((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M') || null;
         }
 
         if (credito) {
@@ -323,7 +331,10 @@ export class AsesorHojaControl implements OnInit {
 
     forkJoin({
       miembrosAll: this.grupoService.getMiembros(),
-      creditosAll: this.grupoService.getCreditos({ todos: true })
+      creditosAll: this.grupoService.getCreditos({ todos: true }),
+      magicosGrupo: this.magicoService.getHojaGrupoMagicos(id).pipe(
+        catchError(() => of({ creditos: [] }))
+      )
     }).subscribe({
       next: (res: any) => {
         this.processGrupoData(id, res);
@@ -335,6 +346,11 @@ export class AsesorHojaControl implements OnInit {
   private processGrupoData(id: string, res: any): void {
     const miembrosAll = res.miembrosAll || [];
     const creditosAll = res.creditosAll?.creditos || res.creditosAll || [];
+    this.creditosMagicosGrupo = (res.magicosGrupo?.creditos || []).map((cm: any) => ({
+      ...cm,
+      tipoCredito: 'MAGICO',
+      esCreditoMagicoModulo: true
+    }));
 
     this.todosLosMiembros = miembrosAll;
     this.todosLosCreditos = creditosAll;
@@ -352,8 +368,12 @@ export class AsesorHojaControl implements OnInit {
         const mId = c.miembro ? (c.miembro._id ? String(c.miembro._id) : String(c.miembro)) : null;
         return mId === String(m._id) || String(c.miembro) === String(m._id);
       });
+      const magicosMiembro = this.creditosMagicosGrupo.filter((cm: any) => {
+        const mId = cm.miembro ? (cm.miembro._id ? String(cm.miembro._id) : String(cm.miembro)) : null;
+        return mId === String(m._id);
+      });
       const pagosHistoricos: any[] = [];
-      creditosMiembro.forEach((c: any) => {
+      [...creditosMiembro, ...magicosMiembro].forEach((c: any) => {
         if (c.pagos) {
           pagosHistoricos.push(...c.pagos);
         }
@@ -417,7 +437,8 @@ export class AsesorHojaControl implements OnInit {
     );
     const tieneCC = activosCiclo.some((c: any) => c.tipoCredito === 'CC' || c.tipoCredito === '8S' || c.tipoCredito === '16S');
     const tieneR = activosCiclo.some((c: any) => c.tipoCredito === 'R' || c.esRefill === true || c.esRefill === 'true');
-    const tieneMagico = activosCiclo.some((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M');
+    const tieneMagico = activosCiclo.some((c: any) => c.tipoCredito === 'MAGICO' || c.tipoCredito === 'M')
+      || this.creditosMagicosGrupo.some((cm: any) => this.esCreditoActivoYConSaldo(cm));
 
     if (!tieneCC) {
       if (tieneR) {
@@ -443,6 +464,8 @@ export class AsesorHojaControl implements OnInit {
       m.ciclo = credito.ciclo;
       m.estadoCredito = credito.estado;
       m.liquidadoConGarantia = credito.liquidadoConGarantia;
+      m.esCreditoMagicoModulo = !!credito.esCreditoMagicoModulo;
+      m.campanaClave = credito.campanaClave || null;
 
       m.totalPagado = (credito.pagos || []).reduce((sum: number, p: any) => {
         if (p.recuperacionSolidario) return sum;
@@ -980,6 +1003,19 @@ export class AsesorHojaControl implements OnInit {
         if (!miembroActual || !miembroActual.creditoId) continue;
 
         const tienePagoNormal = Number(p.monto) > 0;
+
+        if (miembroActual.esCreditoMagicoModulo) {
+          if (tienePagoNormal) {
+            peticiones.push(
+              this.magicoService.registrarPagoMagico(
+                miembroActual.creditoId,
+                this.buildPagoRequest(p, 'normal', false, coords)
+              )
+            );
+          }
+          continue;
+        }
+
         const tieneSolidario = p.solidario && p.beneficiariosSolidarios && p.beneficiariosSolidarios.length > 0;
         const tieneAhorro = Number(p.ahorro) > 0;
         const esRecuperacion = p.recuperacionSolidario && Number(p.montoRecuperacion) > 0;
@@ -1149,6 +1185,17 @@ export class AsesorHojaControl implements OnInit {
 
   async vistaPreviaGrupo(): Promise<void> {
     if (!this.grupo || !this.grupoId) return;
+
+    if (this.currentTab === 'MAGICO') {
+      await Swal.fire({
+        icon: 'info',
+        title: 'Hoja PDF de Mágicos',
+        text: 'El formato de hoja PDF para Créditos Mágicos se integrará en la siguiente fase.',
+        confirmButtonText: 'Entendido',
+        confirmButtonColor: '#2563eb'
+      });
+      return;
+    }
 
     let ciclo = Number(this.cicloGrupo);
     if (isNaN(ciclo) || ciclo <= 0) ciclo = 1;
