@@ -418,14 +418,23 @@ export class AdminHojaControlInd implements OnInit {
       });
 
       this.clienteService.crearClienteIndividual(val).subscribe({
-        next: () => {
-          Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Registro guardado.' });
+        next: (response: any) => {
+          if (response?.offline) {
+            Swal.fire({
+              icon: 'info',
+              title: 'Guardado localmente',
+              text: 'Se ha guardado localmente (Sin internet). Se sincronizará automáticamente al recuperar la señal.',
+              confirmButtonColor: '#3085d6'
+            });
+          } else {
+            Swal.fire({ icon: 'success', title: '¡Éxito!', text: 'Registro guardado.' });
+          }
           this.cargarClientes();
           this.cargarCreditos();
           this.cancelar();
         },
         error: (err) => {
-          Swal.fire({ icon: 'error', title: 'Error', text: err.message });
+          Swal.fire({ icon: 'error', title: 'Error', text: err.error?.msg || err.message || 'No se pudo guardar el registro.' });
         }
       });
     } else {

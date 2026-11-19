@@ -4,7 +4,8 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, concat } from 'rxjs';
+import { toArray } from 'rxjs/operators';
 import Swal from 'sweetalert2';
 import { AuthService } from '../../../../core/services/auth.service';
 import { LocationService } from '../../../../core/services/location.service';
@@ -1026,9 +1027,9 @@ export class AsesorHojaControl implements OnInit {
 
       Swal.update({ title: 'Guardando...', text: 'Por favor espere' });
 
-      forkJoin(peticiones).subscribe({
-        next: (responses) => {
-          const isOffline = responses.some(r => r.offline);
+      concat(...peticiones).pipe(toArray()).subscribe({
+        next: (responses: any[]) => {
+          const isOffline = responses.some((r: any) => r?.offline);
           const message = isOffline
             ? 'Los pagos se han guardado localmente (Sin internet) y se subirán al servidor automáticamente al recuperar la señal.'
             : 'Pagos registrados correctamente';
@@ -1038,7 +1039,7 @@ export class AsesorHojaControl implements OnInit {
           });
         },
         error: (err) => {
-          Swal.fire('Error', 'Hubo un error al registrar los pagos', 'error');
+          Swal.fire('Error', err.error?.msg || err.message || 'Hubo un error al registrar los pagos', 'error');
           console.error(err);
         }
       });

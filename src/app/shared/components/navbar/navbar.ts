@@ -3,6 +3,7 @@ import { RouterLink, RouterLinkActive, Router, NavigationEnd } from '@angular/ro
 import { filter, Subscription } from 'rxjs';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { DexieService } from '../../../core/database/dexie.service';
+import { SyncService } from '../../../core/services/sync.service';
 
 @Component({
   selector: 'app-navbar',
@@ -14,11 +15,14 @@ import { DexieService } from '../../../core/database/dexie.service';
 export class Navbar implements OnInit, OnDestroy {
   isAsesorPage: boolean = false;
   isLoginPage: boolean = false;
+  syncStatus = { total: 0, pending: 0, failed: 0 };
   private routerSubscription?: Subscription;
+  private syncTimer?: any;
 
   constructor(
     private router: Router,
     private dexie: DexieService,
+    public syncService: SyncService,
     private cdr: ChangeDetectorRef,
     @Inject(PLATFORM_ID) private platformId: Object
   ) { }
@@ -30,12 +34,30 @@ export class Navbar implements OnInit, OnDestroy {
     ).subscribe((event: any) => {
       this.checkRoute(event.urlAfterRedirects);
     });
+
+    if (isPlatformBrowser(this.platformId)) {
+      this.actualizarSyncStatus();
+      this.syncTimer = setInterval(() => this.actualizarSyncStatus(), 10000);
+    }
   }
 
   ngOnDestroy() {
     if (this.routerSubscription) {
       this.routerSubscription.unsubscribe();
     }
+    if (this.syncTimer) {
+      clearInterval(this.syncTimer);
+    }
+  }
+
+  async actualizarSyncStatus() {
+    this.syncStatus = await this.syncService.getPendingStatus();
+    this.cdr.detectChanges();
+  }
+
+  async reintentarSync() {
+    await this.syncService.retryFailed();
+    await this.actualizarSyncStatus();
   }
 
   private checkRoute(url: string) {

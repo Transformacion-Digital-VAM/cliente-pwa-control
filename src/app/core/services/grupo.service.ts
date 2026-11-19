@@ -631,8 +631,9 @@ export class GrupoService {
                 this.cacheCreditos.set(cacheKey, { data: res, timestamp: Date.now() });
                 const creditos = res.creditos || res || [];
                 if (Array.isArray(creditos)) {
-                    this.dexie.table('creditos').clear().then(() => {
-                        this.dexie.table('creditos').bulkAdd(creditos);
+                    this.dexie.table('creditos').clear().then(async () => {
+                        await this.dexie.table('creditos').bulkAdd(creditos);
+                        await this.dexie.reaplicarPagosPendientes();
                     }).catch(e => console.warn('Dexie save creditos error:', e));
                 }
                 return res;
@@ -681,6 +682,13 @@ export class GrupoService {
 
     // Registrar pago por integrante de grupo
     registrarPago(creditoId: string, pagoParams: any): Observable<any> {
+        // Garantizar clientId único para idempotencia
+        if (!pagoParams.clientId) {
+            pagoParams.clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : ('pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+        }
+
         const isOnline = navigator.onLine;
         if (!isOnline) {
             return this.guardarPagoLocal(creditoId, pagoParams);
@@ -689,14 +697,33 @@ export class GrupoService {
         return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
             timeout(30000),
             catchError(error => {
-                console.warn('[GrupoService] Falló registrarPago en red (error o timeout), guardando localmente:', error?.message);
-                return this.guardarPagoLocal(creditoId, pagoParams);
+                const isNetworkError = !navigator.onLine ||
+                    error?.name === 'TimeoutError' ||
+                    error?.status === 0 ||
+                    error?.status === 502 ||
+                    error?.status === 503 ||
+                    error?.status === 504;
+
+                if (isNetworkError) {
+                    console.warn('[GrupoService] Falló registrarPago por error de red/timeout, guardando localmente:', error?.message);
+                    return this.guardarPagoLocal(creditoId, pagoParams);
+                }
+
+                // Error real del servidor o validación (400, 401, 403, 404, etc.): NO guardar localmente
+                console.error('[GrupoService] Error del servidor al registrar pago:', error);
+                return throwError(() => error);
             })
         );
     }
 
     // Registrar ahorro por integrante de grupo
     registrarAhorro(creditoId: string, ahorroParams: any): Observable<any> {
+        if (!ahorroParams.clientId) {
+            ahorroParams.clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+                ? crypto.randomUUID()
+                : ('ahorro_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+        }
+
         const isOnline = navigator.onLine;
         if (!isOnline) {
             return this.guardarAhorroLocal(creditoId, ahorroParams);
@@ -705,8 +732,20 @@ export class GrupoService {
         return this.http.post(`${this.apiUrlCredito}/${creditoId}/ahorro`, ahorroParams).pipe(
             timeout(30000),
             catchError(error => {
-                console.warn('[GrupoService] Falló registrarAhorro en red (error o timeout), guardando localmente:', error?.message);
-                return this.guardarAhorroLocal(creditoId, ahorroParams);
+                const isNetworkError = !navigator.onLine ||
+                    error?.name === 'TimeoutError' ||
+                    error?.status === 0 ||
+                    error?.status === 502 ||
+                    error?.status === 503 ||
+                    error?.status === 504;
+
+                if (isNetworkError) {
+                    console.warn('[GrupoService] Falló registrarAhorro por error de red/timeout, guardando localmente:', error?.message);
+                    return this.guardarAhorroLocal(creditoId, ahorroParams);
+                }
+
+                console.error('[GrupoService] Error del servidor al registrar ahorro:', error);
+                return throwError(() => error);
             })
         );
     }
@@ -731,6 +770,7 @@ export class GrupoService {
                     const montoAhorro = Number(pagoParams.montoAhorro) || 0;
 
                     cred.pagos.push({
+                        clientId: pagoParams.clientId,
                         montoPagado: montoPag,
                         fechaPago: pagoParams.fechaPago || new Date().toISOString(),
                         numeroRecibo: pagoParams.numeroRecibo || null,

@@ -45,8 +45,8 @@ export class ClienteService {
     // 2. Determinar si se crea o se actualiza el cliente
     const idCliente = payload.idCliente;
     const clienteObs = idCliente
-      ? this.http.put(`${this.apiUrlCliente}/${idCliente}`, bodyCliente)
-      : this.http.post(`${this.apiUrlCliente}`, bodyCliente);
+      ? this.http.put(`${this.apiUrlCliente}/${idCliente}`, bodyCliente).pipe(timeout(30000))
+      : this.http.post(`${this.apiUrlCliente}`, bodyCliente).pipe(timeout(30000));
 
     return clienteObs.pipe(
       switchMap((clienteGuardado: any) => {
@@ -71,6 +71,7 @@ export class ClienteService {
         };
 
         return this.http.post(`${this.apiUrlCredito}/`, bodyCredito).pipe(
+          timeout(30000),
           map(() => {
             this.clearCache();
             return clienteGuardado;
@@ -78,9 +79,15 @@ export class ClienteService {
         );
       }),
       catchError(error => {
-        const isNetworkError = !navigator.onLine || error.status === 0 || error.status === 504 || error.status === 503;
+        const isNetworkError = !navigator.onLine ||
+          error?.name === 'TimeoutError' ||
+          error.status === 0 ||
+          error.status === 502 ||
+          error.status === 503 ||
+          error.status === 504;
+
         if (isNetworkError) {
-          console.warn(`[Network Error] Status: ${error.status} - Usando guardado local (Dexie) para Cliente Individual`);
+          console.warn(`[Network Error] Status: ${error?.status || 'Timeout'} - Usando guardado local (Dexie) para Cliente Individual`);
           return this.guardarLocal(payload);
         }
         return throwError(() => error);
@@ -218,12 +225,13 @@ export class ClienteService {
    */
   getCreditos(): Observable<any> {
     return this.http.get(`${this.apiUrlCredito}/`).pipe(
-      timeout(3500000),
+      timeout(30000),
       map((res: any) => {
         const creditos = res.creditos || res || [];
         if (Array.isArray(creditos)) {
-          this.dexie.table('creditos').clear().then(() => {
-            this.dexie.table('creditos').bulkAdd(creditos);
+          this.dexie.table('creditos').clear().then(async () => {
+            await this.dexie.table('creditos').bulkAdd(creditos);
+            await this.dexie.reaplicarPagosPendientes();
           }).catch(e => console.warn('Dexie save creditos error:', e));
         }
         return res;
@@ -241,6 +249,12 @@ export class ClienteService {
    * Registra un pago para un crédito (mismo endpoint que en grupos).
    */
   registrarPago(creditoId: string, pagoParams: any): Observable<any> {
+    if (!pagoParams.clientId) {
+      pagoParams.clientId = (typeof crypto !== 'undefined' && crypto.randomUUID)
+        ? crypto.randomUUID()
+        : ('pay_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+    }
+
     const isOnline = navigator.onLine;
     if (!isOnline) {
       return this.guardarPagoLocal(creditoId, pagoParams);
@@ -248,14 +262,26 @@ export class ClienteService {
 
     this.clearCache();
     return this.http.post(`${this.apiUrlCredito}/${creditoId}/pagos`, pagoParams).pipe(
-      timeout(3500000),
+      timeout(30000),
       map((res) => {
         this.clearCache();
         return res;
       }),
       catchError(error => {
-        console.warn('[ClienteService] Falló registrarPago en red (error o timeout), guardando localmente:', error?.message);
-        return this.guardarPagoLocal(creditoId, pagoParams);
+        const isNetworkError = !navigator.onLine ||
+          error?.name === 'TimeoutError' ||
+          error?.status === 0 ||
+          error?.status === 502 ||
+          error?.status === 503 ||
+          error?.status === 504;
+
+        if (isNetworkError) {
+          console.warn('[ClienteService] Falló registrarPago en red por timeout/red, guardando localmente:', error?.message);
+          return this.guardarPagoLocal(creditoId, pagoParams);
+        }
+
+        console.error('[ClienteService] Error del servidor en registrarPago:', error);
+        return throwError(() => error);
       })
     );
   }
@@ -271,14 +297,25 @@ export class ClienteService {
 
     this.clearCache();
     return this.http.put(`${this.apiUrlCredito}/${creditoId}`, payload).pipe(
-      timeout(3500000),
+      timeout(30000),
       map((res) => {
         this.clearCache();
         return res;
       }),
       catchError(error => {
-        console.warn('[ClienteService] Falló actualizarCredito en red (error o timeout), guardando localmente:', error?.message);
-        return this.guardarUpdateCreditoLocal(creditoId, payload);
+        const isNetworkError = !navigator.onLine ||
+          error?.name === 'TimeoutError' ||
+          error?.status === 0 ||
+          error?.status === 502 ||
+          error?.status === 503 ||
+          error?.status === 504;
+
+        if (isNetworkError) {
+          console.warn('[ClienteService] Falló actualizarCredito en red por timeout/red, guardando localmente:', error?.message);
+          return this.guardarUpdateCreditoLocal(creditoId, payload);
+        }
+
+        return throwError(() => error);
       })
     );
   }
@@ -301,6 +338,7 @@ export class ClienteService {
           const montoAhorro = Number(pagoParams.montoAhorro) || 0;
 
           cred.pagos.push({
+            clientId: pagoParams.clientId,
             montoPagado: montoPag,
             fechaPago: pagoParams.fechaPago || new Date().toISOString(),
             numeroRecibo: pagoParams.numeroRecibo || null,
@@ -340,15 +378,18 @@ export class ClienteService {
     );
   }
 
-
   private guardarLocal(payload: any): Observable<any> {
-    return of({
-      offline: true,
-      message: 'Sin conexión: Guardado localmente'
-    });
-    /* 
-    Nota: Para soporte offline completo, debes agregar 'POST_CLIENTE' en el worker 
-    y en DexieService similar a como tienes los grupos.
-    */
+    return from(
+      this.dexie.syncQueue.add({
+        type: 'POST_CLIENTE',
+        data: payload,
+        timestamp: Date.now()
+      })
+    ).pipe(
+      map(() => ({
+        offline: true,
+        message: 'Sin conexión: Cliente y crédito individual guardados localmente. Se sincronizarán automáticamente al recuperar la red.'
+      }))
+    );
   }
 }

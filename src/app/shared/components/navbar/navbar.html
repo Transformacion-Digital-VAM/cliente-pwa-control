@@ -54,7 +54,24 @@
     </div>
 
     <!-- Botones de autenticación y perfil -->
-    <div class="flex items-center space-x-8">
+    <div class="flex items-center space-x-6">
+      <!-- Badge de sincronización -->
+      <div *ngIf="isUserLoggedIn && syncStatus.total > 0" class="flex items-center">
+        <button *ngIf="syncStatus.failed > 0" (click)="reintentarSync()"
+          class="flex items-center space-x-1.5 bg-red-100 text-red-700 border border-red-300 text-xs font-bold py-1 px-3 rounded-full hover:bg-red-200 transition-colors shadow-sm"
+          title="Errores al sincronizar. Clic para reintentar.">
+          <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+          <span>{{ syncStatus.failed }} con error (Reintentar)</span>
+        </button>
+
+        <div *ngIf="syncStatus.failed === 0 && syncStatus.pending > 0"
+          class="flex items-center space-x-1.5 bg-amber-100 text-amber-800 border border-amber-300 text-xs font-semibold py-1 px-3 rounded-full shadow-sm"
+          title="Elemento(s) pendientes de subir al servidor.">
+          <span class="w-2 h-2 bg-amber-500 rounded-full animate-ping"></span>
+          <span>{{ syncStatus.pending }} pendiente(s)</span>
+        </div>
+      </div>
+
       <!-- Botón de iniciar sesión (solo si no está logueado) -->
       <button *ngIf="!isUserLoggedIn" routerLink="/login" class="bg-blue-600 text-white text-sm font-semibold py-2.5 px-6 rounded-full hover:bg-blue-700 transition-all shadow-sm active:scale-95">
         Iniciar Sesión
