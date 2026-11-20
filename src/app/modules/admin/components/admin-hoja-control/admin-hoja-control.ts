@@ -68,13 +68,29 @@ export class AdminHojaControl implements OnInit {
   setupSubscriptions() {
     this.hojaControlForm.get('nombreGrupo')?.valueChanges.subscribe(val => {
       this.filtrarGrupos(val);
-      // Si el usuario edita el nombre, asume que ya no es el grupo seleccionado
+      // Si el usuario edita el nombre, verificar si coincide con alguno existente
       const currentGrupoId = this.hojaControlForm.get('grupoId')?.value;
-      if (currentGrupoId && !this.gruposLocales.find(g => g.nombre === val && g._id === currentGrupoId)) {
+      const grupoCoincidente = this.gruposLocales.find(g => g.nombre?.toLowerCase() === val?.toLowerCase());
+      if (grupoCoincidente) {
+        this.hojaControlForm.get('grupoId')?.setValue(grupoCoincidente._id, { emitEvent: false });
+        if (!this.hojaControlForm.get('clave')?.value && grupoCoincidente.clave) {
+          this.hojaControlForm.get('clave')?.setValue(grupoCoincidente.clave, { emitEvent: false });
+        }
+      } else if (currentGrupoId && !this.gruposLocales.find(g => g.nombre === val && g._id === currentGrupoId)) {
         this.hojaControlForm.get('grupoId')?.setValue('', { emitEvent: false });
         // this.hojaControlForm.get('fechaPrimerPago')?.disable();
         this.hojaControlForm.get('fechaPrimerPago')?.setValue('');
         this.semanasDisponibles = [];
+      }
+    });
+
+    this.hojaControlForm.get('clave')?.valueChanges.subscribe(claveVal => {
+      if (claveVal) {
+        const claveBuscada = String(claveVal).trim();
+        const grupoPorClave = this.gruposLocales.find(g => String(g.clave).trim() === claveBuscada);
+        if (grupoPorClave) {
+          this.hojaControlForm.get('grupoId')?.setValue(grupoPorClave._id, { emitEvent: false });
+        }
       }
     });
 
@@ -680,6 +696,23 @@ export class AdminHojaControl implements OnInit {
   guardarCambios() {
     if (this.hojaControlForm.valid) {
       const payload = { ...this.hojaControlForm.value };
+
+      // Si no tiene grupoId pero la clave o nombre coincide con un grupo existente, asociarlo
+      if (!payload.grupoId && payload.clave) {
+        const claveBuscada = String(payload.clave).trim();
+        const grupoPorClave = this.gruposLocales.find(g => String(g.clave).trim() === claveBuscada);
+        if (grupoPorClave) {
+          payload.grupoId = grupoPorClave._id;
+        }
+      }
+      if (!payload.grupoId && payload.nombreGrupo) {
+        const nombreBuscado = String(payload.nombreGrupo).trim().toLowerCase();
+        const grupoPorNombre = this.gruposLocales.find(g => String(g.nombre).trim().toLowerCase() === nombreBuscado);
+        if (grupoPorNombre) {
+          payload.grupoId = grupoPorNombre._id;
+        }
+      }
+
       if (payload.fechaPrimerPago) {
         const diaDetectado = this.obtenerDiaSemanaDeFecha(payload.fechaPrimerPago);
         if (diaDetectado && (!payload.diaVisita || payload.diaVisita === 'Lunes')) {
