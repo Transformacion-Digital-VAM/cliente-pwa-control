@@ -53,7 +53,7 @@ export class AdminHome implements OnInit {
 
   // Paginación
   currentPage: number = 1;
-  itemsPerPage: number = 30;
+  itemsPerPage: number = 100;
 
   userRole: string = '';
   userCoordinacion: string = '';
