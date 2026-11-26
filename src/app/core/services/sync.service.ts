@@ -113,11 +113,7 @@ export class SyncService {
                         await this.dexie.syncQueue.delete(item.id!);
                     } catch (error: any) {
                         console.error(`Error al sincronizar Grupo ${item.id}:`, error);
-                        if (error.status === 400 || error.status === 404 || error.status === 409) {
-                            await this.dexie.syncQueue.delete(item.id!);
-                        } else if (error.status === 0 || !navigator.onLine) {
-                            break;
-                        }
+                        if (await this.handleSyncError(item, error)) break;
                     }
                 } else if (item.type === 'POST_PAGO') {
                     try {
@@ -127,12 +123,7 @@ export class SyncService {
                         console.log(`[SyncService] Pago sincronizado exitosamente (ID: ${item.id})`);
                     } catch (error: any) {
                         console.error(`Error al sincronizar Pago ${item.id}:`, error);
-                        if (error.status === 400 || error.status === 404 || error.status === 409) {
-                            console.warn(`[SyncService] Descartando pago ${item.id} de la cola por error ${error.status}:`, error.error?.msg || error.message);
-                            await this.dexie.syncQueue.delete(item.id!);
-                        } else if (error.status === 0 || !navigator.onLine) {
-                            break;
-                        }
+                        if (await this.handleSyncError(item, error)) break;
                     }
                 } else if (item.type === 'POST_AHORRO') {
                     try {
@@ -142,11 +133,7 @@ export class SyncService {
                         console.log(`[SyncService] Ahorro sincronizado exitosamente (ID: ${item.id})`);
                     } catch (error: any) {
                         console.error(`Error al sincronizar Ahorro ${item.id}:`, error);
-                        if (error.status === 400 || error.status === 404 || error.status === 409) {
-                            await this.dexie.syncQueue.delete(item.id!);
-                        } else if (error.status === 0 || !navigator.onLine) {
-                            break;
-                        }
+                        if (await this.handleSyncError(item, error)) break;
                     }
                 } else if (item.type === 'PUT_CREDITO') {
                     try {
@@ -156,11 +143,7 @@ export class SyncService {
                         console.log(`[SyncService] Crédito actualizado exitosamente (ID: ${item.id})`);
                     } catch (error: any) {
                         console.error(`Error al sincronizar actualización de Crédito ${item.id}:`, error);
-                        if (error.status === 400 || error.status === 404 || error.status === 409) {
-                            await this.dexie.syncQueue.delete(item.id!);
-                        } else if (error.status === 0 || !navigator.onLine) {
-                            break;
-                        }
+                        if (await this.handleSyncError(item, error)) break;
                     }
                 }
             }
@@ -169,5 +152,24 @@ export class SyncService {
         } finally {
             this.isSyncing = false;
         }
+    }
+
+    /**
+     * Maneja errores de sincronización evitando bucles infinitos cada 45s.
+     * Retorna true si se debe pausar la cola por falta de red.
+     */
+    private async handleSyncError(item: { id?: number; retries?: number }, error: any): Promise<boolean> {
+        if (error?.status === 0 || !navigator.onLine) {
+            return true;
+        }
+        const status = error?.status;
+        const retries = (item.retries || 0) + 1;
+        if (status === 400 || status === 404 || status === 409 || retries >= 5) {
+            console.warn(`[SyncService] Descartando item ${item.id} de la cola (status=${status}, retries=${retries})`);
+            await this.dexie.syncQueue.delete(item.id!);
+        } else {
+            await this.dexie.syncQueue.update(item.id!, { retries });
+        }
+        return false;
     }
 }

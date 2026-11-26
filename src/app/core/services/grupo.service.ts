@@ -658,6 +658,10 @@ export class GrupoService {
         );
     }
 
+    getGrupoById(id: string): Observable<any> {
+        return this.http.get(`${this.apiUrlGrupo}/get/${id}`);
+    }
+
     getPagosConUbicacion(): Observable<any> {
         return this.http.get(`${this.apiUrlCredito}/pagos-con-ubicacion`);
     }

@@ -342,7 +342,7 @@ export class AsesorHome implements OnInit, OnDestroy {
         };
 
         let gruposFiltrados = grupos;
-        if (userRole === 'master' || userRole === 'coordinador') {
+        if (userRole === 'asesor' || userRole === 'master' || userRole === 'coordinador') {
           gruposFiltrados = grupos.filter(matchAsesor);
         }
 

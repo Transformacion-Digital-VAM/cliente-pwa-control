@@ -40,7 +40,7 @@
                 placeholder="Nombre del Grupo">
               <ul *ngIf="showGrupoSuggestions && filteredGrupos.length > 0"
                 class="absolute z-50 w-full bg-white border border-slate-200 mt-1 rounded-xl shadow-2xl max-h-48 overflow-y-auto">
-                <li *ngFor="let grupo of filteredGrupos" (mousedown)="seleccionarGrupo(grupo)"
+                <li *ngFor="let grupo of filteredGrupos" (mousedown)="$event.preventDefault(); seleccionarGrupo(grupo)"
                   class="px-4 py-3 border-b border-slate-50 hover:bg-blue-50 cursor-pointer text-sm font-bold text-slate-700 transition-colors last:border-0">
                   {{ grupo.nombre }}
                   <span class="text-[10px] text-slate-400 font-semibold block mt-0.5 uppercase">Ciclo {{
