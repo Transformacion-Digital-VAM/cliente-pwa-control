@@ -1187,13 +1187,8 @@ export class AsesorHojaControl implements OnInit {
     if (!this.grupo || !this.grupoId) return;
 
     if (this.currentTab === 'MAGICO') {
-      await Swal.fire({
-        icon: 'info',
-        title: 'Hoja PDF de Mágicos',
-        text: 'El formato de hoja PDF para Créditos Mágicos se integrará en la siguiente fase.',
-        confirmButtonText: 'Entendido',
-        confirmButtonColor: '#2563eb'
-      });
+      const url = this.magicoService.getHojaControlMagicosUrl(this.grupoId);
+      this.abrirModalPreview(url, `${this.grupo.nombre || 'Grupo'} (Mágicos)`);
       return;
     }
 

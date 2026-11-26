@@ -107,6 +107,17 @@ export class MagicoLista implements OnInit {
     }
   }
 
+  abrirHojaHtml(c: any, event?: Event): void {
+    if (event) event.stopPropagation();
+    const grupoId = typeof c.grupo === 'object' ? c.grupo?._id : c.grupo;
+    if (grupoId) {
+      const url = this.magicoService.getHojaControlMagicosUrl(grupoId, {
+        incluirLiquidados: this.filtroEstado === 'todos' || this.filtroEstado === 'Liquidado'
+      });
+      window.open(url, '_blank');
+    }
+  }
+
   cancelarCredito(c: any): void {
     Swal.fire({
       title: '¿Cancelar Crédito Mágico?',

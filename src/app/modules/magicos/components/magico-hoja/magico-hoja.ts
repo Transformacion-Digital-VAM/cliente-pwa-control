@@ -102,13 +102,16 @@ export class MagicoHoja implements OnInit {
     return this.creditos.reduce((s, c) => s + (Number(c.saldoPendiente) || 0), 0);
   }
 
-  abrirFormatoPdf(): void {
-    Swal.fire({
-      icon: 'info',
-      title: 'Formato PDF de Mágicos',
-      text: 'El formato personalizado de Hoja PDF para Créditos Mágicos se integrará en la siguiente etapa.',
-      confirmButtonColor: '#7c3aed'
+  abrirHojaControlHtml(tipo: 'llena' | 'vacia' = 'llena'): void {
+    if (!this.grupoId) {
+      Swal.fire('Atención', 'Selecciona un grupo para consultar su Hoja de Control.', 'warning');
+      return;
+    }
+    const url = this.magicoService.getHojaControlMagicosUrl(this.grupoId, {
+      incluirLiquidados: this.incluirLiquidados,
+      tipo
     });
+    window.open(url, '_blank');
   }
 }
 

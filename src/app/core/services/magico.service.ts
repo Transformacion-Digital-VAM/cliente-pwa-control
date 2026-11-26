@@ -101,6 +101,17 @@ export class MagicoService {
     );
   }
 
+  getHojaControlMagicosUrl(grupoId: string, params?: { incluirLiquidados?: boolean; tipo?: string }): string {
+    let url = `${this.apiUrl}/hoja-control/${grupoId}`;
+    const queryParts: string[] = [];
+    if (params?.incluirLiquidados) queryParts.push('incluirLiquidados=true');
+    if (params?.tipo) queryParts.push(`tipo=${encodeURIComponent(params.tipo)}`);
+    if (queryParts.length > 0) {
+      url += `?${queryParts.join('&')}`;
+    }
+    return url;
+  }
+
   registrarPagoMagico(creditoId: string, pagoParams: any): Observable<any> {
     const isOnline = typeof navigator === 'undefined' ? true : navigator.onLine;
     if (!isOnline) {

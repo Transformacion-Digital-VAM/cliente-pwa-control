@@ -95,13 +95,21 @@ export class SyncService {
 
                             // Ahora crear los créditos para cada miembro
                             const peticionesCreditos = miembrosGuardados.map((miembroGuardado, index) => {
-                                const integ = integrantes[index];
+                                const integ = integrantes[index] || {};
+                                const numSemanas = Number(integ.semanas) || (integ.tipoCredito === '8S' ? 8 : 16);
+                                const numMeses = Number(integ.equivalenciaMeses || integ.plazoMeses) || 4;
                                 const bodyCredito = {
                                     miembro: miembroGuardado._id,
                                     ciclo: cicloActual || 1,
                                     tipoCredito: integ.tipoCredito || 'CC',
                                     pagoPactado: integ.pagoPactado,
-                                    fechaPrimerPago: fechaPrimerPago
+                                    fechaPrimerPago: fechaPrimerPago,
+                                    montoSolicitado: integ.montoSolicitado || 0,
+                                    tasaInteres: integ.tasaInteres || 0,
+                                    semanas: numSemanas,
+                                    equivalenciaMeses: numMeses,
+                                    garantia: integ.garantia !== undefined ? integ.garantia : (Number(integ.montoSolicitado || 0) * ((integ.porcentajeGarantia || 5) / 100)),
+                                    porcentajeGarantia: integ.porcentajeGarantia !== undefined ? integ.porcentajeGarantia : 5
                                 };
                                 return this.http.post(`${this.apiUrlCredito}/`, bodyCredito);
                             });
