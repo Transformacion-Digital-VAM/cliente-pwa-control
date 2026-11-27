@@ -1,4 +1,4 @@
-import { Component, OnInit, Inject, PLATFORM_ID } from '@angular/core';
+import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectorRef } from '@angular/core';
 import { FormBuilder, FormGroup, FormArray, ReactiveFormsModule, FormsModule, Validators } from '@angular/forms';
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import Swal from 'sweetalert2';
@@ -20,6 +20,9 @@ export class AdminHojaControl implements OnInit {
   miembrosLocales: any[] = [];
   creditosLocales: any[] = [];
 
+  // Bandera para evitar que valueChanges interfiera con la selección programática
+  private _seleccionandoGrupo = false;
+
   // Autocomplete bindings
   filteredGrupos: any[] = [];
   filteredMiembros: any[][] = []; // Un arreglo por cada integrante
@@ -33,7 +36,8 @@ export class AdminHojaControl implements OnInit {
   constructor(
     @Inject(PLATFORM_ID) private platformId: Object,
     private fb: FormBuilder,
-    private grupoService: GrupoService
+    private grupoService: GrupoService,
+    private cdr: ChangeDetectorRef
   ) {
     this.hojaControlForm = this.fb.group({
       grupoId: [''],
@@ -67,14 +71,32 @@ export class AdminHojaControl implements OnInit {
 
   setupSubscriptions() {
     this.hojaControlForm.get('nombreGrupo')?.valueChanges.subscribe(val => {
+      // Si la selección es programática, ignorar para no interferir
+      if (this._seleccionandoGrupo) return;
       this.filtrarGrupos(val);
-      // Si el usuario edita el nombre, asume que ya no es el grupo seleccionado
+      // Si el usuario edita el nombre, verificar si coincide con alguno existente
       const currentGrupoId = this.hojaControlForm.get('grupoId')?.value;
-      if (currentGrupoId && !this.gruposLocales.find(g => g.nombre === val && g._id === currentGrupoId)) {
+      const grupoCoincidente = this.gruposLocales.find(g => g.nombre?.toLowerCase() === val?.toLowerCase());
+      if (grupoCoincidente) {
+        this.hojaControlForm.get('grupoId')?.setValue(grupoCoincidente._id, { emitEvent: false });
+        if (!this.hojaControlForm.get('clave')?.value && grupoCoincidente.clave) {
+          this.hojaControlForm.get('clave')?.setValue(grupoCoincidente.clave, { emitEvent: false });
+        }
+      } else if (currentGrupoId && !this.gruposLocales.find(g => g.nombre === val && g._id === currentGrupoId)) {
         this.hojaControlForm.get('grupoId')?.setValue('', { emitEvent: false });
         // this.hojaControlForm.get('fechaPrimerPago')?.disable();
         this.hojaControlForm.get('fechaPrimerPago')?.setValue('');
         this.semanasDisponibles = [];
+      }
+    });
+
+    this.hojaControlForm.get('clave')?.valueChanges.subscribe(claveVal => {
+      if (claveVal) {
+        const claveBuscada = String(claveVal).trim();
+        const grupoPorClave = this.gruposLocales.find(g => String(g.clave).trim() === claveBuscada);
+        if (grupoPorClave) {
+          this.hojaControlForm.get('grupoId')?.setValue(grupoPorClave._id, { emitEvent: false });
+        }
       }
     });
 
@@ -214,9 +236,22 @@ export class AdminHojaControl implements OnInit {
   }
 
   cargarCreditos(forceRefresh = false): void {
-    this.grupoService.getCreditos(undefined, forceRefresh).subscribe({
+    this.grupoService.getCreditos({ admin: true }, forceRefresh).subscribe({
       next: (res) => {
         this.creditosLocales = res?.creditos || res || [];
+        // Si el usuario ya había seleccionado un grupo antes de que terminaran de cargar los créditos,
+        // re-aplicar el grupo para rellenar montos, ciclo y fechaPrimerPago.
+        const grupoIdActual = this.hojaControlForm.get('grupoId')?.value;
+        if (grupoIdActual && this.creditosLocales.length > 0) {
+          const grupoActual = this.gruposLocales.find(g => String(g._id) === String(grupoIdActual));
+          if (grupoActual) {
+            const primerMonto = this.integrantes.at(0)?.get('montoSolicitado')?.value;
+            const fechaActual = this.hojaControlForm.get('fechaPrimerPago')?.value;
+            if (!primerMonto || !fechaActual) {
+              this.seleccionarGrupo(grupoActual);
+            }
+          }
+        }
       },
       error: (err) => console.error('Error al cargar créditos', err)
     });
@@ -273,17 +308,23 @@ export class AdminHojaControl implements OnInit {
   }
 
   seleccionarGrupo(grupo: any) {
-    const ultimoCiclo = this.getCicloGrupo(grupo);
-    const ultimaTasa = this.getTasaGrupo(grupo);
+    // Ocultar sugerencias INMEDIATAMENTE al seleccionar
+    this.showGrupoSuggestions = false;
+    this.filteredGrupos = [];
+    this._seleccionandoGrupo = true;
 
-    // Patch de campos del grupo (sin emitir eventos para evitar cascada de suscripciones)
+    const grupoIdStr = String(grupo._id || '');
+
+    // Patch inmediato de los datos básicos del grupo para que la selección se refleje al instante
+    const cicloInicial = this.getCicloGrupo(grupo);
+    const tasaInicial = this.getTasaGrupo(grupo);
     this.hojaControlForm.patchValue({
       grupoId: grupo._id,
       nombreGrupo: grupo.nombre,
       clave: grupo.clave,
       asesor: typeof grupo.asesor === 'object' ? grupo.asesor?._id : grupo.asesor,
-      cicloActual: ultimoCiclo,
-      tasa: ultimaTasa,
+      cicloActual: cicloInicial,
+      tasa: tasaInicial,
       plazoSemanas: grupo.plazoSemanas || 16,
       plazoMeses: grupo.plazoMeses || 4,
       diaVisita: grupo.diaVisita || 'Lunes',
@@ -292,74 +333,137 @@ export class AdminHojaControl implements OnInit {
       porcentajeGarantia: grupo.porcentajeGarantia || 5
     }, { emitEvent: false });
 
-    // Resolver la fechaPrimerPago: primero del grupo, luego del crédito de algún miembro
-    let fechaFuenteISO: string | null = null;
-    const miembrosParaFecha: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+    // Liberar bandera inmediatamente después del patchValue síncrono
+    this._seleccionandoGrupo = false;
 
-    // Detectar el tipoCredito del último ciclo del grupo para pre-llenar estadoGrupo
-    const miembrosIds = miembrosParaFecha.map(m => String(typeof m === 'object' ? (m._id || m) : m));
-    const creditosGrupo = this.creditosLocales.filter(c => {
-      const cId = c.miembro ? String(typeof c.miembro === 'object' ? (c.miembro._id || c.miembro) : c.miembro) : null;
-      return cId && miembrosIds.includes(cId);
-    });
-    if (creditosGrupo.length > 0) {
-      const maxCiclo = Math.max(...creditosGrupo.map(c => c.ciclo || 0));
-      const creditosCicloMax = creditosGrupo.filter(c => c.ciclo === maxCiclo);
-      const tipoMasReciente = creditosCicloMax[0]?.estadoGrupo || creditosCicloMax[0]?.tipoCredito || 'CC';
-      this.hojaControlForm.get('estadoGrupo')?.setValue(tipoMasReciente, { emitEvent: false });
-    } else {
-      this.hojaControlForm.get('estadoGrupo')?.setValue('CC', { emitEvent: false });
-    }
-
-    if (grupo.fechaPrimerPago) {
-      // Fuente 1: El grupo tiene fecha guardada
-      const d = new Date(grupo.fechaPrimerPago);
-      d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-      fechaFuenteISO = d.toISOString().split('T')[0];
-    } else if (this.creditosLocales.length > 0 && miembrosParaFecha.length > 0) {
-      // Fuente 2: Buscar la fecha en el crédito de cualquier miembro del grupo
-      for (const m of miembrosParaFecha) {
-        const mIdStr = String(typeof m === 'object' ? (m._id || m) : m);
-        const credito = this.creditosLocales.find(c => {
-          const cId = c.miembro ? String(typeof c.miembro === 'object' ? (c.miembro._id || c.miembro) : c.miembro) : null;
-          return cId && cId === mIdStr;
-        });
-        if (credito?.fechaPrimerPago) {
-          const d = new Date(credito.fechaPrimerPago);
-          d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
-          fechaFuenteISO = d.toISOString().split('T')[0];
-          break;
+    const aplicarDatosCompletos = (grupoFuente: any, creditosFuente: any[]) => {
+      // Asegurar que los créditos del grupo estén disponibles en creditosLocales para addIntegrante()
+      if (Array.isArray(creditosFuente) && creditosFuente.length > 0) {
+        const idsExistentes = new Set(this.creditosLocales.map(c => String(c._id)));
+        const nuevos = creditosFuente.filter(c => c._id && !idsExistentes.has(String(c._id)));
+        if (nuevos.length > 0) {
+          this.creditosLocales = [...this.creditosLocales, ...nuevos];
         }
       }
-    }
 
-    if (fechaFuenteISO) {
-      this.hojaControlForm.get('fechaPrimerPago')?.setValue(fechaFuenteISO, { emitEvent: false });
-      const diaDetectado = this.obtenerDiaSemanaDeFecha(fechaFuenteISO);
-      if (diaDetectado) {
-        this.hojaControlForm.get('diaVisita')?.setValue(diaDetectado, { emitEvent: false });
+      const miembrosParaFecha: any[] = Array.isArray(grupoFuente.integrantes) ? grupoFuente.integrantes : [];
+      const miembrosIds = miembrosParaFecha.map(m => String(typeof m === 'object' ? (m._id || m) : m));
+      const creditosGrupo = this.creditosLocales.filter(c => {
+        const cId = c.miembro ? String(typeof c.miembro === 'object' ? (c.miembro._id || c.miembro) : c.miembro) : null;
+        return cId && miembrosIds.includes(cId);
+      });
+
+      const ultimoCiclo = creditosGrupo.length > 0
+        ? this.getCicloGrupo(grupoFuente)
+        : (grupoFuente.cicloActual || grupo.cicloActual || 1);
+      const ultimaTasa = creditosGrupo.length > 0
+        ? this.getTasaGrupo(grupoFuente)
+        : (grupoFuente.tasa || grupo.tasa || 7);
+
+      this.hojaControlForm.patchValue({
+        cicloActual: ultimoCiclo,
+        tasa: ultimaTasa
+      }, { emitEvent: false });
+
+      if (creditosGrupo.length > 0) {
+        const maxCiclo = Math.max(...creditosGrupo.map(c => c.ciclo || 0));
+        const creditosCicloMax = creditosGrupo.filter(c => c.ciclo === maxCiclo);
+        const tipoMasReciente = creditosCicloMax[0]?.estadoGrupo || creditosCicloMax[0]?.tipoCredito || 'CC';
+        this.hojaControlForm.get('estadoGrupo')?.setValue(tipoMasReciente, { emitEvent: false });
+      } else {
+        this.hojaControlForm.get('estadoGrupo')?.setValue('CC', { emitEvent: false });
       }
-    }
 
-    // Generar las semanas (para uso interno si se necesitan)
-    this.generarSemanasOpcionales(fechaFuenteISO || grupo.fechaPrimerPago, grupo.plazoSemanas || 16);
+      // Resolver la fechaPrimerPago: primero del grupo, luego del crédito de algún miembro
+      let fechaFuenteISO: string | null = null;
+      if (grupoFuente.fechaPrimerPago) {
+        const d = new Date(grupoFuente.fechaPrimerPago);
+        d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+        fechaFuenteISO = d.toISOString().split('T')[0];
+      } else if (creditosGrupo.length > 0) {
+        const creditosOrdenados = [...creditosGrupo].sort((a, b) => (b.ciclo || 0) - (a.ciclo || 0));
+        const credConFecha = creditosOrdenados.find(c => c.fechaPrimerPago);
+        if (credConFecha?.fechaPrimerPago) {
+          const d = new Date(credConFecha.fechaPrimerPago);
+          d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+          fechaFuenteISO = d.toISOString().split('T')[0];
+        }
+      }
 
-    // --- CARGAR INTEGRANTES DEL GRUPO ---
-    // Limpiar el FormArray y los arreglos de sugerencias
-    this.integrantes.clear();
-    this.filteredMiembros = [];
-    this.showMiembroSuggestions = [];
+      if (fechaFuenteISO) {
+        this.hojaControlForm.get('fechaPrimerPago')?.setValue(fechaFuenteISO, { emitEvent: false });
+        const diaDetectado = this.obtenerDiaSemanaDeFecha(fechaFuenteISO);
+        if (diaDetectado) {
+          this.hojaControlForm.get('diaVisita')?.setValue(diaDetectado, { emitEvent: false });
+        }
+      }
 
-    const miembros: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+      this.generarSemanasOpcionales(fechaFuenteISO || grupoFuente.fechaPrimerPago, grupoFuente.plazoSemanas || 16);
 
-    if (miembros.length > 0) {
-      miembros.forEach(m => this.addIntegrante(m, ultimoCiclo));
+      // Resolver integrantes completos
+      const miembrosRaw: any[] = Array.isArray(grupoFuente.integrantes) ? grupoFuente.integrantes : [];
+      const miembrosMap = new Map(this.miembrosLocales.map(ml => [String(ml._id), ml]));
+      let miembros: any[] = miembrosRaw
+        .map(m => {
+          if (m && typeof m === 'object' && m.nombre) return m;
+          const id = String(typeof m === 'object' ? (m?._id || m) : m);
+          return miembrosMap.get(id) || null;
+        })
+        .filter(Boolean);
+
+      if (miembros.length === 0 && grupoIdStr) {
+        miembros = this.miembrosLocales.filter(ml => {
+          const gId = typeof ml.grupo === 'object' ? (ml.grupo?._id || ml.grupo) : ml.grupo;
+          return gId && String(gId) === grupoIdStr;
+        });
+      }
+
+      this.integrantes.clear();
+      this.filteredMiembros = [];
+      this.showMiembroSuggestions = [];
+
+      if (miembros.length > 0) {
+        miembros.forEach(m => this.addIntegrante(m, ultimoCiclo));
+      } else {
+        this.addIntegrante();
+      }
+      this.cdr.markForCheck();
+      try { this.cdr.detectChanges(); } catch { }
+    };
+
+    // Verificar si ya tenemos miembros resueltos y créditos cargados localmente
+    const miembrosRaw: any[] = Array.isArray(grupo.integrantes) ? grupo.integrantes : [];
+    const miembrosMap = new Map(this.miembrosLocales.map(ml => [String(ml._id), ml]));
+    const tieneMiembrosResueltos = miembrosRaw.some(m => (m && typeof m === 'object' && m.nombre) || miembrosMap.has(String(typeof m === 'object' ? (m?._id || m) : m)));
+
+    if (this.creditosLocales.length > 0 && tieneMiembrosResueltos) {
+      aplicarDatosCompletos(grupo, []);
+    } else if (grupoIdStr) {
+      // Consultar solo este grupo por ID (incluye integrantes populados y sus créditos en ~20ms)
+      this.grupoService.getGrupoById(grupoIdStr).subscribe({
+        next: (grupoCompleto: any) => {
+          const creditosDelGrupo = Array.isArray(grupoCompleto?.creditos) ? grupoCompleto.creditos : [];
+          aplicarDatosCompletos(grupoCompleto || grupo, creditosDelGrupo);
+          // Si el backend aún no devuelve creditos en getGrupoById y creditosLocales sigue vacío,
+          // cargar créditos para completar montos y fechaPrimerPago
+          if (creditosDelGrupo.length === 0 && this.creditosLocales.length === 0) {
+            this.grupoService.getCreditos({ admin: true }, false).subscribe({
+              next: (res) => {
+                this.creditosLocales = res?.creditos || res || [];
+                if (this.creditosLocales.length > 0) {
+                  aplicarDatosCompletos(grupoCompleto || grupo, []);
+                }
+              }
+            });
+          }
+        },
+        error: () => {
+          aplicarDatosCompletos(grupo, []);
+        }
+      });
     } else {
-      // Si el grupo no tiene integrantes registrados, añadir una fila vacía
-      this.addIntegrante();
+      aplicarDatosCompletos(grupo, []);
     }
-
-    this.showGrupoSuggestions = false;
   }
 
   onSemanaChange(fechaValue: string) {
@@ -680,6 +784,23 @@ export class AdminHojaControl implements OnInit {
   guardarCambios() {
     if (this.hojaControlForm.valid) {
       const payload = { ...this.hojaControlForm.value };
+
+      // Si no tiene grupoId pero la clave o nombre coincide con un grupo existente, asociarlo
+      if (!payload.grupoId && payload.clave) {
+        const claveBuscada = String(payload.clave).trim();
+        const grupoPorClave = this.gruposLocales.find(g => String(g.clave).trim() === claveBuscada);
+        if (grupoPorClave) {
+          payload.grupoId = grupoPorClave._id;
+        }
+      }
+      if (!payload.grupoId && payload.nombreGrupo) {
+        const nombreBuscado = String(payload.nombreGrupo).trim().toLowerCase();
+        const grupoPorNombre = this.gruposLocales.find(g => String(g.nombre).trim().toLowerCase() === nombreBuscado);
+        if (grupoPorNombre) {
+          payload.grupoId = grupoPorNombre._id;
+        }
+      }
+
       if (payload.fechaPrimerPago) {
         const diaDetectado = this.obtenerDiaSemanaDeFecha(payload.fechaPrimerPago);
         if (diaDetectado && (!payload.diaVisita || payload.diaVisita === 'Lunes')) {

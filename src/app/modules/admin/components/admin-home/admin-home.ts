@@ -2,7 +2,8 @@ import { Component, OnInit, Inject, PLATFORM_ID, ChangeDetectionStrategy, Change
 import { CommonModule, isPlatformBrowser } from '@angular/common';
 import { RouterModule } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { forkJoin } from 'rxjs';
+import { forkJoin, of } from 'rxjs';
+import { catchError } from 'rxjs/operators';
 import { GrupoService } from '../../../../core/services/grupo.service';
 import { ClienteService } from '../../../../core/services/cliente.service';
 import { NotificationService } from '../../../../core/services/notification.service';
@@ -162,24 +163,18 @@ export class AdminHome implements OnInit {
     });
     this.cdr.markForCheck();
 
-    // 1. CARGA: Coordinaciones, Asesores, Grupos, Clientes e Individuales en Grupo
+    // 1. CARGA: Coordinaciones, Asesores, Grupos y Clientes (individualesEnGrupo se carga después para no bloquear los grupos)
     forkJoin({
-      grupos: this.grupoService.getGrupos(forceRefresh),
-      asesores: this.grupoService.getAsesores(forceRefresh),
-      clientes: this.clienteService.getClientes({ admin: true }, forceRefresh),
-      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh),
-      individualesEnGrupo: this.clienteService.getClientesIndv()
+      grupos: this.grupoService.getGrupos(forceRefresh).pipe(catchError(() => of([]))),
+      asesores: this.grupoService.getAsesores(forceRefresh).pipe(catchError(() => of([]))),
+      clientes: this.clienteService.getClientes({ admin: true }, forceRefresh).pipe(catchError(() => of([]))),
+      coordinaciones: this.grupoService.getCoordinaciones(forceRefresh).pipe(catchError(() => of([])))
     }).subscribe({
       next: (res: any) => {
         const allAsesores = res.asesores || [];
         const allCoordinaciones = res.coordinaciones || [];
         const allGruposRaw = res.grupos || [];
         const allClientesRaw = res.clientes || [];
-        // El endpoint devuelve { success, total, data: [...] }
-        const rawIndGrupo = res.individualesEnGrupo;
-        const allIndividualGruposRaw: any[] = Array.isArray(rawIndGrupo)
-          ? rawIndGrupo
-          : (rawIndGrupo?.data || []);
 
         // 1. Filtrado por rol si es restringido
         const isRestricted = !this.isGlobalRole && !!this.userCoordinacion;
@@ -237,32 +232,8 @@ export class AdminHome implements OnInit {
           }
         }
 
-        // 5. Individuales en grupos (ya tienen asesor y coordinacion del servidor)
-        const individualesEnGrupoProcesados: any[] = [];
-        for (const ig of allIndividualGruposRaw) {
-          let grupoNombre = ig.grupo;
-          if (grupoNombre && /^[0-9a-fA-F]{24}$/.test(grupoNombre.trim())) {
-            const grEncontrado = gruposProcesados.find((g: any) => String(g._id) === grupoNombre.trim());
-            if (grEncontrado && grEncontrado.nombre) {
-              grupoNombre = grEncontrado.nombre;
-            }
-          }
-          const igObj = {
-            ...ig,
-            grupo: grupoNombre,
-            coordinacionNombre: this.resolverNombreCoordinacion(ig)
-          };
-          if (!isRestricted || this.perteneceACoordinacion(igObj, this.userCoordinacion)) {
-            individualesEnGrupoProcesados.push(igObj);
-          }
-        }
-
         this.grupos = gruposProcesados;
         this.elementosPrincipales = [...this.grupos, ...clientesProcesados];
-        // Guardar lista maestra de individuales en grupo (se filtrará en aplicarFiltros)
-        this.individualesEnGrupo = individualesEnGrupoProcesados;
-        this.individualesEnGrupoFiltrados = [...individualesEnGrupoProcesados];
-        this.isLoadingIndividualesEnGrupo = false;
 
         // Actualizar Asesores de la coordinación activa y renderizar interfaz
         this.actualizarAsesoresDeCoordinacion();
@@ -371,13 +342,19 @@ export class AdminHome implements OnInit {
 
         // Enlazar créditos a integrantes de grupos y clientes
         for (const g of this.grupos) {
+          const miembrosDelMapa = this.miembrosPorGrupoMap.get(String(g._id));
+          if (miembrosDelMapa && miembrosDelMapa.length > 0) {
+            g.integrantes = miembrosDelMapa;
+          }
           if (g.integrantes && g.integrantes.length > 0) {
             for (const m of g.integrantes) {
-              m.credito = this.creditoMiembroMap.get(String(m._id || m)) || null;
+              if (m && typeof m === 'object') {
+                m.credito = this.creditoMiembroMap.get(String(m._id || m)) || null;
+              }
             }
             if (!g.estadoGrupo) {
               for (const m of g.integrantes) {
-                const cred = this.creditoMiembroMap.get(String(m._id || m));
+                const cred = this.creditoMiembroMap.get(String(m?._id || m));
                 if (cred?.estadoGrupo) {
                   g.estadoGrupo = cred.estadoGrupo;
                   break;
@@ -781,6 +758,13 @@ export class AdminHome implements OnInit {
       }
     }
 
+    if (Array.isArray(grupo?.ciclosDisponibles)) {
+      for (const c of grupo.ciclosDisponibles) {
+        const cNum = Number(c);
+        if (cNum > 0) ciclos.add(cNum);
+      }
+    }
+
     if (grupo?.cicloActual) {
       const cNum = Number(grupo.cicloActual);
       if (cNum > 0) ciclos.add(cNum);
@@ -904,7 +888,7 @@ export class AdminHome implements OnInit {
     if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
       await Promise.race([
         this.creditosCargadosPromise,
-        new Promise(res => setTimeout(res, 2000))
+        new Promise(res => setTimeout(res, 8000))
       ]);
     }
 
@@ -972,7 +956,7 @@ export class AdminHome implements OnInit {
     if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
       await Promise.race([
         this.creditosCargadosPromise,
-        new Promise(res => setTimeout(res, 2000))
+        new Promise(res => setTimeout(res, 8000))
       ]);
     }
 
@@ -1036,6 +1020,12 @@ export class AdminHome implements OnInit {
 
   async descargarInfoIndividual(cliente: any, event: Event) {
     event.stopPropagation();
+    if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
+      await Promise.race([
+        this.creditosCargadosPromise,
+        new Promise(res => setTimeout(res, 8000))
+      ]);
+    }
     const ciclo = this.getCicloActualCliente(cliente);
     const totalSemanas = this.getSemanasCliente(cliente, ciclo);
     const opciones = this.generarOpcionesSemanas(totalSemanas);
@@ -1072,6 +1062,12 @@ export class AdminHome implements OnInit {
 
   async descargarInfoIndividualLlena(cliente: any, event: Event) {
     event.stopPropagation();
+    if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
+      await Promise.race([
+        this.creditosCargadosPromise,
+        new Promise(res => setTimeout(res, 8000))
+      ]);
+    }
     const ciclo = this.getCicloActualCliente(cliente);
     const totalSemanas = this.getSemanasCliente(cliente, ciclo);
     const opciones = this.generarOpcionesSemanas(totalSemanas);
@@ -1109,7 +1105,7 @@ export class AdminHome implements OnInit {
     if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
       await Promise.race([
         this.creditosCargadosPromise,
-        new Promise(res => setTimeout(res, 2000))
+        new Promise(res => setTimeout(res, 8000))
       ]);
     }
 
@@ -1184,6 +1180,12 @@ export class AdminHome implements OnInit {
 
   async vistaPreviaIndividual(cliente: any, event: Event) {
     event.stopPropagation();
+    if ((!this.creditos || this.creditos.length === 0) && this.creditosCargadosPromise) {
+      await Promise.race([
+        this.creditosCargadosPromise,
+        new Promise(res => setTimeout(res, 8000))
+      ]);
+    }
     const ciclo = this.getCicloActualCliente(cliente);
     const totalSemanas = this.getSemanasCliente(cliente, ciclo);
     const opciones = this.generarOpcionesSemanas(totalSemanas);

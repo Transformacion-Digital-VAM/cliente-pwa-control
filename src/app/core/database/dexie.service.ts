@@ -6,6 +6,7 @@ export interface OfflineRequest {
     type: string;
     data: any;
     timestamp: number;
+    retries?: number;
 }
 
 @Injectable({

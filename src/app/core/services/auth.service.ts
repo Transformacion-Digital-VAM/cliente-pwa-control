@@ -34,6 +34,16 @@ export class AuthService {
                 };
                 
                 try {
+                    const prevSessions = await this.dexie.user_session.toArray();
+                    const cambioUsuario = prevSessions.some(s => String(s.id) !== String(sessionData.id));
+                    if (cambioUsuario) {
+                        await Promise.all([
+                            this.dexie.grupos.clear(),
+                            this.dexie.miembros.clear(),
+                            this.dexie.clientes.clear(),
+                            this.dexie.creditos.clear()
+                        ]);
+                    }
                     await this.dexie.user_session.put(sessionData);
                     console.log('[AuthService] Sesión guardada correctamente en Dexie:', sessionData.user);
                 } catch (dexieError) {
@@ -79,7 +89,15 @@ export class AuthService {
         localStorage.removeItem('isLoggedIn');
         localStorage.removeItem('userRole');
         localStorage.removeItem('loginDate');
-        await this.dexie.user_session.clear();
+        localStorage.removeItem('user');
+        localStorage.removeItem('token');
+        await Promise.all([
+            this.dexie.user_session.clear(),
+            this.dexie.grupos.clear(),
+            this.dexie.miembros.clear(),
+            this.dexie.clientes.clear(),
+            this.dexie.creditos.clear()
+        ]);
     }
 }
 
